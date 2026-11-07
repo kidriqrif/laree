@@ -1,0 +1,25 @@
+# deps and build output
+node_modules/
+dist/
+dev-dist/
+coverage/
+*.tsbuildinfo
+*.log
+
+# os
+.DS_Store
+Thumbs.db
+
+# env
+.env
+.env.*
+!.env.example
+
+# local agent tooling (installed per machine)
+.agents/
+.claude/*
+!.claude/launch.json
+.impeccable/config.local.json
+
+# scratch
+.tmp/
