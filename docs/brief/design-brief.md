@@ -254,7 +254,7 @@ Every component is new in this phase. The building-block milestone (M6) shows ea
 
 **Week and the track lap.** Week opens on the current week. Arrow buttons and swipes move to last week (`?w=-1`) and next week (`?w=1`). The track lap draws the week as one lap, with a lane for each sport. Completed training fills each lane from the start line. The pace light, a small marker on the lap, shows where the plan expects the athlete to be by the end of today. When a lane goes past 120% of its plan, it shows a caution mark instead of more fill (assumption: 120% matches the edge of the "on plan" compliance band). Screen readers get a sentence for each lane instead of the drawing.
 
-**Earn a badge.** There are four badges in this phase: first 100 km week, new FTP, first brick and coach kudos. When the athlete earns one, Today shows it with a finish tape that breaks once. With reduced motion, the tape is already broken. There is no sound and no confetti.
+**Earn a badge.** The catalogue in the gamification spec has eleven badges. Four lead it: first 100 km week, new FTP, first brick and coach kudos. When the athlete earns one, Today shows it with a finish tape that breaks once. With reduced motion, the tape is already broken. There is no sound and no confetti.
 
 **Miss a session.** A missed session is marked "missed" in Week, with a glyph and a label in a neutral tone (assumption). Nothing on the athlete side scolds. The coach sees the miss in compliance, and missing two or more key sessions raises a flag.
 

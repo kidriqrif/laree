@@ -200,7 +200,7 @@ The cube reflects that the power needed to swim rises steeply with speed, so a s
 - Because rest counts, hard sets with long rests score low. Ten 100 m repeats on a 2:00 turnaround make 1,000 m in 20:00, so `I` = 0.90 and load = 24.3, whatever pace the repeats were swum at. That is accepted for phase 1.
 - Drills and kick sets count as swimming.
 
-**Worked example.** Amir's CSS is 1:48 /100 m (108 s), so `v_css` = 0.9259 m/s. He swims 2,000 m in 40:00. `v` = 0.8333 m/s, `I` = 0.900, load = (2,400 / 3,600) × 0.9³ × 100 = 48.6, shown as **49**, confidence medium.
+**Worked example.** Amir's CSS is 1:48 /100 m (108 s), so `v_css` = 0.9259 m/s. They swim 2,000 m in 40:00. `v` = 0.8333 m/s, `I` = 0.900, load = (2,400 / 3,600) × 0.9³ × 100 = 48.6, shown as **49**, confidence medium.
 
 ### 2.5 Heart rate
 
@@ -309,7 +309,12 @@ A workout with no steps gets its load from the duration-only rule (section 2.7) 
 - Riding the plan exactly at the midpoint watts scores 81.79 by the power method. The 30-second smoothing rounds off the step edges, so the plan and the ride differ by under 0.4%.
 - Irfan actually rode it as example 3 in section 2.2, with harder intervals and a shorter cool-down: 96.71 / 82.10 = 117.8% of plan, which is **On plan** (section 7).
 
-**Pace basis.** DANIAL_PACE_EXAMPLE
+**Pace basis.** Danial (threshold pace 3:58 /km) is planned 10 min at 70% of threshold speed, then 5 × (4 min at 105% + 2 min at 65%), then 10 min at 65%.
+
+- `T` = 3,000 s (50 min).
+- `Ī` = (600 × 0.70 + 5 × (240 × 1.05 + 120 × 0.65) + 600 × 0.65) / 3,000 = 2,460 / 3,000 = 0.82.
+- Planned load = (3,000 / 3,600) × 0.82² × 100 = 56.03, shown as **56**.
+- The 105% reps run at 3:47 /km and the 70% warm-up at 5:40 /km.
 
 ## 4. Fitness, Fatigue, Form and Ramp
 

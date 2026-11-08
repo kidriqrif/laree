@@ -199,7 +199,7 @@ The athlete side has no help screen. Empty states and short inline notes carry t
 | CheckIn | The daily wellness entry. | id, athleteId, day, sleep hours, soreness (1-5), mood (1-5), resting HR, HRV, note | One per athlete per day. May be cited by a flag. |
 | Flag | A rule-based alert for Coach. | id, athleteId, rule id, raised day, values, explanation, state (open, acknowledged, resolved), resolution note | Cites check-ins or activities. Never produced by AI. |
 | Kudos | Praise from Coach. | id, athleteId, activity id (optional), message (optional), day, seen by athlete | From Coach to one athlete, optionally on one activity. |
-| Badge | An earned award. | id, athleteId, kind (first 100 km week, new FTP, first brick, coach kudos), earned day, source item | Earned by one athlete. |
+| Badge | An earned award. | id, athleteId, badge key from the catalogue in docs/spec/gamification.md (for example first 100 km week, new FTP, first brick, coach kudos), earned day, source item | Earned by one athlete. |
 | Threshold | A threshold value and its history. Zones are computed from it. | athleteId, kind (FTP, threshold pace, CSS, LTHR), value, valid from day, source (test, coach edit, seed) | Each change adds a row. Amir's FTP row changes from 245 W to 255 W in history week 9. |
 | Settings | Preferences for one person. | owner (an athlete or Coach), units, theme, AI consent for that person's layer, single-key shortcuts (coach only) | One per person. |
 
@@ -739,7 +739,7 @@ Pick one word and use it everywhere.
 | Weighted power divided by FTP | Intensity | |
 | Threshold | Threshold | FTP for power, threshold pace for running, CSS for swimming, LTHR for heart rate. |
 | RPE | Effort | Shown as "Effort (1-10)". "RPE" appears only in coach step targets and help text. |
-| Compliance bands | On plan, Partial, Over, Missed, Unplanned | On plan is 80-120% of the planned session. Partial is below 80%. Over is above 120%. |
+| Compliance bands | Short, Under, On plan, Over, Well over, Missed, Unplanned | On plan is 80-120% of the planned session. Under is 50-79.9% and Short is below 50%. Over is 120.1-150% and Well over is above 150%. |
 | Phases | Base, Build, Peak, Taper, Race, Recovery | |
 | Race priority | A race, B race, C race | |
 | Streak | Streak | Weeks at 80% compliance or better. Rest days count. |

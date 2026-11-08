@@ -223,7 +223,7 @@ Notes on the conditions:
 
 - "Below", "above", "under" and "more than" are strict. "At least" and "or more" include the boundary. So sleep of exactly 6.0 h is not short, and a ramp of exactly 8.0 is not high.
 - Load-based rules (`mood-low-under-load`, `ramp-high`, `form-deep`) use complete days only, up to the end of yesterday. This is the same convention as Form, and it stops a flag from appearing and vanishing while today's sessions are still being logged.
-- `key-missed` counts only past days. Today's key session is not missed until the day is over. A session the coach moved to another day is not missed. A session with the band `partial` is not missed. The bands are defined in [metrics](metrics.md).
+- `key-missed` counts only past days. Today's key session is not missed until the day is over. A session the coach moved to another day is not missed. A session with the band `short` or `under` is not missed. The bands are defined in [metrics](metrics.md).
 - Values are compared unrounded. If rounding would make a value look equal to its threshold, the card shows one more decimal place, so "Form −30.0" never appears on a flag that fired at −30.04.
 - Ramp, Form, Fitness and Fatigue need 42 days of training history before their rules are evaluated, because Fitness starts from zero and climbs fast at first. The seed has 112 days.
 

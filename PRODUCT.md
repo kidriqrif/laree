@@ -53,7 +53,7 @@ Laree's claim is a combination that neighbouring products do not offer together.
 | Weighted power | An average of power that gives hard surges extra weight, so it reflects the real cost of a ride better than plain average power |
 | Intensity | Weighted power divided by FTP |
 | Threshold | The athlete's sustainable limit in each sport: FTP for power, threshold pace for running, CSS for swimming and LTHR for heart rate |
-| Compliance band | How a session compares with its plan: on plan (80 to 120% of plan), partial, over, missed or unplanned |
+| Compliance band | How a session compares with its plan: on plan (80 to 120% of plan), short, under, over, well over, missed or unplanned |
 | Key session | A planned workout that the coach marks as one of the week's most important |
 | Flag | A warning from a fixed rule table, shown with its rule, its values and an explanation |
 
