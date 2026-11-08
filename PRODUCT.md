@@ -35,7 +35,7 @@ Laree's claim is a combination that neighbouring products do not offer together.
 - A season is built around races by priority (A, B or C), phases (base, build, peak, taper, race and recovery) and the key sessions the coach marks.
 - Workouts leave Laree as .zwo, .mrc, .erg and .fit files, and the plan leaves as an .ics calendar.
 - The locale is en-MY: weeks start on Monday, the time zone is Asia/Kuala_Lumpur, units are metric and spelling is British. Training happens in Malaysian heat and humidity (inferred).
-- In phase 1, the four trial members use the live prototype on their own devices, and nothing is shared between devices. The repo (`kidriqrif/strelo`) will be renamed, so the app must work under any base path.
+- In phase 1, the four trial members use the live prototype on their own devices, and nothing is shared between devices. The repo is `kidriqrif/laree` (renamed from `kidriqrif/strelo`), and the app works under any base path so a rename never needs a code change.
 
 ## Capabilities and Constraints
 

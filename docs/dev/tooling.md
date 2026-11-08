@@ -108,9 +108,9 @@ Every dependency is pinned to an exact version, with no `^` or `~`. The versions
 
 ## Base-path agnostic build
 
-The live site is at https://kidriqrif.github.io/strelo/ today. The owner will rename the repo later, and that changes the path. Three choices let the same build run under any path.
+The live site is at https://kidriqrif.github.io/laree/ (the repo was renamed from `strelo` to `laree` on 2026-11-08). Three choices let the same build run under any path, so a rename needs no code change.
 
-1. **Vite `base: './'`.** Every script, style and image URL in the built HTML is relative, so the site loads from `/strelo/`, `/laree/` or a local folder without a rebuild.
+1. **Vite `base: './'`.** Every script, style and image URL in the built HTML is relative, so the site loads from `/laree/`, any other repo path or a local folder without a rebuild.
 2. **Hash routing.** Routes live after the `#`, for example `#/athlete/today`. The server only ever serves `index.html`, so deep links reload without the 404 fallback page that GitHub Pages would otherwise need for a single-page app.
 3. **One storage key, `laree:v1`.** All project sites under `kidriqrif.github.io` share one origin, so they share one `localStorage`. The `laree:` prefix keeps Laree's data apart from any other site there. The `v1` suffix and zustand's versioned `persist` let the store migrate when its shape changes.
 
