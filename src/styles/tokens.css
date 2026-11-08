@@ -1,0 +1,345 @@
+/*
+ * Laree design tokens.
+ * Order: primitives, semantic light, semantic dark (OS), semantic dark (override),
+ * scale tokens, registers, reduced motion.
+ * tokens.test.ts parses this file: keep one declaration per line and keep the
+ * dark block under the media query identical to html[data-theme="dark"].
+ */
+@layer tokens {
+  /* ---------- 1. Primitives (palette) ---------- */
+  :root {
+    --palette-ink: #1a1714;
+    --palette-paper: #fbf6ee;
+    --palette-paper-2: #f3ebdd;
+    --palette-sand: #eadfc8;
+    --palette-track: #e4572e;
+    --palette-track-ink: #b5391a;
+    --palette-sun: #ffc83d;
+    --palette-amber: #eb9100;
+    --palette-oxblood: #8e2a17;
+    --palette-infield: #2f7d4f;
+    --palette-swim: #2b6cb0;
+    --palette-bike: #3a3632;
+    --palette-strength: #857a6c;
+    --palette-night: #14110e;
+    --palette-night-2: #1e1a16;
+    --palette-night-3: #29241f;
+    --palette-chalk: #f2eadc;
+
+    /* Fixed across themes */
+    --font-ui: "Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", system-ui, sans-serif;
+    --font-mono: "Atkinson Hyperlegible Mono Variable", "Atkinson Hyperlegible Mono", ui-monospace, monospace;
+    --font-display: "Anybody Variable", "Anybody", "Arial Narrow", system-ui, sans-serif;
+  }
+
+  /* ---------- 2. Semantic, light (default) ---------- */
+  :root {
+    color-scheme: light;
+
+    --color-bg: #fbf6ee;
+    --color-surface: #f3ebdd;
+    --color-surface-sunken: #eadfc8;
+    --color-text: #1a1714;
+    --color-text-muted: #6b6157;
+    --color-link: #b5391a;
+    --color-action: #e4572e;
+    --color-action-hover: #ee6a40;
+    --color-on-action: #1a1714;
+    --color-accent: #ffc83d;
+    --color-on-accent: #1a1714;
+    --color-display-accent: #e4572e;
+    --color-rule: color-mix(in srgb, #1a1714 14%, transparent);
+    --color-rule-strong: color-mix(in srgb, #1a1714 32%, transparent);
+    --color-control-border: #7d746a;
+    --color-selection: #ffc83d;
+    --color-on-selection: #1a1714;
+    --color-focus: #1a1714;
+    --color-scrim: rgb(26 23 20 / 48%);
+    --color-danger: #8e2a17;
+    --color-on-danger: #fbf6ee;
+
+    /* Sport */
+    --sport-swim: #2b6cb0;
+    --sport-bike: #3a3632;
+    --sport-run: #e4572e;
+    --sport-strength: #857a6c;
+
+    /* Zone ramp, easy to hard */
+    --zone-1: #eadfc8;
+    --zone-2: #ffc83d;
+    --zone-3: #eb9100;
+    --zone-4: #e4572e;
+    --zone-5: #8e2a17;
+    --zone-on-1: #1a1714;
+    --zone-on-2: #1a1714;
+    --zone-on-3: #1a1714;
+    --zone-on-4: #1a1714;
+    --zone-on-5: #fbf6ee;
+
+    /* Status (fill/mark) and status text. Never brand red. */
+    --status-on-plan: #2f7d4f;
+    --status-partial: #ffc83d;
+    --status-partial-outline: #1a1714;
+    --status-over: #5b4b8a;
+    --status-missed: #5c534a;
+    --status-unplanned: #8a8278;
+    --status-on-plan-text: #2a7048;
+    --status-partial-text: #7a5000;
+    --status-over-text: #5b4b8a;
+    --status-missed-text: #5c534a;
+    --status-unplanned-text: #6b6157;
+
+    /* Chart series: fitness, fatigue, form */
+    --series-fitness: #1e6b73;
+    --series-fatigue: #b86200;
+    --series-form: #1a1714;
+    --chart-grid: color-mix(in srgb, #1a1714 10%, transparent);
+    --chart-axis: #6b6157;
+  }
+
+  /* ---------- 3. Semantic, dark (follows the OS unless forced light) ---------- */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+
+      --color-bg: #14110e;
+      --color-surface: #1e1a16;
+      --color-surface-sunken: #0e0c0a;
+      --color-text: #f2eadc;
+      --color-text-muted: #a89d8e;
+      --color-link: #f26b45;
+      --color-action: #e4572e;
+      --color-action-hover: #f26b45;
+      --color-on-action: #1a1714;
+      --color-accent: #ffc83d;
+      --color-on-accent: #1a1714;
+      --color-display-accent: #f26b45;
+      --color-rule: color-mix(in srgb, #f2eadc 16%, transparent);
+      --color-rule-strong: color-mix(in srgb, #f2eadc 36%, transparent);
+      --color-control-border: #8a8174;
+      --color-selection: #ffc83d;
+      --color-on-selection: #1a1714;
+      --color-focus: #f2eadc;
+      --color-scrim: rgb(0 0 0 / 60%);
+      --color-danger: #ff8a6b;
+      --color-on-danger: #14110e;
+
+      --sport-swim: #6fa3dc;
+      --sport-bike: #d9d0c3;
+      --sport-run: #f26b45;
+      --sport-strength: #9a8f80;
+
+      --zone-1: #4a4034;
+      --zone-2: #ffc83d;
+      --zone-3: #eb9100;
+      --zone-4: #e4572e;
+      --zone-5: #b83c24;
+      --zone-on-1: #f2eadc;
+      --zone-on-2: #1a1714;
+      --zone-on-3: #1a1714;
+      --zone-on-4: #1a1714;
+      --zone-on-5: #f2eadc;
+
+      --status-on-plan: #5fbf86;
+      --status-partial: #ffc83d;
+      --status-partial-outline: #f2eadc;
+      --status-over: #a99bd6;
+      --status-missed: #c4baab;
+      --status-unplanned: #766d63;
+      --status-on-plan-text: #5fbf86;
+      --status-partial-text: #ffc83d;
+      --status-over-text: #a99bd6;
+      --status-missed-text: #c4baab;
+      --status-unplanned-text: #a89d8e;
+
+      --series-fitness: #5fc0c8;
+      --series-fatigue: #f59a23;
+      --series-form: #f2eadc;
+      --chart-grid: color-mix(in srgb, #f2eadc 12%, transparent);
+      --chart-axis: #a89d8e;
+    }
+  }
+
+  /* ---------- 4. Semantic, dark (explicit override) ---------- */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --color-bg: #14110e;
+    --color-surface: #1e1a16;
+    --color-surface-sunken: #0e0c0a;
+    --color-text: #f2eadc;
+    --color-text-muted: #a89d8e;
+    --color-link: #f26b45;
+    --color-action: #e4572e;
+    --color-action-hover: #f26b45;
+    --color-on-action: #1a1714;
+    --color-accent: #ffc83d;
+    --color-on-accent: #1a1714;
+    --color-display-accent: #f26b45;
+    --color-rule: color-mix(in srgb, #f2eadc 16%, transparent);
+    --color-rule-strong: color-mix(in srgb, #f2eadc 36%, transparent);
+    --color-control-border: #8a8174;
+    --color-selection: #ffc83d;
+    --color-on-selection: #1a1714;
+    --color-focus: #f2eadc;
+    --color-scrim: rgb(0 0 0 / 60%);
+    --color-danger: #ff8a6b;
+    --color-on-danger: #14110e;
+
+    --sport-swim: #6fa3dc;
+    --sport-bike: #d9d0c3;
+    --sport-run: #f26b45;
+    --sport-strength: #9a8f80;
+
+    --zone-1: #4a4034;
+    --zone-2: #ffc83d;
+    --zone-3: #eb9100;
+    --zone-4: #e4572e;
+    --zone-5: #b83c24;
+    --zone-on-1: #f2eadc;
+    --zone-on-2: #1a1714;
+    --zone-on-3: #1a1714;
+    --zone-on-4: #1a1714;
+    --zone-on-5: #f2eadc;
+
+    --status-on-plan: #5fbf86;
+    --status-partial: #ffc83d;
+    --status-partial-outline: #f2eadc;
+    --status-over: #a99bd6;
+    --status-missed: #c4baab;
+    --status-unplanned: #766d63;
+    --status-on-plan-text: #5fbf86;
+    --status-partial-text: #ffc83d;
+    --status-over-text: #a99bd6;
+    --status-missed-text: #c4baab;
+    --status-unplanned-text: #a89d8e;
+
+    --series-fitness: #5fc0c8;
+    --series-fatigue: #f59a23;
+    --series-form: #f2eadc;
+    --chart-grid: color-mix(in srgb, #f2eadc 12%, transparent);
+    --chart-axis: #a89d8e;
+  }
+
+  /* ---------- 5. Scales (theme independent) ---------- */
+  :root {
+    --space-0: 0;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    --radius-0: 0;
+    --radius-1: 2px;
+    --radius-2: 6px;
+    --radius-3: 14px;
+    --radius-pill: 999px;
+
+    --hairline: 1px;
+    --rule-weight: 2px;
+
+    /* Shadows are rare; hairline rules do the work. */
+    --shadow-none: none;
+    --shadow-sheet: 0 -1px 0 var(--color-rule-strong), 0 -12px 24px -16px rgb(26 23 20 / 28%);
+    --shadow-toast: 0 1px 0 var(--color-rule-strong), 0 8px 16px -10px rgb(26 23 20 / 30%);
+
+    --z-base: 0;
+    --z-sticky: 10;
+    --z-bar: 20;
+    --z-rail: 20;
+    --z-popover: 40;
+    --z-sheet: 50;
+    --z-toast: 60;
+    --z-tooltip: 70;
+
+    --focus-ring-width: 3px;
+    --focus-ring-offset: 2px;
+
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-out: cubic-bezier(0.1, 0.7, 0.2, 1);
+    --ease-lap: cubic-bezier(0.45, 0.05, 0.25, 1);
+  }
+
+  /* ---------- 6. Registers: about 15 tokens switch ---------- */
+  :root,
+  [data-register="athlete"] {
+    --font-display-wdth: 125;
+    --font-display-weight: 800;
+    --font-display-style: italic;
+    --text-base: 17px;
+    --type-ratio: 1.25;
+    --line-height-body: 1.5;
+    --font-number: var(--font-ui);
+    --density-pad-y: var(--space-3);
+    --density-pad-x: var(--space-4);
+    --density-gap: var(--space-4);
+    --row-h: 56px;
+    --target-min: 44px;
+    --radius-card: 14px;
+    --radius-control: 10px;
+    --card-bg: var(--color-surface);
+    --card-border: 0 solid transparent;
+    --dur-fast: 120ms;
+    --dur-base: 240ms;
+    --dur-slow: 400ms;
+    --dur-fill: 600ms;
+  }
+
+  [data-register="coach"] {
+    --font-display-wdth: 75;
+    --font-display-weight: 600;
+    --font-display-style: normal;
+    --text-base: 14px;
+    --type-ratio: 1.125;
+    --line-height-body: 1.4;
+    --font-number: var(--font-mono);
+    --density-pad-y: var(--space-1);
+    --density-pad-x: var(--space-2);
+    --density-gap: var(--space-2);
+    --row-h: 28px;
+    --target-min: 28px;
+    --radius-card: 2px;
+    --radius-control: 2px;
+    --card-bg: transparent;
+    --card-border: 1px solid var(--color-rule);
+    --dur-fast: 60ms;
+    --dur-base: 90ms;
+    --dur-slow: 120ms;
+    --dur-fill: 120ms;
+  }
+
+  /* Type scale derived from the register base and ratio. */
+  :root,
+  [data-register] {
+    --text-xs: max(11px, calc(var(--text-base) / var(--type-ratio) / var(--type-ratio)));
+    --text-sm: calc(var(--text-base) / var(--type-ratio));
+    --text-md: var(--text-base);
+    --text-lg: calc(var(--text-base) * var(--type-ratio));
+    --text-xl: calc(var(--text-base) * var(--type-ratio) * var(--type-ratio));
+    --text-2xl: calc(var(--text-base) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio));
+    --text-3xl: calc(var(--text-base) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio));
+    --text-4xl: calc(var(--text-base) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio));
+    --text-data: calc(var(--text-base) * 0.9);
+  }
+
+  [data-register="coach"] {
+    --text-data: 12.5px;
+  }
+
+  /* ---------- 7. Reduced motion zeroes every duration ---------- */
+  @media (prefers-reduced-motion: reduce) {
+    :root,
+    [data-register] {
+      --dur-fast: 0ms;
+      --dur-base: 0ms;
+      --dur-slow: 0ms;
+      --dur-fill: 0ms;
+    }
+  }
+}

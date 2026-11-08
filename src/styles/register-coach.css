@@ -1,0 +1,59 @@
+/* Coach register ("results sheet"): register-level defaults only. Components live elsewhere. */
+@layer register {
+  [data-register="coach"] {
+    font-size: var(--text-base);
+    line-height: var(--line-height-body);
+    background: var(--color-bg);
+    color: var(--color-text);
+    /* Hairlines at 14% ink (16% in dark, see --color-rule). */
+    --hairline-color: var(--color-rule);
+  }
+
+  [data-register="coach"] :is(h1, h2, h3) {
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-stretch: calc(var(--font-display-wdth) * 1%);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+    letter-spacing: 0.01em;
+  }
+
+  [data-register="coach"] h1 {
+    font-size: var(--text-2xl);
+  }
+
+  [data-register="coach"] h2 {
+    font-size: var(--text-xl);
+  }
+
+  [data-register="coach"] h3 {
+    font-size: var(--text-lg);
+  }
+
+  /* Small-caps style section labels sit on a rule. */
+  [data-register="coach"] :is(h4, [data-label]) {
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-stretch: calc(var(--font-display-wdth) * 1%);
+    font-weight: var(--font-display-weight);
+    font-size: var(--text-sm);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Numbers are monospace at 12.5 px and tabular. */
+  [data-register="coach"] :is(table, [data-numeric], td, th[scope="row"]) {
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  [data-register="coach"] :is(button, [role="button"], [role="tab"], select, input:not([type="checkbox"], [type="radio"])) {
+    min-block-size: var(--target-min);
+  }
+
+  [data-register="coach"] tr {
+    block-size: var(--row-h);
+    border-block-end: var(--hairline) solid var(--hairline-color);
+  }
+}

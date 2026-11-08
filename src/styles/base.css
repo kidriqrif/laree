@@ -1,0 +1,231 @@
+/* Reset and base styles. Layer order is declared in index.css. */
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  * {
+    margin: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    tab-size: 4;
+  }
+
+  body {
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img,
+  picture,
+  video,
+  canvas,
+  svg {
+    display: block;
+    max-width: 100%;
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+  }
+
+  button {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    overflow-wrap: break-word;
+  }
+
+  ul[role="list"],
+  ol[role="list"] {
+    list-style: none;
+    padding: 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
+  textarea {
+    resize: vertical;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+}
+
+@layer base {
+  html {
+    background: var(--color-bg);
+    color: var(--color-text);
+    scrollbar-color: var(--color-rule-strong) transparent;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-ui);
+    font-size: var(--text-base, 17px);
+    line-height: var(--line-height-body, 1.5);
+    font-weight: 400;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth, 125);
+    font-stretch: calc(var(--font-display-wdth, 125) * 1%);
+    font-weight: var(--font-display-weight, 800);
+    font-style: var(--font-display-style, italic);
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+    max-width: 68ch;
+  }
+
+  a {
+    color: var(--color-link);
+    text-decoration: underline;
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.18em;
+  }
+
+  a:hover {
+    text-decoration-thickness: 0.14em;
+  }
+
+  /* Numbers in data are tabular and, in tables, set in mono. */
+  table,
+  [data-numeric],
+  time,
+  output {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  code,
+  kbd,
+  samp,
+  pre,
+  [data-mono] {
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+
+  ::selection {
+    background: var(--color-selection);
+    color: var(--color-on-selection);
+  }
+
+  :focus {
+    outline: none;
+  }
+
+  :focus-visible,
+  [data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  hr {
+    border: 0;
+    border-top: var(--hairline) solid var(--color-rule);
+  }
+
+  /* Visually hidden, still read by assistive tech. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  @media (forced-colors: active) {
+    :focus-visible,
+    [data-focus-visible] {
+      outline: var(--focus-ring-width) solid Highlight;
+    }
+
+    a {
+      color: LinkText;
+    }
+
+    ::selection {
+      background: Highlight;
+      color: HighlightText;
+    }
+
+    /* Fill-only buttons would vanish without an edge. */
+    :where(button, [role="button"]) {
+      outline: 1px solid ButtonText;
+      outline-offset: -1px;
+    }
+
+    /* Compliance marks keep their shape and label; colour is not the carrier. */
+    [data-status] {
+      forced-color-adjust: none;
+      border: 1px solid CanvasText;
+    }
+  }
+}
+
+@layer base {
+  /* Coach results sheet prints black on white with hairlines. */
+  @media print {
+    html,
+    body,
+    [data-register] {
+      background: #fff;
+      color: #000;
+    }
+
+    a {
+      color: inherit;
+    }
+  }
+}

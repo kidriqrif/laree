@@ -1,0 +1,52 @@
+/* Athlete register ("race day"): register-level defaults only. Components live elsewhere. */
+@layer register {
+  [data-register="athlete"] {
+    font-size: var(--text-base);
+    line-height: var(--line-height-body);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  [data-register="athlete"] :is(h1, h2, h3) {
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-stretch: calc(var(--font-display-wdth) * 1%);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+    letter-spacing: -0.01em;
+    text-transform: none;
+  }
+
+  [data-register="athlete"] h1 {
+    font-size: var(--text-3xl);
+  }
+
+  [data-register="athlete"] h2 {
+    font-size: var(--text-2xl);
+  }
+
+  [data-register="athlete"] h3 {
+    font-size: var(--text-xl);
+  }
+
+  /* Interactive targets are never under 44 px. */
+  [data-register="athlete"] :is(button, [role="button"], [role="tab"], select, input:not([type="checkbox"], [type="radio"])) {
+    min-block-size: var(--target-min);
+    min-inline-size: var(--target-min);
+  }
+
+  /* Big numbers in the display face, quiet numbers in the UI face. */
+  [data-register="athlete"] [data-numeric="display"] {
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The lap-fill used by the track lap and progress rings. */
+  [data-register="athlete"] {
+    --lap-fill-duration: var(--dur-fill);
+    --lap-fill-ease: var(--ease-lap);
+  }
+}

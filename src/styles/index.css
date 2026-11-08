@@ -1,0 +1,6 @@
+@layer reset, tokens, base, register, components, utilities;
+
+@import "./tokens.css";
+@import "./base.css";
+@import "./register-athlete.css";
+@import "./register-coach.css";
