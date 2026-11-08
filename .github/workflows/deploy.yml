@@ -33,6 +33,9 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+      # Gate the upload: the manifest must be complete and the build must work under a sub-path.
+      - run: npm run check:manifest
+      - run: npm run check:base
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

@@ -22,4 +22,5 @@ Thumbs.db
 .impeccable/config.local.json
 
 # scratch
-.tmp/
+.tmp*/
+.tmp*

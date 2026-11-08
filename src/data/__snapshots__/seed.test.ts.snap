@@ -1,0 +1,34 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`determinism > matches the stored snapshot 1`] = `
+{
+  "counts": [
+    {
+      "activities": 143,
+      "badges": 8,
+      "checkIns": 109,
+      "flags": 6,
+      "id": "amir",
+      "planned": 253,
+    },
+    {
+      "activities": 104,
+      "badges": 6,
+      "checkIns": 106,
+      "flags": 9,
+      "id": "danial",
+      "planned": 201,
+    },
+    {
+      "activities": 102,
+      "badges": 4,
+      "checkIns": 102,
+      "flags": 6,
+      "id": "irfan",
+      "planned": 172,
+    },
+  ],
+  "digest": 1738640109,
+  "templates": 18,
+}
+`;

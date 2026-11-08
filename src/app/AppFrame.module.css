@@ -1,0 +1,85 @@
+@layer components {
+  .frame {
+    /* Height of the switcher bar. Both shells start below it. */
+    --switcher-h: 48px;
+    display: flex;
+    flex-direction: column;
+    min-block-size: 100dvh;
+  }
+
+  .body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+
+  .skip {
+    position: absolute;
+    inset-block-start: calc(-1 * var(--space-16));
+    inset-inline-start: var(--space-2);
+    z-index: var(--z-toast);
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-radius: var(--radius-control);
+  }
+
+  .skip:focus-visible {
+    inset-block-start: var(--space-2);
+  }
+
+  .standalone {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .standaloneHeader {
+    padding: var(--space-4);
+    border-block-end: var(--hairline) solid var(--color-rule);
+  }
+
+  .standaloneHeader a {
+    display: inline-flex;
+    min-block-size: var(--target-min);
+    align-items: center;
+  }
+
+  .standaloneMain {
+    flex: 1;
+    inline-size: 100%;
+    max-inline-size: 960px;
+    margin-inline: auto;
+    padding: var(--space-4);
+  }
+
+  /* Toast: bottom centre above the athlete bar, bottom left in the coach shell. */
+  .toastRegion {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: var(--space-4);
+    z-index: var(--z-toast);
+    display: flex;
+    justify-content: center;
+    padding-inline: var(--space-4);
+    pointer-events: none;
+  }
+
+  .frame:has([data-bar]) .toastRegion {
+    inset-block-end: calc(var(--space-4) + 78px + env(safe-area-inset-bottom));
+  }
+
+  .frame:has([data-register="coach"]) .toastRegion {
+    justify-content: flex-start;
+  }
+
+  .toast {
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-toast);
+    font-size: var(--text-sm);
+  }
+}

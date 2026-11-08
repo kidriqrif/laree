@@ -1,0 +1,192 @@
+@layer components {
+  .page {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    gap: var(--space-8);
+    max-inline-size: 960px;
+    margin-inline: auto;
+    padding: var(--space-6) var(--space-4) var(--space-12);
+    background: transparent;
+  }
+
+  /* Track lanes running off the page: four hairlines, decoration only. */
+  .lanes {
+    position: absolute;
+    inset-block: 0;
+    inset-inline: calc(-1 * var(--space-4));
+    z-index: -1;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--space-12) - var(--hairline)),
+      var(--color-rule) calc(var(--space-12) - var(--hairline)) var(--space-12)
+    );
+    mask-image: linear-gradient(to bottom, #000, transparent 70%);
+  }
+
+  .hero {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-4);
+  }
+
+  .title {
+    font-size: clamp(var(--text-3xl), 9vw, var(--text-4xl));
+    line-height: 1;
+  }
+
+  .lede {
+    font-size: var(--text-md);
+    max-inline-size: 52ch;
+  }
+
+  .continue {
+    padding-inline: var(--space-5);
+    background: var(--color-action);
+    color: var(--color-on-action);
+    border-radius: var(--radius-control);
+    font-weight: 700;
+    min-block-size: 48px;
+  }
+
+  .continue:hover {
+    background: var(--color-action-hover);
+  }
+
+  .cards {
+    display: grid;
+    gap: var(--space-5);
+    padding: 0;
+    list-style: none;
+  }
+
+  /* Race-bib card: paper stock, an inner ink rule, two pin holes and a tear line above the stub. */
+  .bib {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    inline-size: 100%;
+    min-block-size: 200px;
+    padding: var(--space-6) var(--space-5) 0;
+    text-align: start;
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+    transition:
+      transform var(--dur-base) var(--ease-out),
+      background var(--dur-base) var(--ease-standard);
+  }
+
+  .bib::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 2px solid var(--color-text);
+    border-radius: calc(var(--radius-card) - 4px);
+    pointer-events: none;
+  }
+
+  .bib:hover {
+    transform: translateY(-3px) rotate(-0.6deg);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  .bib:active {
+    transform: translateY(0);
+  }
+
+  .pin {
+    position: absolute;
+    inset-block-start: 14px;
+    inline-size: 12px;
+    block-size: 12px;
+    background: var(--color-bg);
+    border: 1.5px solid var(--color-text);
+    border-radius: var(--radius-pill);
+  }
+
+  .pin[data-side="start"] {
+    inset-inline-start: 14px;
+  }
+
+  .pin[data-side="end"] {
+    inset-inline-end: 14px;
+  }
+
+  .number {
+    justify-self: center;
+    font-size: var(--text-4xl);
+    line-height: 1;
+    color: var(--color-display-accent, var(--color-text));
+  }
+
+  .name {
+    margin-block-start: var(--space-2);
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-style: var(--font-display-style);
+    font-weight: var(--font-display-weight);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+  }
+
+  .blurb {
+    margin-block: var(--space-1) var(--space-4);
+    font-size: var(--text-md);
+  }
+
+  .stub {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-inline: calc(-1 * var(--space-2));
+    padding: var(--space-3) var(--space-2) var(--space-5);
+    border-block-start: 1.5px dashed var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-6);
+  }
+
+  .links a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--target-min);
+  }
+
+  @media (min-width: 768px) {
+    .cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* Bibs sit a little off the grid, like pinned paper. */
+    .cards li:nth-child(odd) .bib {
+      transform: rotate(-0.5deg);
+    }
+
+    .cards li:nth-child(even) .bib {
+      transform: rotate(0.5deg);
+    }
+
+    .cards li .bib:hover {
+      transform: translateY(-3px) rotate(0deg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bib:hover,
+    .cards li .bib:hover {
+      transform: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .bib {
+      outline: 1px solid ButtonText;
+    }
+  }
+}

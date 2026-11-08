@@ -1,0 +1,69 @@
+@layer components {
+  /* Standalone default: bottom centre. Athlete: above the bar. Coach: bottom right. */
+  .region {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: var(--space-4);
+    z-index: var(--z-toast);
+    display: flex;
+    justify-content: center;
+    padding-inline: var(--space-4);
+    pointer-events: none;
+  }
+
+  :global(body:has([data-bar])) .region {
+    inset-block-end: calc(var(--space-4) + 78px + env(safe-area-inset-bottom));
+  }
+
+  :global(body:has([data-register="coach"])) .region {
+    justify-content: flex-end;
+  }
+
+  .toast {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3) var(--space-4);
+    max-inline-size: 28rem;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-toast);
+    font-size: var(--text-sm);
+    pointer-events: auto;
+  }
+
+  .text {
+    margin: 0;
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .primary,
+  .secondary {
+    min-block-size: 44px;
+    padding-inline: var(--space-4);
+    border: var(--hairline) solid currentcolor;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .primary {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .primary:focus-visible,
+  .secondary:focus-visible {
+    outline: 2px solid var(--color-bg);
+    outline-offset: 2px;
+  }
+}

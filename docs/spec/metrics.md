@@ -413,7 +413,7 @@ function formBand(form: number): FormBand {
 
 Edges: −30.5 rounds to −31 (Overreaching); −30.4 rounds to −30 (Building); −10.6 is Building; −10.4 is Steady; 5.4 is Steady; 5.5 rounds to +6 (Fresh); 25.4 is Fresh; 25.5 rounds to +26 (Detraining).
 
-Every rule that compares Form, Fitness, Fatigue or Ramp with a limit, including the flag rules in `docs/spec/checkins-flags.md`, should compare the displayed, rounded value. The number on screen and the rule then always agree.
+Bands and other display rules compare the displayed, rounded value, so the number on screen and the label always agree. The flag rules in `docs/spec/checkins-flags.md` are the exception: they compare unrounded values, and the flag card adds a decimal place when rounding would hide the difference.
 
 Bands use the status palette, never the brand colours, and each band has a glyph as well as a colour.
 

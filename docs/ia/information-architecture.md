@@ -42,6 +42,7 @@ Indentation shows nesting. Every item carries its address.
 
 - Role picker `#/`
 - Athlete side (athlete shell, bottom bar)
+  - `#/athlete` and `#/athlete/` redirect to `#/athlete/today`
   - Today `#/athlete/today`
     - Log sheet `#/athlete/today?sheet=log`
     - Check-in sheet `#/athlete/today?sheet=check-in`
@@ -664,7 +665,7 @@ The route decides which side is shown. When the switcher disagrees, it follows t
 - A valid route with an unknown id keeps the shell and shows an item-level message, such as "We can't find that workout."
 - `?sheet` accepts `log` and `check-in`. Other values are dropped.
 - `?w` accepts whole numbers from -16 (the first history week) to 12 (the last plan week). Values outside that range are clamped. Non-numbers are dropped. The URL is rewritten either way.
-- `#/athlete` on its own is not in the route map, so it shows not-found today. Section 14 recommends a redirect.
+- `#/athlete` and `#/athlete/` redirect to `#/athlete/today`, like `#/coach` (decision 7 in section 14).
 
 ### 9.7 PWA shortcuts and start URL
 
@@ -806,7 +807,7 @@ The plan did not settle these structural details. Each is a recommendation the p
 4. Id-less coach routes write the resolved athlete id into the URL with a replace.
 5. Role follows route: the switcher follows the address and a toast says so.
 6. An unknown address under a side shows not-found inside that side's shell. An unknown id shows an item-level message.
-7. Open question: `#/athlete` alone is not in the route map. The recommendation is to redirect it to `#/athlete/today`, mirroring `#/coach`. Until the owner agrees, it shows not-found.
+7. `#/athlete` and `#/athlete/` redirect to `#/athlete/today`, mirroring `#/coach`. Decided; no longer open.
 8. Flags are coach-only. Athletes see their own check-in values against their own baseline in neutral words.
 9. Under 1024 px the coach side is fully read-only, including kudos and resolving flags. Light actions on small screens are a candidate for the MVP.
 10. AI features are absent, not disabled, when AI is not active for that athlete. The toggles in Me and Settings explain what turning AI on would add.

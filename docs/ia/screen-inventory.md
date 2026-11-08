@@ -192,7 +192,7 @@ Any unknown address, or a valid route with an unknown id.
 - **Purpose.** Say plainly that an address leads nowhere, and offer a way on.
 - **Main question.** "Where did I mean to go?"
 - **Data shown.**
-  - **Page not found:** the heading "Off course", the line "There's no page at #/coach/calender.", and links to the role picker, Today and Overview. Under `#/athlete/` or `#/coach/` it shows inside that side's shell. Elsewhere it uses the standalone frame.
+  - **Page not found:** the heading "Off course", the line "There's no page at #/coach/calender.", and links to the role picker, Today and Overview. Under `#/athlete/` or `#/coach/` it shows inside that side's shell. Elsewhere it uses the standalone frame. `#/athlete` and `#/athlete/` are not errors: they redirect to `#/athlete/today`, like `#/coach` to `#/coach/overview`.
   - **Item not found:** inside the shell, for example "We can't find that activity. It may have been deleted, made on another device, or removed by a reset." with a link to the section's main page.
 - **Primary action.** Go to the nearest main page: Today in the athlete shell, Overview in the coach shell, the role picker in the standalone frame.
 - **Secondary actions.** The other links.
