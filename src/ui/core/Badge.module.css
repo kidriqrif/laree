@@ -1,0 +1,90 @@
+@layer components {
+  .badge {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text);
+  }
+
+  .medal {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 56px;
+    block-size: 56px;
+  }
+
+  .disc {
+    display: grid;
+    place-items: center;
+    inline-size: 56px;
+    block-size: 56px;
+    box-sizing: border-box;
+    border-radius: var(--radius-pill);
+  }
+
+  [data-state="earned"] .disc {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    border: var(--rule-weight) solid var(--color-on-accent);
+  }
+
+  [data-state="locked"] .disc {
+    background: transparent;
+    color: var(--color-text-muted);
+    border: var(--rule-weight) dashed var(--color-text-muted);
+  }
+
+  /* Finish tape: 45 degree ink and paper stripes across the bottom of the medal. */
+  .ribbon {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-end: -3px;
+    z-index: 1;
+    block-size: 6px;
+    border: var(--hairline) solid var(--color-on-accent);
+    background: repeating-linear-gradient(
+      45deg,
+      var(--color-on-accent) 0 3px,
+      var(--color-accent) 3px 6px
+    );
+  }
+
+  .caption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: var(--text-sm);
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .state {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    font-weight: 400;
+  }
+
+  .count {
+    display: inline-grid;
+    place-items: center;
+    box-sizing: border-box;
+    min-inline-size: 18px;
+    block-size: 18px;
+    padding-inline: var(--space-1);
+    border-radius: var(--radius-pill);
+    background: var(--color-action);
+    color: var(--color-on-action);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  @media (forced-colors: active) {
+    [data-state="earned"] .disc {
+      border-color: CanvasText;
+    }
+  }
+}

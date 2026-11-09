@@ -13,6 +13,7 @@ import {
   SettingsIcon,
 } from '../ui/icons/index.ts'
 import { useRouteTitle } from './AppFrame.tsx'
+import { CoachKeyboard } from './keyboard/index.ts'
 import { ATHLETES, isAthleteId } from './people.ts'
 import { useViewer } from './viewer.ts'
 import styles from './CoachShell.module.css'
@@ -67,55 +68,57 @@ export default function CoachShell() {
   )
 
   return (
-    <div className={styles.shell} data-register="coach">
-      <header className={styles.topBar}>
-        <Link to="/" aria-label="Laree, role picker" className={styles.mark}>
-          <Logo variant="mark" size={28} />
-        </Link>
-        <p className={styles.section}>{section ?? 'Laree'}</p>
-        <button
-          type="button"
-          className={styles.sectionsButton}
-          aria-expanded={open}
-          aria-controls="coach-rail"
-          onClick={() => setOpen((o) => !o)}
-        >
-          <MenuIcon size={20} />
-          <span>Sections</span>
-        </button>
-      </header>
-      <nav id="coach-rail" className={styles.rail} data-open={open} aria-label="Coach sections">
-        <Link to="/" aria-label="Laree, role picker" className={styles.railLogo}>
-          <Logo size={28} />
-        </Link>
-        <ul role="list" className={styles.list}>
-          {TOP.map(link)}
-          <li>
-            <p className={styles.group} data-label>
-              Athletes
-            </p>
-            <ul role="list" className={styles.list}>
-              {ATHLETES.map((a, i) =>
-                link({
-                  to: `/coach/athlete/${a.id}`,
-                  label: a.name,
-                  icon: <span className={styles.initial}>{a.name.slice(0, 1)}</span>,
-                  hint: `g ${i + 1}`,
-                }),
-              )}
-            </ul>
-          </li>
-          {BOTTOM.map(link)}
-        </ul>
-      </nav>
-      <div className={styles.content}>
-        <p className={styles.readOnly} role="note">
-          Planning and editing need a screen at least 1024 px wide. Everything here is read-only.
-        </p>
-        <main id="main" tabIndex={-1} className={styles.main}>
-          <Outlet />
-        </main>
+    <CoachKeyboard>
+      <div className={styles.shell} data-register="coach">
+        <header className={styles.topBar}>
+          <Link to="/" aria-label="Laree, role picker" className={styles.mark}>
+            <Logo variant="mark" size={28} />
+          </Link>
+          <p className={styles.section}>{section ?? 'Laree'}</p>
+          <button
+            type="button"
+            className={styles.sectionsButton}
+            aria-expanded={open}
+            aria-controls="coach-rail"
+            onClick={() => setOpen((o) => !o)}
+          >
+            <MenuIcon size={20} />
+            <span>Sections</span>
+          </button>
+        </header>
+        <nav id="coach-rail" className={styles.rail} data-open={open} aria-label="Coach sections">
+          <Link to="/" aria-label="Laree, role picker" className={styles.railLogo}>
+            <Logo size={28} />
+          </Link>
+          <ul role="list" className={styles.list}>
+            {TOP.map(link)}
+            <li>
+              <p className={styles.group} data-label>
+                Athletes
+              </p>
+              <ul role="list" className={styles.list}>
+                {ATHLETES.map((a, i) =>
+                  link({
+                    to: `/coach/athlete/${a.id}`,
+                    label: a.name,
+                    icon: <span className={styles.initial}>{a.name.slice(0, 1)}</span>,
+                    hint: `g ${i + 1}`,
+                  }),
+                )}
+              </ul>
+            </li>
+            {BOTTOM.map(link)}
+          </ul>
+        </nav>
+        <div className={styles.content}>
+          <p className={styles.readOnly} role="note">
+            Planning and editing need a screen at least 1024 px wide. Everything here is read-only.
+          </p>
+          <main id="main" tabIndex={-1} className={styles.main}>
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </CoachKeyboard>
   )
 }

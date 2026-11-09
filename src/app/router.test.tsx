@@ -20,8 +20,6 @@ beforeEach(() => {
 afterEach(cleanup)
 
 const STUBS: [string, string, 'athlete' | 'coach' | 'standalone'][] = [
-  ['/brand', 'Brand board', 'standalone'],
-  ['/kit', 'UI kit gallery', 'standalone'],
   ['/reset', 'Reset demo data', 'standalone'],
   ['/athlete/today', 'Today', 'athlete'],
   ['/athlete/week', 'Week', 'athlete'],
@@ -63,6 +61,16 @@ describe('routes', () => {
     // The switcher shows on every route.
     expect(screen.getByRole('region', { name: 'Prototype controls' })).toBeTruthy()
   })
+
+  it('renders the brand board (a built page, not a stub)', async () => {
+    renderAt('/brand')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Brand board' }, { timeout: 15000 })).toBeTruthy()
+  }, 20000)
+
+  it('renders the kit gallery (a built page, not a stub)', async () => {
+    renderAt('/kit')
+    expect(await screen.findByRole('heading', { level: 1, name: 'UI kit' }, { timeout: 15000 })).toBeTruthy()
+  }, 20000)
 
   it.each([
     ['/nope', 'standalone'],

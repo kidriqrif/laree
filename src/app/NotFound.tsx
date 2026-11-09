@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router'
-import styles from './NotFound.module.css'
+import styles from './Fallback.module.css'
 
 export type NotFoundScope = 'athlete' | 'coach' | 'standalone'
 
-const MAIN: Record<NotFoundScope, { to: string; label: string }> = {
+/** Each side's main page: where a lost or crashed screen sends you. */
+export const MAIN: Record<NotFoundScope, { to: string; label: string }> = {
   athlete: { to: '/athlete/today', label: 'Go to Today' },
   coach: { to: '/coach/overview', label: 'Go to Overview' },
   standalone: { to: '/', label: 'Back to the role picker' },
@@ -15,14 +16,14 @@ export function NotFound({ scope }: { scope: NotFoundScope }) {
   const { pathname, search } = useLocation()
   const heading = useRef<HTMLHeadingElement>(null)
   // Move focus to the heading on every new address, including a second bad address in a row.
-  // oxlint-disable-next-line react/exhaustive-effect-dependencies
   useEffect(() => {
     heading.current?.focus()
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- pathname is the trigger, not an input
   }, [pathname])
   const main = MAIN[scope]
   const others = (Object.keys(MAIN) as NotFoundScope[]).filter((s) => s !== scope)
   return (
-    <section className={styles.notFound} data-screen="S6">
+    <section className={styles.screen} data-screen="S6">
       <h1 ref={heading} tabIndex={-1}>
         Off course
       </h1>

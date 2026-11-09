@@ -1,0 +1,53 @@
+@layer components {
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    box-sizing: border-box;
+    block-size: var(--space-8);
+    padding-inline: var(--space-3);
+    border: var(--hairline) solid var(--color-rule-strong);
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  :global([data-register="coach"]) .chip {
+    block-size: var(--space-5);
+    padding-inline: var(--space-2);
+    border-radius: var(--radius-1);
+  }
+
+  .glyph {
+    display: inline-flex;
+    flex: none;
+  }
+
+  .status {
+    border-color: currentcolor;
+  }
+
+  .sOnPlan {
+    color: var(--status-on-plan-text);
+  }
+
+  .sPartial {
+    color: var(--status-partial-text);
+  }
+
+  .sOver {
+    color: var(--status-over-text);
+  }
+
+  .sMissed {
+    color: var(--status-missed-text);
+  }
+
+  .sUnplanned {
+    color: var(--status-unplanned-text);
+  }
+}

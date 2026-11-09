@@ -1,0 +1,62 @@
+@layer components {
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-8) var(--space-4);
+    color: var(--color-text);
+    text-align: center;
+  }
+
+  .lanes {
+    color: var(--color-text-muted);
+  }
+
+  .title {
+    margin: 0;
+  }
+
+  .description {
+    max-inline-size: 36ch;
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-block-start: var(--space-2);
+  }
+
+  .hint {
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-size: var(--text-data);
+  }
+
+  /* Coach: a concise left-aligned line, no drawing. */
+  :global([data-register="coach"]) .empty {
+    align-items: flex-start;
+    padding: var(--space-4) var(--space-2);
+    text-align: start;
+  }
+
+  :global([data-register="coach"]) .lanes {
+    display: none;
+  }
+
+  :global([data-register="athlete"]) .title {
+    font-size: var(--text-2xl);
+  }
+
+  :global([data-register="coach"]) .title {
+    font-size: var(--text-md);
+  }
+
+  /* The hint is a keyboard shortcut: useful on desktop and for coaches only. */
+  :global([data-register="athlete"]) .hint {
+    display: none;
+  }
+}

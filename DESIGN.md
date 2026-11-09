@@ -130,7 +130,7 @@ Set display with `font-variation-settings: "wdth" N` and `font-stretch: N%`. Use
 | data | 15.3 px | 12.5 px mono |
 
 - Line height: body 1.5 (athlete), 1.4 (coach). Display 1.05.
-- Body column max 68ch. Never below 11 px, and nothing meaningful below 12 px on the coach side.
+- Body column max 34em, about 70 characters (the UI face has a wide zero, so a ch measure runs long). Never below 11 px, and nothing meaningful below 12 px on the coach side.
 - All numbers in data use `font-variant-numeric: tabular-nums`. Coach tables are mono with slashed zero.
 - Sentence case. Uppercase only for coach section labels (`h4`, 0.06em tracking).
 - Fonts are self-hosted with `font-display: swap`. Latin files only load unless other scripts appear.

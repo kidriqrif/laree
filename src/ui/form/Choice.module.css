@@ -1,0 +1,278 @@
+@layer components {
+  /* ---------- Segmented control ---------- */
+  .segments {
+    display: inline-flex;
+    align-self: flex-start;
+    max-inline-size: 100%;
+    box-sizing: border-box;
+    padding: 2px;
+    border: var(--hairline) solid var(--color-control-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-sunken);
+  }
+
+  :global([data-register="coach"]) .segments {
+    padding: 0;
+    border-radius: var(--radius-1);
+  }
+
+  .segment {
+    display: inline-flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-block-size: var(--target-min);
+    min-inline-size: var(--target-min);
+    padding-inline: var(--space-4);
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  :global([data-register="coach"]) .segment {
+    padding-inline: var(--space-3);
+    border-radius: 0;
+    box-shadow: inset 0 -2px 0 transparent;
+  }
+
+  .segment[data-hovered] {
+    background: var(--color-surface);
+  }
+
+  .segment[data-selected] {
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-weight: 700;
+  }
+
+  :global([data-register="coach"]) .segment[data-selected] {
+    background: transparent;
+    color: var(--color-text);
+    box-shadow: inset 0 -2px 0 var(--color-text);
+  }
+
+  .segment[data-focus-visible],
+  .radioCard[data-focus-visible],
+  .rate[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .segment[data-disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ---------- Radio cards ---------- */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: var(--density-gap);
+  }
+
+  .radioCard {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    box-sizing: border-box;
+    min-block-size: var(--target-min);
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: var(--hairline) solid var(--color-control-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .radioCard[data-hovered] {
+    border-color: var(--color-text);
+  }
+
+  .radioCard[data-selected] {
+    border-color: var(--color-text);
+    box-shadow: inset 0 0 0 1.5px var(--color-text);
+    background: var(--color-selection);
+    color: var(--color-on-selection);
+  }
+
+  .radioCard[data-disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .cardTitle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 700;
+  }
+
+  .cardMark {
+    flex: none;
+    inline-size: var(--space-4);
+    block-size: var(--space-4);
+    border: 1.5px solid currentcolor;
+    border-radius: var(--radius-pill);
+    box-sizing: border-box;
+  }
+
+  .radioCard[data-selected] .cardMark {
+    background: currentcolor;
+    box-shadow: inset 0 0 0 3px var(--color-selection);
+  }
+
+  .cardText {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .radioCard[data-selected] .cardText {
+    color: inherit;
+  }
+
+  /* ---------- Switch ---------- */
+  .switchRoot {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .switch {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-block-size: var(--target-min);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .track {
+    position: relative;
+    flex: none;
+    inline-size: var(--space-10);
+    block-size: var(--space-6);
+    box-sizing: border-box;
+    border: var(--hairline) solid var(--color-control-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-sunken);
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  :global([data-register="coach"]) .track {
+    inline-size: var(--space-8);
+    block-size: var(--space-5);
+    border-radius: var(--radius-1);
+  }
+
+  .thumb {
+    position: absolute;
+    inset-block: 2px;
+    inset-inline-start: 2px;
+    aspect-ratio: 1;
+    border-radius: var(--radius-pill);
+    background: var(--color-text);
+    transition: inset-inline-start var(--dur-fast) var(--ease-standard);
+  }
+
+  :global([data-register="coach"]) .thumb {
+    border-radius: var(--radius-1);
+  }
+
+  .switch[data-selected] .track {
+    background: var(--color-action);
+    border-color: var(--color-text);
+  }
+
+  .switch[data-selected] .thumb {
+    inset-inline-start: calc(100% - 2px);
+    translate: -100% 0;
+  }
+
+  .switch[data-focus-visible] .track {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .switch[data-disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ---------- Rating ---------- */
+  .rates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  .rate {
+    display: inline-flex;
+    flex: 1 0 var(--target-min);
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-block-size: var(--target-min);
+    min-inline-size: var(--target-min);
+    border: var(--hairline) solid var(--color-control-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-family: var(--font-number);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .rate[data-hovered] {
+    border-color: var(--color-text);
+  }
+
+  .rate[data-selected] {
+    background: var(--color-text);
+    border-color: var(--color-text);
+    color: var(--color-bg);
+  }
+
+  .rate[data-disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .segment,
+    .track,
+    .thumb {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .segment[data-selected],
+    .rate[data-selected] {
+      forced-color-adjust: none;
+      background: Highlight;
+      color: HighlightText;
+    }
+
+    .segment[data-focus-visible],
+    .radioCard[data-focus-visible],
+    .rate[data-focus-visible],
+    .switch[data-focus-visible] .track {
+      outline-color: Highlight;
+    }
+  }
+}

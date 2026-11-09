@@ -1,0 +1,201 @@
+@layer components {
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-sheet);
+    display: flex;
+    background: var(--color-scrim);
+    color: var(--color-text);
+    font-family: var(--font-ui);
+    font-size: var(--text-base);
+    line-height: var(--line-height-body);
+  }
+
+  .overlay[data-kind="sheet"] {
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .overlay[data-kind="drawer"] {
+    justify-content: flex-end;
+  }
+
+  .overlay[data-kind="dialog"] {
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+  }
+
+  .overlay[data-entering] {
+    animation: fade-in var(--dur-base) var(--ease-out);
+  }
+
+  .overlay[data-exiting] {
+    animation: fade-out var(--dur-fast) var(--ease-standard) forwards;
+  }
+
+  .modal {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    background: var(--color-surface);
+    color: var(--color-text);
+    min-block-size: 0;
+  }
+
+  .modal[data-kind="sheet"] {
+    inline-size: 100%;
+    max-inline-size: 640px;
+    max-block-size: 90dvh;
+    border-start-start-radius: var(--radius-card);
+    border-start-end-radius: var(--radius-card);
+    box-shadow: var(--shadow-sheet);
+    padding-block-end: env(safe-area-inset-bottom);
+  }
+
+  .modal[data-kind="sheet"][data-entering] {
+    animation: slide-up var(--dur-base) var(--ease-out);
+  }
+
+  .modal[data-kind="sheet"][data-exiting] {
+    animation: slide-down var(--dur-base) var(--ease-standard) forwards;
+  }
+
+  .modal[data-kind="drawer"] {
+    inline-size: min(420px, 100%);
+    block-size: 100%;
+    border-inline-start: var(--hairline) solid var(--color-rule-strong);
+    border-radius: 0;
+  }
+
+  .modal[data-kind="drawer"][data-entering] {
+    animation: slide-in var(--dur-fast) var(--ease-out);
+  }
+
+  .modal[data-kind="drawer"][data-exiting] {
+    animation: slide-out var(--dur-fast) var(--ease-standard) forwards;
+  }
+
+  .modal[data-kind="dialog"] {
+    inline-size: min(480px, 100%);
+    max-block-size: 90dvh;
+    border-radius: var(--radius-card);
+    border: var(--hairline) solid var(--color-rule-strong);
+  }
+
+  .dialog {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 0;
+    flex: 1 1 auto;
+    outline: none;
+  }
+
+  .grab {
+    align-self: center;
+    flex: none;
+    inline-size: 36px;
+    block-size: 4px;
+    margin-block-start: var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--color-rule-strong);
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex: none;
+    padding: var(--space-3) var(--space-4) var(--space-2);
+  }
+
+  :global([data-register="coach"]) .header {
+    border-block-end: var(--hairline) solid var(--color-rule);
+  }
+
+  .title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-stretch: calc(var(--font-display-wdth) * 1%);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+    font-size: 1.25em;
+    line-height: 1.2;
+  }
+
+  .body {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-2) var(--space-4) var(--space-4);
+  }
+
+  .footer {
+    display: flex;
+    flex: none;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-block-start: var(--hairline) solid var(--color-rule);
+  }
+
+  .popover {
+    z-index: var(--z-popover);
+    box-sizing: border-box;
+    min-inline-size: 180px;
+    max-inline-size: min(360px, 100vw - var(--space-8));
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: var(--hairline) solid var(--color-rule-strong);
+    border-radius: var(--radius-control);
+    font-family: var(--font-ui);
+    font-size: var(--text-base);
+  }
+
+  .popover[data-entering] {
+    animation: fade-in var(--dur-fast) var(--ease-out);
+  }
+
+  .popover[data-exiting] {
+    animation: fade-out var(--dur-fast) var(--ease-standard) forwards;
+  }
+
+  .popoverDialog {
+    padding: var(--space-3);
+    outline: none;
+  }
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
+
+  @keyframes fade-out {
+    to { opacity: 0; }
+  }
+
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+  }
+
+  @keyframes slide-down {
+    to { transform: translateY(100%); }
+  }
+
+  @keyframes slide-in {
+    from { transform: translateX(24px); opacity: 0; }
+  }
+
+  @keyframes slide-out {
+    to { transform: translateX(24px); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .overlay,
+    .modal,
+    .popover {
+      animation: none !important;
+    }
+  }
+}

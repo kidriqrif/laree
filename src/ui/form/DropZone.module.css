@@ -1,0 +1,58 @@
+@layer components {
+  .zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    box-sizing: border-box;
+    padding: var(--space-6) var(--density-pad-x);
+    border: 1.5px dashed var(--color-text-muted);
+    border-radius: var(--radius-card);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    text-align: center;
+  }
+
+  .zone[data-drop-target] {
+    border-style: solid;
+    border-color: var(--color-text);
+    background: var(--color-selection);
+    color: var(--color-on-selection);
+  }
+
+  .zone[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .zone[data-disabled] {
+    opacity: 0.4;
+  }
+
+  .title {
+    font-weight: 700;
+  }
+
+  .hint {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .zone[data-drop-target] .hint {
+    color: inherit;
+  }
+
+  .files {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+    font-family: var(--font-number);
+  }
+
+  @media (forced-colors: active) {
+    .zone[data-focus-visible] {
+      outline-color: Highlight;
+    }
+  }
+}

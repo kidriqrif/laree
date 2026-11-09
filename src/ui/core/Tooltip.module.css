@@ -1,0 +1,41 @@
+@layer components {
+  .tooltip {
+    z-index: var(--z-tooltip);
+    box-sizing: border-box;
+    max-inline-size: 240px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-control);
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-size: var(--text-sm);
+    line-height: 1.3;
+    box-shadow: var(--shadow-toast);
+  }
+
+  .tooltip[data-entering] {
+    animation: tip-in var(--dur-fast) var(--ease-out);
+  }
+
+  .tooltip[data-exiting] {
+    animation: tip-in var(--dur-fast) var(--ease-out) reverse;
+  }
+
+  @keyframes tip-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tooltip[data-entering],
+    .tooltip[data-exiting] {
+      animation: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .tooltip {
+      border: 1px solid CanvasText;
+    }
+  }
+}

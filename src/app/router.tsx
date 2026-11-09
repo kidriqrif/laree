@@ -2,8 +2,9 @@ import type { ComponentType } from 'react'
 import { createHashRouter, redirect, type RouteObject } from 'react-router'
 import { AppFrame, StandaloneFrame } from './AppFrame.tsx'
 import { AthleteShell } from './AthleteShell.tsx'
-import { NotFound } from './NotFound.tsx'
+import { NotFound, type NotFoundScope } from './NotFound.tsx'
 import { RolePicker } from './RolePicker.tsx'
+import { RootError, RouteError } from './RouteError.tsx'
 
 type Loader = () => Promise<{ default: ComponentType }>
 
@@ -13,6 +14,11 @@ const page =
   async (): Promise<{ Component: ComponentType }> => ({ Component: (await load()).default })
 
 const title = (t: string) => ({ title: t })
+
+/** A crashed page renders its error inside this layer, so the frame or shell around it keeps working. */
+const guarded = (scope: NotFoundScope, children: RouteObject[]): RouteObject[] => [
+  { errorElement: <RouteError scope={scope} />, children },
+]
 
 const athleteRoutes: RouteObject[] = [
   { index: true, loader: () => redirect('/athlete/today') },
@@ -76,23 +82,24 @@ const coachRoutes: RouteObject[] = [
 export const routes: RouteObject[] = [
   {
     element: <AppFrame />,
+    errorElement: <RootError />,
     children: [
       {
         element: <StandaloneFrame />,
-        children: [
+        children: guarded('standalone', [
           { index: true, element: <RolePicker />, handle: title('Role picker') },
           { path: 'brand', lazy: page(() => import('../features/shared/brand/BrandPage.tsx')), handle: title('Brand board') },
           { path: 'kit', lazy: page(() => import('../features/shared/kit/KitPage.tsx')), handle: title('UI kit') },
           { path: 'reset', lazy: page(() => import('../features/shared/reset/ResetPage.tsx')), handle: title('Reset demo data') },
           { path: '*', element: <NotFound scope="standalone" />, handle: title('Not found') },
-        ],
+        ]),
       },
-      { path: 'athlete', element: <AthleteShell />, children: athleteRoutes },
+      { path: 'athlete', element: <AthleteShell />, children: guarded('athlete', athleteRoutes) },
       {
         path: 'coach',
         // The coach shell is a separate chunk: athletes never download it.
         lazy: async () => ({ Component: (await import('./CoachShell.tsx')).default }),
-        children: coachRoutes,
+        children: guarded('coach', coachRoutes),
       },
     ],
   },

@@ -1,0 +1,266 @@
+/* Track lap paint. Geometry lives in TrackLap.tsx (docs/spec/gamification.md 5.3); colour lives here. */
+@layer components {
+  .root {
+    /* Unfilled lane: a tint of the text colour, so lanes read on the page and on a card, light and dark. */
+    --lap-lane: var(--color-rule);
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    min-inline-size: 0;
+    color: var(--color-text);
+  }
+
+  .root[data-size="full"] {
+    gap: var(--space-3);
+  }
+
+  .root [data-sport="swim"] {
+    --lap-sport: var(--sport-swim);
+  }
+
+  .root [data-sport="bike"] {
+    --lap-sport: var(--sport-bike);
+  }
+
+  .root [data-sport="run"] {
+    --lap-sport: var(--sport-run);
+  }
+
+  .root [data-sport="strength"] {
+    --lap-sport: var(--sport-strength);
+  }
+
+  /* ---------- Drawing ---------- */
+
+  .svg {
+    display: block;
+    max-inline-size: 100%;
+    block-size: auto;
+  }
+
+  .root[data-size="full"] .svg {
+    inline-size: 100%;
+  }
+
+  .lane {
+    fill: none;
+    stroke: var(--lap-lane);
+  }
+
+  .outline {
+    fill: none;
+    stroke: var(--color-rule-strong);
+  }
+
+  .start,
+  .finish {
+    stroke: var(--color-text);
+  }
+
+  /* The transition is set inline (TrackLap.tsx), so it can be dropped for caution and reduced motion. */
+  .fill {
+    fill: none;
+    stroke: var(--lap-sport);
+  }
+
+  .hatch {
+    fill: none;
+    opacity: 0.3;
+  }
+
+  .hatchLine {
+    fill: var(--color-bg);
+  }
+
+  .light {
+    fill: var(--color-accent);
+    stroke: var(--color-on-accent);
+  }
+
+  .number {
+    fill: var(--color-text);
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-stretch: calc(var(--font-display-wdth) * 1%);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .caption,
+  .plan,
+  .note {
+    font-family: var(--font-ui);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  .caption {
+    fill: var(--color-text-muted);
+  }
+
+  .plan {
+    fill: var(--color-text);
+  }
+
+  .note {
+    fill: var(--color-text-muted);
+    font-weight: 700;
+  }
+
+  /* ---------- Key (compact) and legend (full) ---------- */
+
+  .key {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+    line-height: var(--line-height-body);
+  }
+
+  .item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    white-space: nowrap;
+  }
+
+  .legend {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+    line-height: var(--line-height-body);
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--space-2);
+    padding-block: var(--space-1);
+    border-block-end: var(--hairline) solid var(--color-rule);
+  }
+
+  .row:last-child {
+    border-block-end: 0;
+  }
+
+  .aside {
+    padding-block: var(--space-1);
+    color: var(--color-text-muted);
+  }
+
+  .label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    min-inline-size: 0;
+  }
+
+  .pct {
+    font-family: var(--font-number);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums lining-nums;
+    text-align: end;
+  }
+
+  .over {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-inline-start: var(--space-2);
+    color: var(--status-partial-text);
+  }
+
+  .mark,
+  .dot,
+  .caution {
+    flex: none;
+    inline-size: 1.2em;
+    block-size: 1.2em;
+  }
+
+  .dot {
+    inline-size: 0.8em;
+    block-size: 0.8em;
+  }
+
+  .markLane {
+    fill: none;
+    stroke: var(--lap-lane);
+  }
+
+  .markLane[data-on] {
+    stroke: var(--lap-sport);
+  }
+
+  .caution {
+    color: var(--status-partial-text);
+  }
+
+  /* ---------- Status line under the lap ---------- */
+
+  .status {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-inline-size: none;
+    margin: 0;
+    font-size: var(--text-sm);
+    line-height: var(--line-height-body);
+    color: var(--color-text);
+  }
+
+  .status[data-tone="muted"] {
+    color: var(--color-text-muted);
+  }
+
+  .status > svg {
+    flex: none;
+    inline-size: 1.2em;
+    block-size: 1.2em;
+  }
+
+  /* Belt and braces for the inline transition: under reduced motion, fills jump. */
+  @media (prefers-reduced-motion: reduce) {
+    .fill,
+    .hatch {
+      transition: none !important;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .lane,
+    .markLane {
+      stroke: GrayText;
+    }
+
+    .fill,
+    .markLane[data-on],
+    .start,
+    .finish,
+    .outline {
+      stroke: CanvasText;
+    }
+
+    .hatchLine {
+      fill: Canvas;
+    }
+
+    .light {
+      fill: Canvas;
+      stroke: CanvasText;
+    }
+
+    .number,
+    .caption,
+    .plan,
+    .note {
+      fill: CanvasText;
+    }
+  }
+}

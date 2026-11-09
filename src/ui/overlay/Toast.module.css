@@ -1,0 +1,78 @@
+@layer components {
+  .region {
+    position: fixed;
+    z-index: var(--z-toast);
+    inset-inline: var(--space-4);
+    inset-block-end: calc(var(--space-16) + var(--space-4) + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+    outline: none;
+  }
+
+  :global([data-register="coach"]) .region {
+    inset-inline-end: auto;
+    inset-block-end: var(--space-4);
+    align-items: flex-start;
+  }
+
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    box-sizing: border-box;
+    max-inline-size: min(440px, 100%);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-toast);
+    font-family: var(--font-ui);
+    font-size: var(--text-base);
+    pointer-events: auto;
+    outline: none;
+    animation: toast-in var(--dur-base) var(--ease-out);
+  }
+
+  .toast[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--color-accent);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .content {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+
+  .message {
+    display: block;
+  }
+
+  .toast .action {
+    color: var(--color-accent);
+    box-shadow: none;
+  }
+
+  .toast .dismiss {
+    color: var(--color-bg);
+  }
+
+  .toast .action[data-focus-visible],
+  .toast .dismiss[data-focus-visible] {
+    outline-color: var(--color-accent);
+  }
+
+  @keyframes toast-in {
+    from { transform: translateY(8px); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .toast {
+      animation: none;
+    }
+  }
+}

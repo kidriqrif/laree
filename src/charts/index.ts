@@ -1,0 +1,24 @@
+// Chart kit public parts. T6.5 appends its exports below.
+export { Axis } from './Axis.tsx';
+export type { AxisProps, AxisTick } from './Axis.tsx';
+export { Bars } from './Bars.tsx';
+export type { BarDatum, BarsProps } from './Bars.tsx';
+export { Bullet } from './Bullet.tsx';
+export type { BulletBand, BulletProps } from './Bullet.tsx';
+export { ChartFrame } from './ChartFrame.tsx';
+export type { ChartFrameProps, ChartTable } from './ChartFrame.tsx';
+export { Sparkline } from './Sparkline.tsx';
+export type { SparklineProps } from './Sparkline.tsx';
+export { ZoneBar } from './ZoneBar.tsx';
+export type { ZoneBarProps } from './ZoneBar.tsx';
+export { useSize } from './useSize.ts';
+export * from './format.ts';
+export * from './scales.ts';
+export { PMC, FORM_BAND_LABEL } from './PMC.tsx';
+export type { PMCProps, PMCRace } from './PMC.tsx';
+export { Heatmap } from './Heatmap.tsx';
+export type { HeatCell, HeatColumn, HeatLegendItem, HeatLevel, HeatmapProps, HeatRow } from './Heatmap.tsx';
+export { Curve, fmtSpan } from './Curve.tsx';
+export type { CurvePoint, CurveProps } from './Curve.tsx';
+export { TrackLap } from './TrackLap.tsx';
+export type { TrackLapProps, TrackLapSize } from './TrackLap.tsx';

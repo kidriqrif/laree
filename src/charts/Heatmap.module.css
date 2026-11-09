@@ -1,0 +1,151 @@
+@layer components {
+  .wrap {
+    --heat-cell-w: 28px;
+    --heat-cell-h: 28px;
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  :global([data-register="athlete"]) .wrap {
+    --heat-cell-w: 44px;
+    --heat-cell-h: 44px;
+  }
+
+  .scroll {
+    overflow-x: auto;
+    padding: 2px;
+  }
+
+  .grid {
+    border-collapse: separate;
+    border-spacing: 2px;
+    font-size: var(--text-xs);
+  }
+
+  .corner {
+    padding: 0;
+  }
+
+  .colHead {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    padding-bottom: var(--space-1);
+  }
+
+  .rowHead {
+    text-align: left;
+    padding-right: var(--space-2);
+    color: var(--color-text);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .cell {
+    min-width: var(--heat-cell-w);
+    height: var(--heat-cell-h);
+    padding: 0;
+    text-align: center;
+    vertical-align: middle;
+    border-radius: var(--radius-1);
+    background: var(--zone-1);
+    color: var(--zone-on-1);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+
+  .cell[data-level="1"] {
+    background: var(--zone-2);
+    color: var(--zone-on-2);
+  }
+
+  .cell[data-level="2"] {
+    background: var(--zone-3);
+    color: var(--zone-on-3);
+  }
+
+  .cell[data-level="3"] {
+    background: var(--zone-4);
+    color: var(--zone-on-4);
+  }
+
+  .cell[data-level="4"] {
+    background: var(--zone-5);
+    color: var(--zone-on-5);
+  }
+
+  .hollow {
+    background: transparent;
+    border: var(--hairline, 1px) dashed var(--color-control-border);
+    color: var(--color-text-muted);
+  }
+
+  .cell:hover {
+    outline: var(--hairline, 1px) solid var(--color-text);
+    outline-offset: -1px;
+  }
+
+  .cell:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 1px;
+  }
+
+  .glyph {
+    font-weight: 700;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .chip {
+    width: var(--space-3);
+    height: var(--space-3);
+    border-radius: var(--radius-1);
+    background: var(--zone-1);
+  }
+
+  .chip[data-level="1"] {
+    background: var(--zone-2);
+  }
+
+  .chip[data-level="2"] {
+    background: var(--zone-3);
+  }
+
+  .chip[data-level="3"] {
+    background: var(--zone-4);
+  }
+
+  .chip[data-level="4"] {
+    background: var(--zone-5);
+  }
+
+  .chip.hollow {
+    background: transparent;
+  }
+
+  .empty {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+}

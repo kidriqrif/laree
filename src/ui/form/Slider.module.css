@@ -1,0 +1,142 @@
+@layer components {
+  .slider {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-inline-size: 0;
+    color: var(--color-text);
+  }
+
+  .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+
+  .output {
+    font-family: var(--font-number);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  .track {
+    position: relative;
+    inline-size: 100%;
+    min-block-size: var(--target-min);
+    touch-action: none;
+  }
+
+  .rail {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    block-size: var(--space-2);
+    translate: 0 -50%;
+    border: var(--hairline) solid var(--color-control-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-surface-sunken);
+    box-sizing: border-box;
+  }
+
+  .fill {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    border-radius: inherit;
+    background: var(--color-action);
+  }
+
+  .thumb {
+    inset-block-start: 50%;
+    inline-size: var(--space-6);
+    block-size: var(--space-6);
+    box-sizing: border-box;
+    border: 2px solid var(--color-text);
+    border-radius: var(--radius-pill);
+    background: var(--color-bg);
+    cursor: grab;
+  }
+
+  :global([data-register="coach"]) .thumb {
+    inline-size: var(--space-4);
+    block-size: var(--space-5);
+    border-radius: var(--radius-1);
+  }
+
+  .thumb[data-dragging] {
+    background: var(--color-action);
+    cursor: grabbing;
+  }
+
+  .thumb[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .slider[data-disabled] {
+    opacity: 0.4;
+  }
+
+  /* ---------- Phase slider ---------- */
+  .phaseTrack {
+    position: relative;
+    inline-size: 100%;
+    min-block-size: calc(var(--target-min) + var(--space-8));
+  }
+
+  .segments {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: var(--space-2);
+    block-size: var(--space-8);
+    display: flex;
+    border: var(--hairline) solid var(--color-text);
+    border-radius: var(--radius-control);
+    overflow: hidden;
+    background: var(--color-surface-sunken);
+  }
+
+  .segment {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-inline-size: 0;
+    padding-inline: var(--space-2);
+    overflow: hidden;
+    font-size: var(--text-xs);
+    line-height: 1.2;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .segment:nth-child(even) {
+    background: var(--color-surface);
+  }
+
+  .segment + .segment {
+    border-inline-start: var(--hairline) solid var(--color-text);
+  }
+
+  .segName {
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .segWeeks {
+    font-family: var(--font-number);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-muted);
+  }
+
+  .phaseThumb {
+    inset-block-start: calc(var(--space-2) + var(--space-8) + var(--space-3));
+  }
+
+  @media (forced-colors: active) {
+    .thumb[data-focus-visible] {
+      outline-color: Highlight;
+    }
+  }
+}

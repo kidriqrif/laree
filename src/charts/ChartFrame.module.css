@@ -1,0 +1,93 @@
+@layer components {
+  .frame {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    min-width: 0;
+    color: var(--color-text);
+  }
+
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .toggle {
+    min-height: var(--target-min, 28px);
+    padding: 0 var(--space-2);
+    border: var(--hairline, 1px) solid var(--color-control-border);
+    border-radius: var(--radius-1);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--text-xs);
+    cursor: pointer;
+  }
+
+  .toggle[data-register="athlete"],
+  :global([data-register="athlete"]) .toggle {
+    min-height: 44px;
+  }
+
+  .toggle:hover {
+    background: var(--color-surface-sunken);
+  }
+
+  .toggle:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .body {
+    min-width: 0;
+  }
+
+  .tableWrap {
+    overflow-x: auto;
+  }
+
+  .table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table caption {
+    text-align: left;
+    color: var(--color-text-muted);
+    padding-bottom: var(--space-1);
+  }
+
+  .table th,
+  .table td {
+    padding: var(--space-1) var(--space-2);
+    border-bottom: var(--hairline, 1px) solid var(--color-rule);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .table th:first-child {
+    text-align: left;
+    font-family: var(--font-ui);
+    font-weight: 500;
+  }
+
+  .table td {
+    font-family: var(--font-mono);
+  }
+
+  .inline {
+    display: inline-block;
+    vertical-align: middle;
+  }
+}

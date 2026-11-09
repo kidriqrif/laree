@@ -1,0 +1,20 @@
+@layer components {
+  .card {
+    box-sizing: border-box;
+    padding: var(--density-pad-y) var(--density-pad-x);
+    border: var(--card-border);
+    border-radius: var(--radius-card);
+    background: var(--card-bg);
+    color: var(--color-text);
+  }
+
+  .flush {
+    padding: 0;
+  }
+
+  @media (forced-colors: active) {
+    .card {
+      border: 1px solid CanvasText;
+    }
+  }
+}

@@ -1,0 +1,112 @@
+@layer components {
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-inline-size: 0;
+    font-size: var(--text-base);
+    color: var(--color-text);
+  }
+
+  .label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  .hint {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .error {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-danger);
+  }
+
+  .error::before {
+    content: "!";
+    display: inline-block;
+    inline-size: 1.25em;
+    font-weight: 800;
+  }
+
+  /* Shared box for every text-like control: height follows the register. */
+  .control {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: var(--space-12);
+    min-block-size: var(--target-min);
+    padding-inline: var(--density-pad-x);
+    border: var(--hairline) solid var(--color-control-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font: inherit;
+    transition: border-color var(--dur-fast) var(--ease-standard);
+  }
+
+  :global([data-register="coach"]) .control {
+    block-size: var(--row-h);
+  }
+
+  .control[data-hovered] {
+    border-color: var(--color-rule-strong);
+  }
+
+  .control[data-focus-within],
+  .control[data-focus-visible],
+  .control[data-focused] {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .control[data-invalid] {
+    border-color: var(--color-danger);
+  }
+
+  .control[data-disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .input {
+    flex: 1;
+    min-inline-size: 0;
+    block-size: 100%;
+    padding: 0;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+  }
+
+  .input::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .numeric {
+    text-align: end;
+    font-family: var(--font-number);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .unit {
+    flex: none;
+    margin-inline-start: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  @media (forced-colors: active) {
+    .control[data-focus-within],
+    .control[data-focus-visible],
+    .control[data-focused] {
+      outline-color: Highlight;
+    }
+  }
+}

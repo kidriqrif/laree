@@ -107,9 +107,16 @@
     text-wrap: balance;
   }
 
-  p {
+  p,
+  li,
+  dd,
+  figcaption {
     text-wrap: pretty;
-    max-width: 68ch;
+  }
+
+  /* About 70 characters. The UI face has a wide zero, so a ch measure ran to about 90. */
+  p {
+    max-width: 34em;
   }
 
   a {

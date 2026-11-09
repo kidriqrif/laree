@@ -1,0 +1,14 @@
+@layer components {
+  .icon {
+    inline-size: var(--space-12);
+    padding-inline: 0;
+  }
+
+  :global([data-register="coach"]) .icon {
+    inline-size: var(--row-h);
+  }
+
+  .icon svg {
+    flex: none;
+  }
+}

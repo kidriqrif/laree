@@ -1,0 +1,20 @@
+@layer components {
+  .line {
+    stroke: var(--chart-axis);
+    stroke-width: var(--hairline, 1px);
+    shape-rendering: crispEdges;
+  }
+
+  .grid {
+    stroke: var(--chart-grid);
+    stroke-width: var(--hairline, 1px);
+    shape-rendering: crispEdges;
+  }
+
+  .label {
+    fill: var(--chart-axis);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+}
