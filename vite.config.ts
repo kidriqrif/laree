@@ -46,6 +46,9 @@ export default defineConfig({
   build: { target: 'es2022' },
   test: {
     environment: 'happy-dom',
+    setupFiles: ['./src/test/setup.ts'],
+    // Above the 5 s async wait in the setup file, so a slow query fails with its own message.
+    testTimeout: 20_000,
     include: ['src/**/*.test.{ts,tsx}', 'brand/**/*.test.ts', 'scripts/**/*.test.ts'],
     alias: {
       'virtual:pwa-register/react': fileURLToPath(new URL('./src/app/pwa/registerStub.ts', import.meta.url)),
