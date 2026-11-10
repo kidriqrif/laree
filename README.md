@@ -1,5 +1,7 @@
 # Laree
 
+**Every lane counts.**
+
 Training planner for triathlon, running and cycling. Light and fun for the athlete, built like an instrument for the coach.
 
 *Laree* (la-REE) is a play on the Malay word *lari*, "run".

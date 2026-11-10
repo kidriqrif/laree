@@ -84,13 +84,13 @@ function ogImage(tagFont: Outliner): string {
   const top = 92;
   const word = path(C.track, placePath(g.track, s, left, top)) + path(C.ink, placePath(g.letters, s, left, top));
 
-  const tag = tagFont('Lap by lap.', 64, left, top + g.baseline * s + 116);
+  const tag = tagFont('Every lane counts.', 64, left, top + g.baseline * s + 116);
 
   return doc({
     w: W,
     h: H,
     viewBox: `0 0 ${W} ${H}`,
-    title: 'Laree. Lap by lap.',
+    title: 'Laree. Every lane counts.',
     body: rect(0, 0, W, H, C.paper) + path(C.track, bend) + word + path(C.ink, tag.d),
   });
 }

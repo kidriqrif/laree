@@ -146,7 +146,14 @@ export const RULES: { title: string; body: string }[] = [
   { title: 'No effects', body: 'No gradients, shadows, glows, bevels or 3D, and no purple in brand artwork.' },
 ]
 
-export const TAGLINES: { line: string; job: string }[] = [
-  { line: 'Lap by lap.', job: 'The tagline. Fitness is built one session and one week at a time. It sits under the wordmark on the social image, in store listings and on sign-in.' },
-  { line: 'Every lane counts.', job: 'The idea behind the logo. Every athlete matters equally, just as every lane runs the same distance. Use it where the logo is explained.' },
+/** The tagline, chosen by the product owner in November 2026. */
+export const TAGLINE = {
+  line: 'Every lane counts.',
+  meaning: 'Every athlete matters equally, just as every lane in the logo runs the same distance.',
+}
+
+export const TAGLINE_RULES: { title: string; body: string }[] = [
+  { title: 'Where it goes', body: 'Under the wordmark on the social image, in store listings and on sign-in, and wherever the logo is explained.' },
+  { title: 'How to write it', body: 'Sentence case, with its full stop. In artwork, set it in Anybody at width 125, weight 800, italic.' },
+  { title: 'Not these', body: 'Never "Lari lah" or "Jom lari": apps called Lari La and JomRun already exist. "Lap by lap." was the other candidate and is not a tagline.' },
 ]

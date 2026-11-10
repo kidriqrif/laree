@@ -93,7 +93,7 @@ Structure, routes, flows and naming live in `docs/ia/information-architecture.md
 - **Purpose.** Let a visitor choose who to view the prototype as, and say plainly what the prototype is.
 - **Main question.** "Who do I want to see Laree as?"
 - **Data shown.**
-  1. The Laree wordmark, a tagline candidate, and one line: "A training planner for triathlon, running and cycling. This is a prototype with made-up data, kept only on this device."
+  1. The Laree wordmark, the tagline ("Every lane counts."), and one line: "A training planner for triathlon, running and cycling. This is a prototype with made-up data, kept only on this device."
   2. "Continue as Amir" (or whichever role was last used), for returning visitors.
   3. Four role cards. Coach: "Plan and review the team. Best on a laptop." Amir: "70.3 triathlete. Teluk Half in 10 weeks." Danial: "Marathoner. Kota Marathon in 12 weeks." Irfan: "Gran-fondo cyclist. Cameron Gran Fondo in 9 weeks." The weeks to go come from the data.
   4. Links: Brand board, UI kit, Reset demo data.
@@ -133,7 +133,7 @@ A bar at the top of every route.
   2. Icons: app icon, maskable icon, monochrome icon, and favicons at 32 and 16 px. The 1200 × 630 social image.
   3. Colour: the palette with names, hex values and contrast pairs; sport colours; the intensity heat ramp from sand to oxblood; status colours with their glyphs.
   4. Type: Anybody in expanded italic (race day) and condensed (results sheet); Atkinson Hyperlegible Next and Atkinson Hyperlegible Mono.
-  5. The icon set, voice samples and tagline candidates ("Lap by lap." and "Every lane counts.").
+  5. The icon set, voice samples and the tagline ("Every lane counts.").
 - **Primary action.** Download an asset as SVG or PNG.
 - **Secondary actions.** Copy a hex value. Jump to a section. Switch the theme to see dark variants.
 - **States.**

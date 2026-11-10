@@ -164,14 +164,17 @@ Two product rules shape the copy as well:
 
 In running text, write **Laree**: a capital L, then lowercase. Never write LAREE, Lari or Larée. The lowercase "laree" belongs to the logo only. The name is said la-REE.
 
-## Taglines
+## Tagline
 
-There are two lines, and each has a job.
+**Every lane counts.**
 
-- **Lap by lap.** This is the tagline. It is about patience: fitness is built one session and one week at a time. It sits under the wordmark on the social image, in store listings and on the sign-in screen.
-- **Every lane counts.** This is the idea behind the brand. Use it where the logo is explained, such as the about page, the coach's onboarding or a slide in a talk. It says that every athlete matters equally, just as every lane in the logo runs the same distance.
+This is the tagline, and it is also the idea behind the brand: every athlete matters equally, just as every lane in the logo runs the same distance. The product owner chose it in November 2026.
 
-The recommendation is "Lap by lap." as the tagline, with "Every lane counts." as the line that explains the logo. [PRODUCT.md](../../PRODUCT.md) lists the tagline as undecided, so the product owner has the final word.
+- It sits under the wordmark on the social image, in store listings and on the sign-in screen. In the prototype it sits under the logo on the role picker.
+- Use it wherever the logo is explained, such as the about page, the coach's onboarding or a slide in a talk.
+- Write it in sentence case, with its full stop. In artwork it is set in Anybody at width 125, weight 800, italic.
+
+"Lap by lap." was the other candidate. It is not a tagline, so never set it under the wordmark.
 
 Never use "Lari lah" or "Jom lari". Apps called "Lari La" and JomRun already exist, and a line like that would read as theirs.
 
@@ -200,7 +203,7 @@ Never use "Lari lah" or "Jom lari". Apps called "Lari La" and JomRun already exi
 
 **Favicons.** At 16, 32 and 48 px a four-lane bend cannot be drawn honestly, so the favicons are separate drawings in whole pixels. Each is an upright two-lane L on an ink tile, with lane widths chosen so that every straight edge lands on a pixel. The bend is tightened so the L reads as a letter rather than a hook. The stagger survives at this size: in each favicon, both lanes run the same distance. `public/favicon.ico` holds the 16, 32 and 48 px drawings, and `public/favicon.svg` is the 32 px drawing.
 
-**Social image.** The social image (`public/og.png`, 1200 × 630) puts the wordmark and "Lap by lap." on paper, with a large four-lane bend wrapping the lower right corner.
+**Social image.** The social image (`public/og.png`, 1200 × 630) puts the wordmark and "Every lane counts." on paper, with a large four-lane bend wrapping the lower right corner.
 
 Add these lines to the `<head>` of `index.html`. The build uses `base: './'`, so the paths are relative. Open Graph needs an absolute URL, so replace the placeholder with the deployed address.
 
@@ -212,7 +215,7 @@ Add these lines to the `<head>` of `index.html`. The build uses `base: './'`, so
 <meta name="theme-color" content="#FBF6EE" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#14110E" media="(prefers-color-scheme: dark)" />
 <meta property="og:image" content="https://DEPLOYED-ADDRESS/og.png" />
-<meta property="og:image:alt" content="The Laree wordmark and the tagline Lap by lap." />
+<meta property="og:image:alt" content="The Laree wordmark and the tagline Every lane counts." />
 ```
 
 The web app manifest lists the icons like this:

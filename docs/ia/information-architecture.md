@@ -271,7 +271,7 @@ Each list puts the most important content first and says why. The screen invento
 1. The logo and its variants. The logo is what people come to see.
 2. Colour: palette, sport colours, the intensity heat ramp and status colours with their glyphs.
 3. Type: the display face in both register widths, and the UI and data faces.
-4. Icons, voice and tagline candidates ("Lap by lap." and "Every lane counts.").
+4. Icons, voice and the tagline ("Every lane counts.").
 5. Downloads.
 
 **UI kit gallery** (`#/kit`)

@@ -345,7 +345,7 @@ The floor is WCAG 2.2 level AA (assumption: the plan names the checks, not the s
 
 Each question has a default for the prototype, so the build is not blocked.
 
-1. **Which tagline?** The candidates are "Lap by lap." and "Every lane counts." "Lari lah" and "Jom lari" are ruled out, because the apps "Lari La" and JomRun exist. Default: the brand guide recommends one and the product owner confirms it.
+1. **Which tagline?** Decided in November 2026: "Every lane counts." The other candidate, "Lap by lap.", is not used. "Lari lah" and "Jom lari" are ruled out, because the apps "Lari La" and JomRun exist.
 2. **Should athletes see their own flags?** Default: flags are a coach tool. The athlete's check-in confirmation says what was shared (assumption).
 3. **How does the trial run?** The coach is both the product owner and a participant, so someone else should time the coach's tasks. Default: one of the athletes moderates the coach session, and the coach moderates the athlete sessions (assumption).
 4. **Who edits thresholds?** Default: the coach edits FTP, threshold pace, CSS and LTHR, and the athlete sees the history on Me (assumption).

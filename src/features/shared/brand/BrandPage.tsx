@@ -9,7 +9,8 @@ import {
   SEMANTIC,
   SPORTS,
   STATUSES,
-  TAGLINES,
+  TAGLINE,
+  TAGLINE_RULES,
   ZONES,
 } from './content.ts'
 import type { Ground, LogoFile } from './content.ts'
@@ -115,7 +116,7 @@ export default function BrandPage() {
           <Logo size={88} title="Laree" />
         </div>
         <h1 className={styles.title}>Brand board</h1>
-        <p className={styles.tagline}>Lap by lap.</p>
+        <p className={styles.tagline}>{TAGLINE.line}</p>
         <p className={styles.heroNote}>
           The l is a 400 m track bend, drawn with lane lines and a real track stagger. This page holds every logo file,
           the colours, the type and the rules for using them.
@@ -125,7 +126,7 @@ export default function BrandPage() {
           <a href="#colour">Colour</a>
           <a href="#type">Type</a>
           <a href="#rules">Rules</a>
-          <a href="#voice">Taglines</a>
+          <a href="#voice">Tagline</a>
         </nav>
       </header>
 
@@ -318,15 +319,19 @@ export default function BrandPage() {
         </div>
       </Section>
 
-      <Section id="voice" title="Two candidate taglines" lede="The recommendation is the first as the tagline and the second as the line that explains the logo. The decision is not made yet.">
-        <div className={styles.taglines}>
-          {TAGLINES.map((t) => (
-            <figure key={t.line} className={styles.taglineCard}>
-              <blockquote className={styles.taglineText}>{t.line}</blockquote>
-              <figcaption>{t.job}</figcaption>
-            </figure>
+      <Section id="voice" title="The tagline" lede="One line. It says in words what the logo shows.">
+        <figure className={styles.taglineCard}>
+          <blockquote className={styles.taglineText}>{TAGLINE.line}</blockquote>
+          <figcaption>{TAGLINE.meaning}</figcaption>
+        </figure>
+        <ul className={styles.rules}>
+          {TAGLINE_RULES.map((r) => (
+            <li key={r.title} className={styles.rule}>
+              <h3>{r.title}</h3>
+              <p>{r.body}</p>
+            </li>
           ))}
-        </div>
+        </ul>
       </Section>
     </div>
   )

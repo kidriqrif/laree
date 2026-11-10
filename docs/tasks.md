@@ -254,7 +254,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
 - [ ] **T6.7 Brand board at `#/brand`.** _Replaces stub._
   - Why: S3 shows the logo, palette, type and downloads.
   - Acceptance:
-    - Shows every logo variant from `brand/svg/`, the palette with hex values, the type specimens, usage rules and the two candidate taglines ("Lap by lap." and "Every lane counts.").
+    - Shows every logo variant from `brand/svg/`, the palette with hex values, the type specimens, usage rules and the tagline ("Every lane counts.").
     - Each file has a working download link that works under any base path.
   - Owns: `src/features/shared/brand/`.
   - Depends on: M2, T6.1.
@@ -535,5 +535,5 @@ Reviews in G11a only read and write notes. Fixes happen in G11b, one at a time, 
 
 - Turn on GitHub Pages (Settings, Pages, Source: GitHub Actions) when T4.3 starts.
 - Sign in to Git Credential Manager at the first push if not done yet.
-- Pick a tagline from the two candidates when T6.7 lands.
+- Tagline: decided in November 2026. It is "Every lane counts."
 - After release, the repo rename is safe because of the base-path check in T4.3 and T11.5.

@@ -158,7 +158,7 @@ All measurements are in pixels, in SVG space.
 
 The 1200 × 630 image uses the logo's own track function at pixel scale. The bend has four lanes of 20 px with 5 px lines (the master's 4:1 ratio) and an inside radius of 70 px. Its outer edge is 56 px from the right and bottom edges. It is mirrored, so the lanes come in along the bottom from a staggered start at x = 96 and leave off the top edge on a common line. With the top out of frame, all of the stagger goes to the visible end (split 0), and every lane still runs the same distance.
 
-The wordmark sits at 4.2 px per unit, with its top left at (96, 92). The tagline "Lap by lap." is set in Anybody at width 125, weight 800, italic, 64 px, with its baseline 116 px below the wordmark's baseline. It is converted to outlines.
+The wordmark sits at 4.2 px per unit, with its top left at (96, 92). The tagline "Every lane counts." is set in Anybody at width 125, weight 800, italic, 64 px, with its baseline 116 px below the wordmark's baseline. It is converted to outlines.
 
 ## Path rules
 

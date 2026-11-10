@@ -30,6 +30,28 @@
     gap: var(--space-4);
   }
 
+  /* The logo and its tagline are one lockup, as on the social image. */
+  .lockup {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-2);
+  }
+
+  /* 21 px at weight 800 counts as large type, so the display accent is allowed. */
+  .tagline {
+    margin: 0;
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" 125;
+    font-stretch: 125%;
+    font-weight: 800;
+    font-style: italic;
+    font-synthesis: none;
+    font-size: var(--text-lg);
+    line-height: 1.1;
+    text-wrap: balance;
+    color: var(--color-display-accent);
+  }
+
   .title {
     font-size: clamp(var(--text-3xl), 9vw, var(--text-4xl));
     line-height: 1;

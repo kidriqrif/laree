@@ -39,7 +39,7 @@ export const FILE_BYTES: Record<string, number> = {
   'laree-wordmark-solid.svg': 955,
   'laree-wordmark.svg': 1260,
   'misuse.svg': 82223,
-  'og-image.svg': 6426,
+  'og-image.svg': 8550,
   'laree-app-icon-1024.png': 24897,
   'laree-mark-1024.png': 27219,
   'laree-mark-512.png': 11167,

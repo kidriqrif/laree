@@ -39,11 +39,13 @@ describe('BrandPage', () => {
     }
   })
 
-  it('shows the heading, both taglines and a hex for every palette entry', () => {
+  it('shows the heading, the tagline and a hex for every palette entry', () => {
     render(<BrandPage />)
     expect(screen.getByRole('heading', { level: 1, name: 'Brand board' })).toBeTruthy()
-    expect(screen.getAllByText('Lap by lap.').length).toBeGreaterThan(0)
-    expect(screen.getByText('Every lane counts.')).toBeTruthy()
+    // Under the logo in the hero, and again in its own section.
+    expect(screen.getAllByText('Every lane counts.')).toHaveLength(2)
+    // The other candidate is named in a rule, never set as a line of its own.
+    expect(screen.queryByText('Lap by lap.')).toBeNull()
     expect(screen.getAllByText('#E4572E').length).toBeGreaterThan(0)
   })
 })

@@ -66,11 +66,12 @@ Laree's claim is a combination that neighbouring products do not offer together.
 - AI is opt-in per user and off by default, with two consent layers (athlete and coach). The prototype shows only template output labelled "Simulated AI - prototype". The MVP plans `claude-haiku-5-5` for summaries and `claude-sonnet-5-5` for plan proposals, called from a server. Flags are always rule-based.
 - All rights reserved. The code is not open source.
 
-**Undecided.** The tagline ("Lap by lap." or "Every lane counts."), whether athletes see their own flags, who edits thresholds, a Bahasa Melayu interface, notifications, pricing, and the order of device integrations in the MVP.
+**Undecided.** Whether athletes see their own flags, who edits thresholds, a Bahasa Melayu interface, notifications, pricing, and the order of device integrations in the MVP.
 
 ## Brand Commitments
 
 - **Name:** Laree, said la-REE, coined from the Malay "lari" (run). Never use "Lari lah" or "Jom lari" as taglines, because the apps "Lari La" and JomRun exist.
+- **Tagline:** "Every lane counts." Every athlete matters equally, just as every lane in the logo runs the same distance. The product owner chose it in November 2026.
 - **Logo and palette:** the L is drawn as a 400 m track corner with lane lines, followed by "aree", and the palette is called "hot track". Both are locked. `DESIGN.md` and `docs/brand/` hold the details.
 - **Two registers, one token set:** the athlete side is very fun, dead easy to navigate and mobile-first. The coach side is a precision instrument for the desktop.
 - **Crafted, not generic:** the product owner rejects a "vibecoded" look.

@@ -40,7 +40,11 @@
     font-stretch: 125%;
     font-weight: 800;
     font-style: italic;
-    font-size: var(--text-2xl);
+    font-synthesis: none;
+    /* Fluid, so the tagline stays on one line on a phone. Never below 21 px: large type only. */
+    font-size: clamp(var(--text-lg), 6vw, var(--text-2xl));
+    line-height: 1.1;
+    text-wrap: balance;
     color: var(--color-display-accent);
   }
 
@@ -350,6 +354,7 @@
     display: grid;
     gap: var(--space-2);
     align-content: start;
+    min-inline-size: 0;
     padding: var(--space-4);
     border: var(--hairline) solid var(--color-rule-strong);
     border-radius: var(--radius-card);
@@ -368,7 +373,9 @@
     line-height: 1.05;
     font-family: var(--font-display);
     font-synthesis: none;
-    font-size: var(--text-3xl);
+    /* Ten expanded digits are one unbreakable word: scale them so a phone never scrolls sideways. */
+    font-size: clamp(var(--text-lg), 8vw, var(--text-3xl));
+    overflow-wrap: anywhere;
   }
 
   .athleteDisplay {
@@ -474,17 +481,11 @@
     padding-inline-start: var(--space-5);
   }
 
-  /* Taglines */
-  .taglines {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
-    gap: var(--space-4);
-  }
-
+  /* Tagline */
   .taglineCard {
     display: grid;
     gap: var(--space-3);
-    margin: 0;
+    margin: 0 0 var(--space-2);
     padding: var(--space-6);
     border: var(--hairline) solid var(--color-rule-strong);
     border-radius: var(--radius-card);
@@ -499,13 +500,14 @@
     font-weight: 800;
     font-style: italic;
     font-synthesis: none;
-    font-size: var(--text-3xl);
+    font-size: clamp(var(--text-2xl), 7vw, var(--text-4xl));
     line-height: 1.05;
+    text-wrap: balance;
     color: var(--color-display-accent);
   }
 
   .taglineCard figcaption {
-    font-size: var(--text-sm);
+    max-inline-size: 34em;
     color: var(--color-text-muted);
   }
 

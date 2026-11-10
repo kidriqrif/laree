@@ -34,7 +34,10 @@ export function RolePicker() {
     <div className={styles.page} data-register="athlete" data-screen="S1">
       <div className={styles.lanes} aria-hidden="true" />
       <header className={styles.hero}>
-        <Logo size={72} title="Laree" />
+        <div className={styles.lockup}>
+          <Logo size={72} title="Laree" />
+          <p className={styles.tagline}>Every lane counts.</p>
+        </div>
         <h1 className={styles.title}>Who are you today?</h1>
         <p className={styles.lede}>
           A training planner for triathlon, running and cycling. This is a prototype with made-up data, kept only on
