@@ -1,4 +1,4 @@
-// Stub: T10.3 replaces this file. It renders nothing until then.
+import { lazy, Suspense } from 'react'
 import type { AthleteId } from '../../../domain/types.ts'
 
 export interface AiConsentDialogProps {
@@ -7,6 +7,14 @@ export interface AiConsentDialogProps {
   onClose: () => void
 }
 
-export function AiConsentDialog(_props: AiConsentDialogProps): null {
-  return null
+const Impl = lazy(() => import('../../../ai/CoachConsentDialog.tsx'))
+
+/** C20, the coach side of consent for one athlete. Loads only when it opens. */
+export function AiConsentDialog(props: AiConsentDialogProps) {
+  if (!props.isOpen) return null
+  return (
+    <Suspense fallback={null}>
+      <Impl {...props} />
+    </Suspense>
+  )
 }

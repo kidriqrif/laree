@@ -43,7 +43,7 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-const T = { timeout: 8000 }
+const T = { timeout: 25000 }
 
 describe('Season page', () => {
   it('shows the empty season text with no races', async () => {

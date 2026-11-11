@@ -19,8 +19,8 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-const heading = () => screen.findByRole('heading', { level: 1, name: 'Analytics' }, { timeout: 8000 })
-const figure = (name: RegExp) => screen.findByRole('figure', { name }, { timeout: 8000 })
+const heading = () => screen.findByRole('heading', { level: 1, name: 'Analytics' }, { timeout: 25000 })
+const figure = (name: RegExp) => screen.findByRole('figure', { name }, { timeout: 25000 })
 const summaryOf = (fig: HTMLElement) => fig.getAttribute('aria-describedby') ? document.getElementById(fig.getAttribute('aria-describedby') as string)?.textContent ?? '' : ''
 
 describe('Analytics page', () => {

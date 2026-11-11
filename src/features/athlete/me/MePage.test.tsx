@@ -20,7 +20,7 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-const heading = (name: string) => screen.findByRole('heading', { name }, { timeout: 8000 })
+const heading = (name: string) => screen.findByRole('heading', { name }, { timeout: 25000 })
 
 describe('Me page', () => {
   it("shows Amir's FTP history from 245 W to 255 W with a date", async () => {

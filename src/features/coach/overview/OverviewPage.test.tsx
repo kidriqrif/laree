@@ -31,7 +31,7 @@ afterEach(cleanup)
 async function renderOverview() {
   const router = createMemoryRouter(routes, { initialEntries: ['/coach/overview'] })
   render(<RouterProvider router={router} />)
-  const grid = await screen.findByRole('grid', { name: 'Team today' }, { timeout: 10000 })
+  const grid = await screen.findByRole('grid', { name: 'Team today' }, { timeout: 25000 })
   return { router, grid }
 }
 

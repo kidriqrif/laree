@@ -6,23 +6,23 @@ Props below are final. If an owner needs another prop, add it as optional.
 
 ## Slot stubs
 
-| Path | Export | Props | Owner | Host |
-|---|---|---|---|---|
-| `src/features/athlete/log/LogSheet.tsx` | `LogSheet` | none; opens on `?sheet=log` | T7.4 | Today (T7.2) |
-| `src/features/athlete/checkin/CheckInSheet.tsx` | `CheckInSheet` | none; opens on `?sheet=check-in` | T7.3 | Today (T7.2) |
-| `src/features/athlete/today/CheckInStrip.tsx` | `CheckInStrip` | `{ athleteId: AthleteId; day: DayOffset }` | T7.3 | Today (T7.2) |
-| `src/features/athlete/today/KudosSlot.tsx` | `KudosSlot` | `{ athleteId: AthleteId }` | T10.2 | Today (T7.2) |
-| `src/features/athlete/me/AiSection.tsx` | `AiSection` | `{ athleteId: AthleteId }` | T10.3 | Me (T7.8) |
-| `src/features/shared/activity/ActivityDetail.tsx` | `ActivityDetail` | `{ activityId: string; viewer: 'athlete' \| 'coach' }` | T7.6 | Athlete activity page (T7.6), coach activity page (T8.4) |
-| `src/features/coach/athlete/FlagDrawerSlot.tsx` | `FlagDrawerSlot` | `{ athleteId: AthleteId; flagId: string; onClose: () => void }` | T10.1 | Athlete summary (T8.2) |
-| `src/features/coach/activity/KudosButtonSlot.tsx` | `KudosButtonSlot` | `{ athleteId: AthleteId; activityId: string }` | T10.2 | Coach activity page (T8.4) |
-| `src/features/coach/calendar/CalendarExport.tsx` | `CalendarExport` | `{ athleteId: AthleteId; weekStartDay: DayOffset; selectedWorkoutId?: string }` | T9.7 | Calendar (T9.1) |
-| `src/features/coach/calendar/SuggestSlot.tsx` | `SuggestSlot` | `{ athleteId: AthleteId; weekStartDay: DayOffset }` | T10.5 | Calendar (T9.1) |
-| `src/features/coach/builder/ExportSlot.tsx` | `ExportSlot` | `{ template: WorkoutTemplate }` | T9.7 | Builder (T9.3) |
-| `src/features/coach/builder/AddToCalendarSlot.tsx` | `AddToCalendarSlot` | `{ template: WorkoutTemplate }` | T9.7 | Builder (T9.3) |
-| `src/features/coach/settings/AiConsentDialog.tsx` | `AiConsentDialog` | `{ athleteId: AthleteId; isOpen: boolean; onClose: () => void }` | T10.3 | Coach settings (T10.4) |
-| `src/features/shared/ai-panels/WeeklyRecapPanel.tsx` | `WeeklyRecapPanel` | `{ athleteId: AthleteId; weekStartDay: DayOffset }` | T10.5 | Week (T7.5) |
-| `src/features/shared/ai-panels/CheckInSummaryPanel.tsx` | `CheckInSummaryPanel` | `{ athleteId: AthleteId; day: DayOffset }` | T10.5 | Check-in detail drawer (T10.1) |
+| Path | Export | Props | Owner | Host | Filled by |
+|---|---|---|---|---|---|
+| `src/features/athlete/log/LogSheet.tsx` | `LogSheet` | none; opens on `?sheet=log` | T7.4 | Today (T7.2) | src/features/athlete/log/LogSheet.tsx |
+| `src/features/athlete/checkin/CheckInSheet.tsx` | `CheckInSheet` | none; opens on `?sheet=check-in` | T7.3 | Today (T7.2) | also src/features/athlete/checkin/CheckInSheet.tsx (rewritten in place) |
+| `src/features/athlete/today/CheckInStrip.tsx` | `CheckInStrip` | `{ athleteId: AthleteId; day: DayOffset }` | T7.3 | Today (T7.2) | src/features/athlete/today/CheckInStrip.tsx |
+| `src/features/athlete/today/KudosSlot.tsx` | `KudosSlot` | `{ athleteId: AthleteId }` | T10.2 | Today (T7.2) | src/features/athlete/today/KudosSlot.tsx |
+| `src/features/athlete/me/AiSection.tsx` | `AiSection` | `{ athleteId: AthleteId }` | T10.3 | Me (T7.8) | src/features/athlete/me/AiSection.tsx, with src/ai/AiConsentSheet.tsx |
+| `src/features/shared/activity/ActivityDetail.tsx` | `ActivityDetail` | `{ activityId: string; viewer: 'athlete' \| 'coach' }` | T7.6 | Athlete activity page (T7.6), coach activity page (T8.4) | src/features/shared/activity/ActivityDetail.tsx |
+| `src/features/coach/athlete/FlagDrawerSlot.tsx` | `FlagDrawerSlot` | `{ athleteId: AthleteId; flagId: string; onClose: () => void }` | T10.1 | Athlete summary (T8.2) | src/features/coach/athlete/FlagDrawerSlot.tsx, with check-ins/FlagDetailDrawer.tsx |
+| `src/features/coach/activity/KudosButtonSlot.tsx` | `KudosButtonSlot` | `{ athleteId: AthleteId; activityId: string }` | T10.2 | Coach activity page (T8.4) | src/features/coach/activity/KudosButtonSlot.tsx, with shared/kudos/KudosComposer.tsx |
+| `src/features/coach/calendar/CalendarExport.tsx` | `CalendarExport` | `{ athleteId: AthleteId; weekStartDay: DayOffset; selectedWorkoutId?: string }` | T9.7 | Calendar (T9.1) | src/features/coach/calendar/CalendarExport.tsx |
+| `src/features/coach/calendar/SuggestSlot.tsx` | `SuggestSlot` | `{ athleteId: AthleteId; weekStartDay: DayOffset }` | T10.5 | Calendar (T9.1) | src/features/coach/calendar/SuggestSlot.tsx, with calendar/SuggestDrawer.tsx |
+| `src/features/coach/builder/ExportSlot.tsx` | `ExportSlot` | `{ template: WorkoutTemplate }` | T9.7 | Builder (T9.3) | src/features/coach/builder/ExportSlot.tsx |
+| `src/features/coach/builder/AddToCalendarSlot.tsx` | `AddToCalendarSlot` | `{ template: WorkoutTemplate }` | T9.7 | Builder (T9.3) | src/features/coach/builder/AddToCalendarSlot.tsx |
+| `src/features/coach/settings/AiConsentDialog.tsx` | `AiConsentDialog` | `{ athleteId: AthleteId; isOpen: boolean; onClose: () => void }` | T10.3 | Coach settings (T10.4) | src/features/coach/settings/AiConsentDialog.tsx, with src/ai/CoachConsentDialog.tsx |
+| `src/features/shared/ai-panels/WeeklyRecapPanel.tsx` | `WeeklyRecapPanel` | `{ athleteId: AthleteId; weekStartDay: DayOffset }` | T10.5 | Week (T7.5) | src/features/shared/ai-panels/WeeklyRecapPanel.tsx, with AiTextPanel.tsx |
+| `src/features/shared/ai-panels/CheckInSummaryPanel.tsx` | `CheckInSummaryPanel` | `{ athleteId: AthleteId; day: DayOffset }` | T10.5 | Check-in detail drawer (T10.1) | src/features/shared/ai-panels/CheckInSummaryPanel.tsx, with AiTextPanel.tsx |
 
 Both panels are also exported from `src/features/shared/ai-panels/index.ts`; import them from there. Each stub exports its props type as `<Name>Props` (except the two sheets, which take none).
 
@@ -30,7 +30,7 @@ Rules for hosts: mount the slot unconditionally and let it decide whether to sho
 
 ## App hooks
 
-| Path | Export | Use |
+| Path | Export | Use | Filled by |
 |---|---|---|
 | `src/app/useCoachReadOnly.ts` | `useCoachReadOnly(): boolean` | True under 1024 px (IA 4.4). A coach screen then hides drag and drop, builder editing, the phase slider and every form, and shows the same data as a read-only stack. Follows resizing. Also exports `COACH_READ_ONLY_QUERY`. |
 | `src/app/keyboard` | `buildDestinations(athleteId, { templates, races })`, `filterDestinations`, `DESTINATION_GROUPS` | Jump to now also lists library workouts (`/coach/library/:id`) and races (`/coach/season/:athleteId`). |

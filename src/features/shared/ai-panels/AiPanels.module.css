@@ -1,0 +1,11 @@
+@layer components {
+  .panel { display: grid; gap: var(--space-2); padding: var(--space-4); border: var(--hairline) solid var(--color-rule); border-radius: var(--radius-md); min-width: 0; }
+  .head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); align-items: baseline; }
+  .title { margin: 0; font-size: var(--text-md); font-weight: 600; }
+  .meta { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
+  .model { font-family: var(--font-number); }
+  .headline { margin: 0; font-weight: 600; }
+  .lines { margin: 0; padding-left: var(--space-5); display: grid; gap: var(--space-1); }
+  .cites { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); }
+  .muted { margin: 0; color: var(--color-text-muted); }
+}

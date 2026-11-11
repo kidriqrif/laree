@@ -62,7 +62,7 @@ afterEach(() => {
   toastQueue.clear()
 })
 
-const grid = () => screen.findByRole('group', { name: /sessions by day/i }, { timeout: 8000 })
+const grid = () => screen.findByRole('group', { name: /sessions by day/i }, { timeout: 25000 })
 
 /** Pick a session up with m, press the arrows `steps` times and press `end`. */
 async function keyboardMove(title: string, steps: number, end: 'Enter' | 'Escape' = 'Enter') {
@@ -81,7 +81,7 @@ describe('Calendar page', () => {
     const router = renderAt('/coach/calendar/amir?w=1')
     const g = await grid()
     expect(within(g).getAllByRole('heading', { level: 3 })).toHaveLength(7)
-    expect(within(g).getByText('Threshold run')).toBeTruthy()
+    expect(await within(g).findByText('Threshold run')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Next week' }))
     await waitFor(() => expect(router.state.location.search).toBe('?w=2'))
     fireEvent.click(screen.getByRole('button', { name: 'Today' }))

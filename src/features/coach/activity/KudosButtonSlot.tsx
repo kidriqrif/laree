@@ -1,11 +1,12 @@
-// Stub: T10.2 replaces this file. It renders nothing until then.
 import type { AthleteId } from '../../../domain/types.ts'
+import { KudosComposer } from '../../shared/kudos/KudosComposer.tsx'
 
 export interface KudosButtonSlotProps {
   athleteId: AthleteId
   activityId: string
 }
 
-export function KudosButtonSlot(_props: KudosButtonSlotProps): null {
-  return null
+/** The coach's "Send kudos" on an activity, linked to it. */
+export function KudosButtonSlot({ athleteId, activityId }: KudosButtonSlotProps) {
+  return <KudosComposer athleteId={athleteId} activityId={activityId} />
 }

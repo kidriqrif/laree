@@ -311,7 +311,7 @@ export default function WeekPage() {
         </section>
       ) : null}
 
-      <WeeklyRecapPanel athleteId={athleteId} weekStartDay={firstDay} />
+      {isPast ? <WeeklyRecapPanel athleteId={athleteId} weekStartDay={firstDay} /> : null}
     </div>
   )
 }

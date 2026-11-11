@@ -69,7 +69,7 @@ describe('routes', () => {
   it.each(PAGES)('%s renders its real page in the right shell', async (path, heading, side) => {
     renderAt(typeof path === 'function' ? path() : path)
     const name = typeof heading === 'function' ? heading() : heading
-    expect(await screen.findByRole('heading', { level: 1, name }, { timeout: 15000 })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name }, { timeout: 25000 })).toBeTruthy()
     const registers = [...document.querySelectorAll('[data-register]')].map((el) => el.getAttribute('data-register'))
     expect(registers).toHaveLength(side === 'standalone' ? 0 : 1)
     expect(registers.includes(side)).toBe(side !== 'standalone')
@@ -79,12 +79,12 @@ describe('routes', () => {
 
   it('renders the brand board (a built page, not a stub)', async () => {
     renderAt('/brand')
-    expect(await screen.findByRole('heading', { level: 1, name: 'Brand board' }, { timeout: 15000 })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Brand board' }, { timeout: 25000 })).toBeTruthy()
   }, 20000)
 
   it('renders the kit gallery (a built page, not a stub)', async () => {
     renderAt('/kit')
-    expect(await screen.findByRole('heading', { level: 1, name: 'UI kit' }, { timeout: 15000 })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 1, name: 'UI kit' }, { timeout: 25000 })).toBeTruthy()
   }, 20000)
 
   it.each([

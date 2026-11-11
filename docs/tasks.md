@@ -452,7 +452,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
 
 ## M10: Check-ins, flags, kudos, simulated AI, settings
 
-- [ ] **T10.1 Check-ins page, flag inbox, flag and check-in detail.** _Replaces stub._
+- [x] **T10.1 Check-ins page, flag inbox, flag and check-in detail.** _Replaces stub._
   - Why: C13, C14, C15.
   - Acceptance:
     - Team grid (athletes by 14 days, heatmap cells), flag inbox with open, acknowledged and resolved filters.
@@ -462,7 +462,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/coach/check-ins/`, `src/features/coach/athlete/FlagDrawerSlot.tsx`.
   - Depends on: M8 (T8.2), T5.4, T5.8, T6.5.
 
-- [ ] **T10.2 Kudos.** _New._
+- [x] **T10.2 Kudos.** _New._
   - Why: C16 and the athlete's kudos card.
   - Acceptance:
     - Popover composer from any "Send kudos" with an optional linked activity, a text field and a sent toast.
@@ -470,7 +470,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/shared/kudos/`, `src/features/athlete/today/KudosSlot.tsx`, `src/features/coach/activity/KudosButtonSlot.tsx`.
   - Depends on: T7.2, T8.4, T5.5.
 
-- [ ] **T10.3 AI consent and simulated output engine.** _New._
+- [x] **T10.3 AI consent and simulated output engine.** _New._
   - Why: AI is opt-in on two layers and off by default.
   - Acceptance:
     - `consent.ts` returns active only when athlete and coach both consent. Coach cannot enable AI for an athlete.
@@ -480,14 +480,14 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/ai/`, `src/features/athlete/me/AiSection.tsx`, `src/features/coach/settings/AiConsentDialog.tsx`.
   - Depends on: T7.8, T5.8, T6.2.
 
-- [ ] **T10.4 Coach settings page.** _Replaces stub._
+- [x] **T10.4 Coach settings page.** _Replaces stub._
   - Why: C18.
   - Acceptance:
     - Units, theme, keyboard help link, the athlete consent table (active, waiting for athlete) with the coach toggle that opens the consent dialog, and the reset link.
   - Owns: `src/features/coach/settings/` (except `AiConsentDialog.tsx`).
   - Depends on: M6, T5.8.
 
-- [ ] **T10.5 AI panels on athlete and coach screens.** _Fills slots._
+- [x] **T10.5 AI panels on athlete and coach screens.** _Fills slots._
   - Why: shows what AI would do, only when consent is active.
   - Acceptance:
     - Weekly recap on Week, check-in summary on the check-in detail drawer, "Suggest next week" drawer (C5) listing changes the coach accepts or rejects one by one, then applies with Undo.
@@ -495,7 +495,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/coach/calendar/SuggestSlot.tsx`, `src/features/shared/ai-panels/`.
   - Depends on: T10.3, T9.1, T10.1.
 
-- [ ] **T10.6 Seed and flow coverage test.** _Test task._
+- [x] **T10.6 Seed and flow coverage test.** _Test task._
   - Why: the demo script depends on specific seeded cases.
   - Acceptance:
     - An integration test walks the flows of sections 7.1 to 7.6 against the store without a browser and passes.

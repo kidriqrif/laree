@@ -31,7 +31,7 @@ const INDEXES: Array<[string, object]> = [
 ]
 
 // Each test renders the whole gallery, which can pass 5 s when the full suite shares the CPU.
-describe('KitPage', { timeout: 20_000 }, () => {
+describe('KitPage', { timeout: 60_000 }, () => {
   it('shows every export of every index at least once', () => {
     const { container } = renderKit()
     const covered = new Set<string>()

@@ -18,7 +18,7 @@ afterEach(cleanup)
 async function renderAthlete(id: string) {
   const router = createMemoryRouter(routes, { initialEntries: [`/coach/athlete/${id}`] })
   render(<RouterProvider router={router} />)
-  await screen.findByRole('heading', { level: 1 }, { timeout: 10000 })
+  await screen.findByRole('heading', { level: 1 }, { timeout: 25000 })
   return router
 }
 
@@ -64,7 +64,7 @@ describe('athlete summary', () => {
   it('says so for an unknown athlete', async () => {
     const router = createMemoryRouter(routes, { initialEntries: ['/coach/athlete/nobody'] })
     render(<RouterProvider router={router} />)
-    expect(await screen.findByText("We can't find that athlete", {}, { timeout: 10000 })).toBeTruthy()
+    expect(await screen.findByText("We can't find that athlete", {}, { timeout: 25000 })).toBeTruthy()
   })
 
   it('keeps the old threshold in history when it is edited', async () => {

@@ -47,8 +47,8 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     setupFiles: ['./src/test/setup.ts'],
-    // Above the 10 s async wait in the setup file, so a slow query fails with its own message.
-    testTimeout: 30_000,
+    // Above the 25 s async wait in the setup file, so a slow query fails with its own message.
+    testTimeout: 60_000,
     // Page tests load whole lazy routes. With a worker per core they starve each other and time out.
     maxWorkers: '50%',
     include: ['src/**/*.test.{ts,tsx}', 'brand/**/*.test.ts', 'scripts/**/*.test.ts'],

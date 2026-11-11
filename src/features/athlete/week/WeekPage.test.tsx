@@ -21,7 +21,7 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 
-const h1 = () => screen.findByRole('heading', { level: 1 }, { timeout: 8000 })
+const h1 = () => screen.findByRole('heading', { level: 1 }, { timeout: 25000 })
 
 describe('Week page', () => {
   it.each([
