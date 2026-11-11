@@ -1,18 +1,16 @@
 import { forwardRef } from 'react'
 import { Button as AriaButton } from 'react-aria-components/Button'
 import type { ButtonProps as AriaButtonProps } from 'react-aria-components/Button'
+import { buttonClass, type ButtonVariant } from './buttonClass.ts'
 import styles from './Button.module.css'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger'
+export { buttonClass } from './buttonClass.ts'
+export type { ButtonVariant } from './buttonClass.ts'
 
 export interface ButtonProps extends Omit<AriaButtonProps, 'className'> {
   /** Primary has an ink label on track red. Danger must sit behind a confirm step. */
   variant?: ButtonVariant
   className?: string
-}
-
-export function buttonClass(variant: ButtonVariant, className?: string): string {
-  return [styles.button, styles[variant], className].filter(Boolean).join(' ')
 }
 
 /** Height follows the register: 48 px for athletes, 28 px for coaches. */

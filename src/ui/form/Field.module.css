@@ -85,7 +85,8 @@
     font: inherit;
   }
 
-  .input::placeholder {
+  .input::placeholder,
+  .control::placeholder {
     color: var(--color-text-muted);
   }
 

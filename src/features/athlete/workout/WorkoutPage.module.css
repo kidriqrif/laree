@@ -1,0 +1,139 @@
+@layer components {
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    padding-block-end: var(--space-8);
+  }
+
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .date {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .key {
+    padding: 0 var(--space-2);
+    border: var(--hairline) solid var(--color-rule-strong);
+    border-radius: var(--radius-pill);
+    color: var(--color-text);
+  }
+
+  .title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-size: var(--text-3xl);
+    line-height: 1.1;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+    gap: var(--space-3);
+    margin: var(--space-2) 0 0;
+  }
+
+  .facts dt {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .facts dd {
+    margin: 0;
+    font-family: var(--font-number);
+    font-size: var(--text-xl);
+  }
+
+  .status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0;
+  }
+
+  .upcoming {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--target-min);
+    color: var(--color-link);
+  }
+
+  .h2 {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+  }
+
+  .note p {
+    margin: 0;
+  }
+
+  .free {
+    margin: 0;
+    font-size: var(--text-md);
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding-block: var(--space-3);
+    border-block-end: var(--hairline) solid var(--color-rule);
+  }
+
+  .kind {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .sentence {
+    font-family: var(--font-number);
+    font-size: var(--text-md);
+  }
+
+  .step .note {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .block {
+    padding-inline-start: var(--space-3);
+    border-inline-start: var(--rule-weight) solid var(--color-rule-strong);
+  }
+
+  .repeat {
+    display: block;
+    padding-block-start: var(--space-3);
+    font-weight: 600;
+  }
+
+  .actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}

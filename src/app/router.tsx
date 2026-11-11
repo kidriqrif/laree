@@ -1,9 +1,8 @@
 import type { ComponentType } from 'react'
 import { createHashRouter, redirect, type RouteObject } from 'react-router'
-import { AppFrame, StandaloneFrame } from './AppFrame.tsx'
+import { AppFrame } from './AppFrame.tsx'
 import { AthleteShell } from './AthleteShell.tsx'
 import { NotFound, type NotFoundScope } from './NotFound.tsx'
-import { RolePicker } from './RolePicker.tsx'
 import { RootError, RouteError } from './RouteError.tsx'
 
 type Loader = () => Promise<{ default: ComponentType }>
@@ -85,9 +84,14 @@ export const routes: RouteObject[] = [
     errorElement: <RootError />,
     children: [
       {
-        element: <StandaloneFrame />,
+        // The standalone pages are their own chunks, logo code included: Today never loads them.
+        lazy: async () => ({ Component: (await import('./StandaloneFrame.tsx')).StandaloneFrame }),
         children: guarded('standalone', [
-          { index: true, element: <RolePicker />, handle: title('Role picker') },
+          {
+            index: true,
+            lazy: async () => ({ Component: (await import('./RolePicker.tsx')).RolePicker }),
+            handle: title('Role picker'),
+          },
           { path: 'brand', lazy: page(() => import('../features/shared/brand/BrandPage.tsx')), handle: title('Brand board') },
           { path: 'kit', lazy: page(() => import('../features/shared/kit/KitPage.tsx')), handle: title('UI kit') },
           { path: 'reset', lazy: page(() => import('../features/shared/reset/ResetPage.tsx')), handle: title('Reset demo data') },

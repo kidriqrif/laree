@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { useViewer } from '../app/viewer.ts'
 import { today } from '../domain/time.ts'
 import {
   aiActiveFor,
@@ -68,6 +69,7 @@ describe('selectors', () => {
     expect(thresholdOn(data(), 'amir', 'ftp', 70)).toBe(255)
     useLaree.getState().setAiConsent('amir', true)
     expect(aiActiveFor(data().settings, 'amir')).toBe(false)
+    useViewer.getState().viewAs('coach')
     useLaree.getState().setAiConsent('coach', true)
     expect(aiActiveFor(data().settings, 'amir')).toBe(true)
   })

@@ -1,10 +1,10 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role, react/set-state-in-effect -- status region; the toast reports the viewer syncing to the router location */
 import { useEffect, useState } from 'react'
-import { Link, Outlet, useLocation, useMatches } from 'react-router'
-import { Logo } from '../ui/brand/Logo.tsx'
+import { Outlet, useLocation, useMatches } from 'react-router'
 import { personName } from './people.ts'
 import { RoleSwitcher } from './RoleSwitcher.tsx'
 import { StorageBanner } from './StorageBanner.tsx'
+import { ThemeSync } from './ThemeSync.tsx'
 import { UpdateToast } from './pwa/UpdateToast.tsx'
 import { setLastCoachRoute, useViewer } from './viewer.ts'
 import styles from './AppFrame.module.css'
@@ -59,6 +59,7 @@ export function AppFrame() {
 
   return (
     <div className={styles.frame}>
+      <ThemeSync />
       <button
         type="button"
         className={styles.skip}
@@ -75,25 +76,6 @@ export function AppFrame() {
       <div role="status" className={styles.toastRegion}>
         {toast ? <p className={styles.toast}>{toast}</p> : null}
       </div>
-    </div>
-  )
-}
-
-/** Standalone frame (IA 4.6): the Laree mark linking to the role picker, then the content. */
-export function StandaloneFrame() {
-  const { pathname } = useLocation()
-  return (
-    <div className={styles.standalone}>
-      {pathname === '/' ? null : (
-        <header className={styles.standaloneHeader}>
-          <Link to="/" aria-label="Laree, role picker">
-            <Logo size={28} />
-          </Link>
-        </header>
-      )}
-      <main id="main" tabIndex={-1} className={styles.standaloneMain}>
-        <Outlet />
-      </main>
     </div>
   )
 }

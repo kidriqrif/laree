@@ -1,0 +1,35 @@
+@layer components {
+  .page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .note {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    max-inline-size: 36rem;
+  }
+
+  .noteRow {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-3);
+  }
+
+  .noteField {
+    flex: 1;
+  }
+
+  .h2 {
+    margin: 0;
+  }
+}

@@ -47,8 +47,10 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     setupFiles: ['./src/test/setup.ts'],
-    // Above the 5 s async wait in the setup file, so a slow query fails with its own message.
-    testTimeout: 20_000,
+    // Above the 10 s async wait in the setup file, so a slow query fails with its own message.
+    testTimeout: 30_000,
+    // Page tests load whole lazy routes. With a worker per core they starve each other and time out.
+    maxWorkers: '50%',
     include: ['src/**/*.test.{ts,tsx}', 'brand/**/*.test.ts', 'scripts/**/*.test.ts'],
     alias: {
       'virtual:pwa-register/react': fileURLToPath(new URL('./src/app/pwa/registerStub.ts', import.meta.url)),

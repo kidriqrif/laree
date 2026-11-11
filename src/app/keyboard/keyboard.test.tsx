@@ -89,6 +89,75 @@ describe('hotkeys', () => {
     expect(onN).not.toHaveBeenCalled()
   })
 
+  it('fires Ctrl shortcuts, in fields only when asked, and lists them in help', async () => {
+    const onSave = vi.fn<() => void>()
+    const onUndo = vi.fn<() => void>()
+    function Builder() {
+      useHotkeys([
+        { keys: 'Ctrl+s', description: 'Save', handler: onSave, inFields: true },
+        { keys: 'Ctrl+z', description: 'Undo the last change', handler: onUndo },
+      ])
+      return <input aria-label="Title" />
+    }
+    render(
+      <MemoryRouter>
+        <CoachKeyboard>
+          <Builder />
+        </CoachKeyboard>
+      </MemoryRouter>,
+    )
+    fireEvent.keyDown(document.body, { key: 's', ctrlKey: true })
+    // Cmd on a Mac, and Caps Lock, do the same.
+    fireEvent.keyDown(document.body, { key: 'S', metaKey: true })
+    expect(onSave).toHaveBeenCalledTimes(2)
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true })
+    expect(onUndo).toHaveBeenCalledOnce()
+
+    const field = screen.getByLabelText('Title')
+    fireEvent.keyDown(field, { key: 's', ctrlKey: true })
+    expect(onSave).toHaveBeenCalledTimes(3)
+    // Ctrl+Z in a field stays the field's own undo: the event is left alone.
+    expect(fireEvent.keyDown(field, { key: 'z', ctrlKey: true })).toBe(true)
+    expect(onUndo).toHaveBeenCalledOnce()
+
+    // Not with Shift or a held key, and never as plain letters.
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true, shiftKey: true })
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true, repeat: true })
+    press('z')
+    press('s')
+    expect(onUndo).toHaveBeenCalledOnce()
+    expect(onSave).toHaveBeenCalledTimes(3)
+
+    press('?')
+    const help = await screen.findByRole('dialog', { name: 'Keyboard help' })
+    expect(help.textContent).toContain('Ctrl+S')
+    expect(help.textContent).toContain('Ctrl+Z')
+    // The dialog owns the keyboard while it is open.
+    fireEvent.keyDown(document.body, { key: 's', ctrlKey: true })
+    expect(onSave).toHaveBeenCalledTimes(3)
+  })
+
+  it('keeps Ctrl shortcuts on when single keys are off', () => {
+    const onSave = vi.fn<() => void>()
+    const onN = vi.fn<() => void>()
+    function Keys() {
+      useHotkeys([
+        { keys: 'Ctrl+s', description: 'Save', handler: onSave },
+        { keys: 'n', description: 'New', handler: onN },
+      ])
+      return null
+    }
+    render(
+      <HotkeyProvider singleKeys={false}>
+        <Keys />
+      </HotkeyProvider>,
+    )
+    press('n')
+    fireEvent.keyDown(document.body, { key: 's', ctrlKey: true })
+    expect(onN).not.toHaveBeenCalled()
+    expect(onSave).toHaveBeenCalledOnce()
+  })
+
   it('does nothing when single keys are off', () => {
     const onN = vi.fn<() => void>()
     function Off() {
@@ -140,11 +209,11 @@ describe('hotkeys', () => {
     render(<App withPage={false} />)
     press('/')
     const box = await screen.findByRole('combobox', {
-      name: 'Search athletes and sections',
+      name: 'Search athletes, sections, workouts and races',
     })
-    expect(screen.getAllByRole('option').length).toBe(10)
+    expect(screen.getAllByRole('option').length).toBeGreaterThan(10)
     fireEvent.change(box, { target: { value: 'dan' } })
-    expect(screen.getAllByRole('option')).toHaveLength(1)
+    expect(screen.getAllByRole('option')[0]?.textContent).toBe('Danial')
     fireEvent.change(box, { target: { value: 'a' } })
     fireEvent.keyDown(box, { key: 'ArrowDown' })
     fireEvent.keyDown(box, { key: 'Enter' })

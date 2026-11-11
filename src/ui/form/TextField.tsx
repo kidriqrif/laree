@@ -2,7 +2,7 @@ import { forwardRef } from 'react'
 import { Input } from 'react-aria-components/Input'
 import { TextField as AriaTextField } from 'react-aria-components/TextField'
 import type { TextFieldProps as AriaTextFieldProps } from 'react-aria-components/TextField'
-import { controlClass, cx, FieldFooter, FieldLabel, fieldClass, inputClass } from './Field.tsx'
+import { controlClass, cx, FieldFooter, FieldLabel, fieldClass } from './Field.tsx'
 import type { FieldProps } from './Field.tsx'
 
 export interface TextFieldProps extends Omit<AriaTextFieldProps, 'className' | 'children' | 'isInvalid'>, FieldProps {
@@ -16,7 +16,8 @@ export const TextField = forwardRef<HTMLDivElement, TextFieldProps>(function Tex
   return (
     <AriaTextField {...rest} ref={ref} isInvalid={error ? true : undefined} className={cx(fieldClass, className)}>
       <FieldLabel>{label}</FieldLabel>
-      <Input className={cx(controlClass, inputClass)} placeholder={placeholder} />
+      {/* The input is the box itself. inputClass is for an input inside a box, and would strip the border. */}
+      <Input className={controlClass} placeholder={placeholder} />
       <FieldFooter hint={hint} error={error} />
     </AriaTextField>
   )

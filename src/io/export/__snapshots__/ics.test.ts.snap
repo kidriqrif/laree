@@ -1,0 +1,120 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`sessionIcs > writes a timed session with TZID, VTIMEZONE and the rounded-up end 1`] = `
+"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Laree//Laree prototype 0.1//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Laree · Amir
+BEGIN:VTIMEZONE
+TZID:Asia/Kuala_Lumpur
+BEGIN:STANDARD
+DTSTART:19700101T000000
+TZOFFSETFROM:+0800
+TZOFFSETTO:+0800
+TZNAME:+08
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:pw-amir-120-1@laree.app
+DTSTAMP:20261108T020000Z
+SEQUENCE:0
+DTSTART;TZID=Asia/Kuala_Lumpur:20261110T063000
+DTEND;TZID=Asia/Kuala_Lumpur:20261110T073900
+SUMMARY:Bike · Threshold 4 × 8 · 1 h 09 min · key session
+CATEGORIES:Laree,Bike
+DESCRIPTION:15 min warm-up from 143 to 214 W\\n4 × (8 min interval at 242-2
+ 54 W + 3 min recovery at 143-157 W)\\n10 min cool-down from 171 to 128 W\\n1
+  h 09 min · Load 82 · planned at FTP 285 W\\nCoach: Hold 242 W\\, the last
+  rep is the hard one.
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR
+"
+`;
+
+exports[`sessionIcs > writes an untimed session as an all-day, transparent event with no VTIMEZONE 1`] = `
+"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Laree//Laree prototype 0.1//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Laree · Amir
+BEGIN:VEVENT
+UID:pw-amir-120-1@laree.app
+DTSTAMP:20261108T020000Z
+SEQUENCE:0
+DTSTART;VALUE=DATE:20261110
+DTEND;VALUE=DATE:20261111
+SUMMARY:Bike · Threshold 4 × 8 · 1 h 09 min · key session
+CATEGORIES:Laree,Bike
+DESCRIPTION:15 min warm-up from 143 to 214 W\\n4 × (8 min interval at 242-2
+ 54 W + 3 min recovery at 143-157 W)\\n10 min cool-down from 171 to 128 W\\n1
+  h 09 min · Load 82 · planned at FTP 285 W\\nCoach: Hold 242 W\\, the last
+  rep is the hard one.
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR
+"
+`;
+
+exports[`weekIcs > writes sessions in day order, races as all-day events, and skips rest days 1`] = `
+"BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Laree//Laree prototype 0.1//EN
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Laree · Amir
+BEGIN:VTIMEZONE
+TZID:Asia/Kuala_Lumpur
+BEGIN:STANDARD
+DTSTART:19700101T000000
+TZOFFSETFROM:+0800
+TZOFFSETTO:+0800
+TZNAME:+08
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:pw-amir-120-1@laree.app
+DTSTAMP:20261108T020000Z
+SEQUENCE:0
+DTSTART;TZID=Asia/Kuala_Lumpur:20261110T063000
+DTEND;TZID=Asia/Kuala_Lumpur:20261110T073900
+SUMMARY:Bike · Threshold 4 × 8 · 1 h 09 min · key session
+CATEGORIES:Laree,Bike
+DESCRIPTION:15 min warm-up from 143 to 214 W\\n4 × (8 min interval at 242-2
+ 54 W + 3 min recovery at 143-157 W)\\n10 min cool-down from 171 to 128 W\\n1
+  h 09 min · Load 82 · planned at FTP 285 W\\nCoach: Hold 242 W\\, the last
+  rep is the hard one.\\nOpen in Laree: https://laree.example/#/athlete/work
+ out/pw-amir-120-1
+URL:https://laree.example/#/athlete/workout/pw-amir-120-1
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:pw-amir-122-1@laree.app
+DTSTAMP:20261108T020000Z
+SEQUENCE:0
+DTSTART;VALUE=DATE:20261112
+DTEND;VALUE=DATE:20261113
+SUMMARY:Run · Easy run · 45 min
+CATEGORIES:Laree,Run
+DESCRIPTION:45 min steady at 4:40-5:17 /km\\n45 min · Load 40 · planned at
+  threshold pace 3:58 /km\\nOpen in Laree: https://laree.example/#/athlete/w
+ orkout/pw-amir-122-1
+URL:https://laree.example/#/athlete/workout/pw-amir-122-1
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:race.race-teluk@laree.app
+DTSTAMP:20261108T020000Z
+SEQUENCE:0
+DTSTART;VALUE=DATE:20261115
+DTEND;VALUE=DATE:20261116
+SUMMARY:A race · Teluk Half · 1.9 / 90 / 21.1 km
+CATEGORIES:Laree,Race
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR
+"
+`;

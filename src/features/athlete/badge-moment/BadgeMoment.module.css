@@ -1,0 +1,113 @@
+@layer components {
+  .live {
+    display: block;
+  }
+
+  .moment {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border: var(--hairline) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+  }
+
+  .tape {
+    width: 100%;
+    max-width: 320px;
+    align-self: center;
+    overflow: visible;
+  }
+
+  .strip {
+    fill: var(--color-accent);
+  }
+
+  .stripe {
+    stroke: var(--color-on-accent);
+    stroke-width: 2;
+    stroke-dasharray: 6 6;
+    fill: none;
+  }
+
+  .face {
+    font-family: var(--font-display);
+    font-size: 22px;
+    fill: var(--color-text);
+  }
+
+  /* Already broken: the halves sit apart. With motion allowed they snap apart from the middle. */
+  .tapeLeft {
+    transform: translateX(-6px) rotate(-3deg);
+    transform-origin: 0 28px;
+  }
+
+  .tapeRight {
+    transform: translateX(6px) rotate(3deg);
+    transform-origin: 240px 28px;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .tapeLeft {
+      animation: snap-left var(--dur-slow) var(--ease-out) both;
+    }
+
+    .tapeRight {
+      animation: snap-right var(--dur-slow) var(--ease-out) both;
+    }
+  }
+
+  @keyframes snap-left {
+    from {
+      transform: none;
+    }
+    to {
+      transform: translateX(-6px) rotate(-3deg);
+    }
+  }
+
+  @keyframes snap-right {
+    from {
+      transform: none;
+    }
+    to {
+      transform: translateX(6px) rotate(3deg);
+    }
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .kicker {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .name {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+  }
+
+  .line {
+    margin: 0;
+    font-size: var(--text-base);
+  }
+
+  .date {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+}

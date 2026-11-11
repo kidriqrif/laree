@@ -11,8 +11,19 @@ export function parseKeys(keys: string): string[] {
     .map((k) => (k === 'Space' ? ' ' : k))
 }
 
-/** Plain-text label for help: "g then c", "?" or "n". */
+/**
+ * The key of a Ctrl shortcut written "Ctrl+s", lower-cased, or null for anything else.
+ * A Ctrl shortcut is one key with Ctrl (Cmd on a Mac) held, never a sequence.
+ */
+export function ctrlKeyOf(keys: string): string | null {
+  const m = /^ctrl\+(\S+)$/i.exec(keys.trim())
+  return m?.[1] ? m[1].toLowerCase() : null
+}
+
+/** Plain-text label for help: "g then c", "?", "n" or "Ctrl+S". */
 export function describeKeys(keys: string): string {
+  const ctrl = ctrlKeyOf(keys)
+  if (ctrl) return `Ctrl+${ctrl.length === 1 ? ctrl.toUpperCase() : ctrl}`
   return parseKeys(keys)
     .map((k) => (k === ' ' ? 'Space' : k))
     .join(' then ')

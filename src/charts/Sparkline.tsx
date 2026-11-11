@@ -10,7 +10,7 @@ export interface SparklineProps {
   values: readonly (number | null)[];
   /** Names the series for screen readers, e.g. "Fitness, last 16 weeks". */
   label: string;
-  /** Fixed width in px. Omit to fill the container. */
+  /** Fixed width in px, for a trend inside a line of text or a table cell. Omit to fill the container. */
   width?: number;
   height?: number;
   formatValue?: (n: number) => string;
@@ -68,7 +68,8 @@ export function Sparkline({
         rows: clean.map((v, i) => [String(i + 1), v == null ? 'No data' : formatValue(v)]),
       }}
       className={className}
-      style={width ? { width } : undefined}
+      // Without a fixed width the figure is a block, so it takes the width of its container.
+      style={width ? { width } : { display: 'block' }}
     >
       <div ref={ref} className={styles.wrap}>
         <svg

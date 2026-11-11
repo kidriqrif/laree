@@ -421,7 +421,7 @@ Use a fresh `Stream` for each call. If any check fails, nothing is downloaded an
 
 ### 6.7 Example: the sample workout as messages
 
-The file is 414 bytes: a 14-byte header with ".FIT" at byte offset 8, 398 bytes of records, and a 2-byte CRC.
+The file is 468 bytes: a 14-byte header with ".FIT" at byte offset 8, 452 bytes of records, and a 2-byte CRC.
 
 | # | Message | Fields written | What the device shows |
 |---|---|---|---|
@@ -719,7 +719,7 @@ Messages use the file name in curly quotes and end with what to do next.
 ## 13. Tests
 
 - **Golden files.** `src/io/export/__fixtures__/` holds the sample workout and the expected `.zwo`, `.mrc`, `.erg` and `.ics` (untimed and timed) files from sections 4, 5 and 7, byte for byte, CRLF included. The tests inject the export clock and the runtime start.
-- **FIT.** Encode the sample, run every check in section 6.6, compare the decoded messages with the table in section 6.7, and snapshot the length (414 bytes). Also cover a run with pace targets and distance steps, a swim with open targets and a pool length, a heart-rate workout, a workout with no notes, and a 51-step workout, which must be refused.
+- **FIT.** Encode the sample, run every check in section 6.6, compare the decoded messages with the table in section 6.7, and snapshot the length (468 bytes). Also cover a run with pace targets and distance steps, a swim with open targets and a pool length, a heart-rate workout, a workout with no notes, and a 51-step workout, which must be refused.
 - **Text helpers.** `asciiSafe`, `slug`, XML escaping, ICS escaping, and ICS folding: no line over 75 octets, no split multi-byte character, and unfolding gives back the original line.
 - **Detection.** Each format with a misleading extension; gzip around each format; zip; a PDF renamed to .fit; an empty file; a UTF-16 GPX; a TCX with leading spaces; a FIT workout file.
 - **Readers.** FIT activity fixtures are written in the test with the SDK's `Encoder`, so no third-party files sit in the repo: a ride with power, a run with pauses, a pool swim, a triathlon with transitions, and a file with its CRC broken. GPX and TCX fixtures are short hand-written files covering Garmin extensions, bare `<power>`, a route-only GPX and a TCX with two `Track` elements in one lap.

@@ -1,0 +1,75 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`writeErg > matches the snapshot for a interval workout 1`] = `
+"[COURSE HEADER]
+VERSION = 2
+UNITS = ENGLISH
+DESCRIPTION = Over-unders for Amir, FTP 255 W
+FILE NAME = laree-amir-2026-11-14-over-unders.erg
+FTP = 255
+MINUTES WATTS
+[END COURSE HEADER]
+[COURSE DATA]
+0.00	128
+10.00	166
+10.00	281
+13.00	281
+13.00	128
+15.00	128
+15.00	281
+18.00	281
+18.00	166
+23.00	115
+[END COURSE DATA]
+"
+`;
+
+exports[`writeErg > matches the snapshot for a repeat block workout 1`] = `
+"[COURSE HEADER]
+VERSION = 2
+UNITS = ENGLISH
+DESCRIPTION = Threshold 4 x 8 for Amir, FTP 255 W
+FILE NAME = laree-amir-2026-11-10-threshold-4x8.erg
+FTP = 255
+MINUTES WATTS
+[END COURSE HEADER]
+[COURSE DATA]
+0.00	128
+15.00	191
+15.00	249
+23.00	249
+23.00	140
+26.00	140
+26.00	249
+34.00	249
+34.00	140
+37.00	140
+37.00	249
+45.00	249
+45.00	140
+48.00	140
+48.00	249
+56.00	249
+56.00	140
+59.00	140
+59.00	166
+69.00	115
+[END COURSE DATA]
+"
+`;
+
+exports[`writeErg > matches the snapshot for a steady workout 1`] = `
+"[COURSE HEADER]
+VERSION = 2
+UNITS = ENGLISH
+DESCRIPTION = Steady endurance for Amir, FTP 255 W
+FILE NAME = laree-amir-2026-11-12-steady-endurance.erg
+FTP = 255
+MINUTES WATTS
+[END COURSE HEADER]
+[COURSE DATA]
+0.00	179
+60.00	179
+[END COURSE DATA]
+"
+`;

@@ -91,6 +91,45 @@
     cursor: progress;
   }
 
+  /*
+   * Native buttons and links (PlainButton, buttonClass on a link) carry none of react-aria's data
+   * attributes, so they take the same looks from the plain pseudo-classes. Hover is for pointers
+   * that can hover: on a touch screen :hover would stick after a tap.
+   */
+  .button:not([data-rac]):active {
+    transform: translateY(1px);
+  }
+
+  @media (hover: hover) {
+    .primary:not([data-rac]):hover {
+      background: var(--color-action-hover);
+    }
+
+    .secondary:not([data-rac]):hover {
+      background: var(--color-surface);
+    }
+
+    .quiet:not([data-rac]):hover,
+    .danger:not([data-rac]):hover {
+      text-decoration: underline;
+    }
+  }
+
+  .button:not([data-rac]):disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+    text-decoration: none;
+  }
+
+  .primary:not([data-rac]):disabled {
+    background: var(--color-action);
+  }
+
+  .secondary:not([data-rac]):disabled {
+    background: transparent;
+  }
+
   .spinner {
     inline-size: 1em;
     block-size: 1em;

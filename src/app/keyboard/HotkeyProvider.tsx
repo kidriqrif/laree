@@ -9,18 +9,26 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { isDialogOpen, isModifierKey, isTypingTarget, parseKeys, SEQUENCE_WINDOW_MS } from './keys.ts'
+import { ctrlKeyOf, isDialogOpen, isModifierKey, isTypingTarget, parseKeys, SEQUENCE_WINDOW_MS } from './keys.ts'
 
 export type HotkeyScope = 'global' | 'page'
 
 export interface HotkeyBinding {
-  /** One key ("n", "?") or a sequence ("g c"). Keys are the typed character. */
+  /**
+   * One key ("n", "?"), a sequence ("g c") or a Ctrl shortcut ("Ctrl+s", which Cmd also fires on a Mac).
+   * Keys are the typed character.
+   */
   keys: string
   /** Plain English, shown in Keyboard help. */
   description: string
   handler: (event: KeyboardEvent) => void
   /** False hides the key from help and stops it firing. Default true. */
   enabled?: boolean
+  /**
+   * Ctrl shortcuts only: also fire while a text field has focus, as Save should. Default false,
+   * so Ctrl+Z in a field stays the field's own undo.
+   */
+  inFields?: boolean
 }
 
 export interface HotkeyEntry {
@@ -32,6 +40,9 @@ export interface HotkeyEntry {
 
 interface Registered extends HotkeyEntry {
   tokens: string[]
+  /** The key of a Ctrl shortcut, or null for single keys and sequences. */
+  ctrl: string | null
+  inFields: boolean
 }
 
 export interface HotkeysContextValue {
@@ -60,8 +71,9 @@ function strip(r: Registered): HotkeyEntry {
 }
 
 /**
- * Listens for single keys and two-key sequences and runs whatever pages registered.
- * It ignores typing in fields, open comboboxes and open dialogs, and keys with Ctrl, Meta or Alt held.
+ * Listens for single keys, two-key sequences and Ctrl shortcuts and runs whatever pages registered.
+ * Single keys ignore typing in fields, open comboboxes and open dialogs, and can be turned off.
+ * Ctrl shortcuts stay on when single keys are off (WCAG 2.1.4 is about character keys).
  * It owns no keys itself: see useHotkeys.
  */
 export function HotkeyProvider({ children, singleKeys = true, target }: HotkeyProviderProps) {
@@ -85,6 +97,8 @@ export function HotkeyProvider({ children, singleKeys = true, target }: HotkeyPr
       description: b.description,
       scope,
       tokens: parseKeys(b.keys),
+      ctrl: ctrlKeyOf(b.keys),
+      inFields: b.inFields === true,
     }))
     rows.forEach((r, i) => {
       const binding = live[i]
@@ -117,26 +131,41 @@ export function HotkeyProvider({ children, singleKeys = true, target }: HotkeyPr
     const node: Document | HTMLElement = target ?? document
     const onKeyDown = (e: Event) => {
       const event = e as KeyboardEvent
-      if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return
+      if (event.altKey || event.isComposing) return
       if (isModifierKey(event.key)) return
+
+      // Page keys come before global ones, so a page may shadow a global key.
+      const all = [...registryRef.current.values()].flat()
+      const ordered = [...all.filter((r) => r.scope === 'page'), ...all.filter((r) => r.scope === 'global')]
+
+      if (event.ctrlKey || event.metaKey) {
+        if (event.shiftKey || event.repeat || isDialogOpen(document)) return
+        const key = event.key.toLowerCase()
+        const typing = isTypingTarget(event.target)
+        const hit = ordered.find((r) => r.ctrl === key && (r.inFields || !typing))
+        if (!hit) return
+        if (pendingRef.current) clearPending()
+        event.preventDefault()
+        handlers.current.get(hit.id)?.(event)
+        return
+      }
+
       if (isTypingTarget(event.target) || isDialogOpen(document)) {
         if (pendingRef.current) clearPending()
         return
       }
       if (!enabledRef.current || event.repeat) return
 
-      // Page keys come before global ones, so a page may shadow a global key.
-      const all = [...registryRef.current.values()].flat()
-      const ordered = [...all.filter((r) => r.scope === 'page'), ...all.filter((r) => r.scope === 'global')]
+      const plain = ordered.filter((r) => r.ctrl === null)
       const attempt = (seq: string[]): boolean => {
-        const hit = ordered.find((r) => r.tokens.length === seq.length && r.tokens.every((t, i) => t === seq[i]))
+        const hit = plain.find((r) => r.tokens.length === seq.length && r.tokens.every((t, i) => t === seq[i]))
         if (hit) {
           clearPending()
           event.preventDefault()
           handlers.current.get(hit.id)?.(event)
           return true
         }
-        const longer = ordered.some((r) => r.tokens.length > seq.length && seq.every((t, i) => t === r.tokens[i]))
+        const longer = plain.some((r) => r.tokens.length > seq.length && seq.every((t, i) => t === r.tokens[i]))
         if (longer) {
           clearTimeout(timer.current)
           pendingRef.current = seq
@@ -206,7 +235,9 @@ export function useHotkeys(bindings: readonly HotkeyBinding[], options: UseHotke
   useEffect(() => {
     latest.current = bindings
   })
-  const signature = bindings.map((b) => `${b.keys}|${b.description}|${b.enabled === false ? 0 : 1}`).join('||')
+  const signature = bindings
+    .map((b) => `${b.keys}|${b.description}|${b.enabled === false ? 0 : 1}|${b.inFields ? 1 : 0}`)
+    .join('||')
 
   useEffect(() => {
     const stable = latest.current.map((b, i) => ({

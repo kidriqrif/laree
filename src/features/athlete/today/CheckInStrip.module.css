@@ -1,0 +1,36 @@
+@layer components {
+  .strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border-radius: var(--radius-card);
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .main {
+    margin: 0;
+    font-size: var(--text-md);
+    color: var(--color-text);
+  }
+
+  .extra {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--space-2);
+  }
+}

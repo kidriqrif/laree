@@ -53,7 +53,7 @@ M7, M8 and M9 can also run side by side as milestones, because their feature fol
 
 ## M4: Bare app and first live URL
 
-- [ ] **T4.1 Router, shells, role picker, prototype switcher, not-found.** _New._
+- [x] **T4.1 Router, shells, role picker, prototype switcher, not-found.** _New._
   - Why: every later task needs routes, both layouts and a way to choose who is viewing. The role picker is also the start URL.
   - Acceptance:
     - A hash router serves every route in the route table of the information architecture (`#/`, `#/brand`, `#/kit`, `#/reset`, the six athlete routes, the nine coach routes). `#/coach` redirects to `#/coach/overview`. Any other address shows the not-found page (S6) in the right shell.
@@ -68,7 +68,7 @@ M7, M8 and M9 can also run side by side as milestones, because their feature fol
   - Owns: `src/main.tsx`, `src/app/` except `keyboard/` and `pwa/` (router, shells, RoleSwitcher, RolePicker, NotFound), every stub page file listed above, `index.html`.
   - Depends on: M3 tokens.
 
-- [ ] **T4.2 PWA manifest, icons, shortcuts, update toast.** _New._
+- [x] **T4.2 PWA manifest, icons, shortcuts, update toast.** _New._
   - Why: the app must install on a phone and survive a reload with no network. Both are checked later in M11.
   - Acceptance:
     - `vite-plugin-pwa` generates a manifest with `start_url` and `scope` set to `./`, name "Laree", standard, maskable and monochrome icons from `brand/png/`, and the two shortcuts `./#/athlete/today?sheet=log` ("Log a session") and `./#/athlete/today` ("Today").
@@ -78,7 +78,7 @@ M7, M8 and M9 can also run side by side as milestones, because their feature fol
   - Owns: `vite.config.ts`, `public/`, `src/app/pwa/` (UpdateToast and registration), `scripts/check-manifest.ts`.
   - Depends on: M2 icons, M3 tokens.
 
-- [ ] **T4.3 Pages deploy and base-path check.** _Modifies the existing workflow._
+- [x] **T4.3 Pages deploy and base-path check.** _Modifies the existing workflow._
   - Why: the PLAN wants a first live URL at the end of M4, and the owner will rename the repo later.
   - Acceptance:
     - `.github/workflows/deploy.yml` runs checkout, setup-node (from `.nvmrc`), `npm ci`, typecheck, lint, test, build, configure-pages, upload-pages-artifact and deploy-pages.
@@ -96,7 +96,7 @@ M7, M8 and M9 can also run side by side as milestones, because their feature fol
 
 All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Detail for each formula sits in `docs/spec/metrics.md`, `checkins-flags.md` and `gamification.md`.
 
-- [ ] **T5.1 Domain types and time model.** _New._
+- [x] **T5.1 Domain types and time model.** _New._
   - Why: all other M5 tasks share one vocabulary: Athlete, Coach, Race, Phase, PlannedWorkout, WorkoutTemplate, Step, Activity, CheckIn, Flag, Kudos, Badge, Zones and thresholds, Settings.
   - Acceptance:
     - `types.ts` defines every object in the object model, including Step targets (% FTP, % threshold pace, % LTHR, % CSS, RPE), Activity source (file, manual, simulated device) and load with method and confidence.
@@ -105,7 +105,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
   - Owns: `src/domain/types.ts`, `src/domain/time.ts`, `src/domain/time.test.ts`.
   - Depends on: M4.
 
-- [ ] **T5.2 Session load, Fitness, Fatigue, Form, Ramp.** _New._
+- [x] **T5.2 Session load, Fitness, Fatigue, Form, Ramp.** _New._
   - Why: the numbers on every coach screen and the athlete's track lap come from here.
   - Acceptance:
     - Load uses the first method with data: power, pace, swim, heart rate, RPE, duration. Each result carries method and confidence.
@@ -114,7 +114,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
   - Owns: `src/domain/metrics/load.ts`, `src/domain/metrics/fitness.ts` and their tests.
   - Depends on: T5.1.
 
-- [ ] **T5.3 Zones, compliance, best efforts.** _New._
+- [x] **T5.3 Zones, compliance, best efforts.** _New._
   - Why: time in zones feeds Analytics, compliance bands feed the athlete's colour state and flags.
   - Acceptance:
     - Time in zones and the polarisation index follow `metrics.md` section 6.
@@ -123,7 +123,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
   - Owns: `src/domain/metrics/zones.ts`, `compliance.ts`, `curves.ts` and tests.
   - Depends on: T5.1.
 
-- [ ] **T5.4 Check-in baselines and flag rules.** _New._
+- [x] **T5.4 Check-in baselines and flag rules.** _New._
   - Why: flags are rule-based and must be explainable. AI never makes them.
   - Acceptance:
     - Each of the eight rules in the PLAN has a truth table test (fires, does not fire, edge value). Each fired flag carries rule id, the values seen and a plain explanation.
@@ -132,7 +132,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
   - Owns: `src/domain/flags.ts`, `src/domain/baselines.ts` and tests.
   - Depends on: T5.1, T5.2 (Form and Ramp inputs).
 
-- [ ] **T5.5 Streaks, badges, lap model.** _New._
+- [x] **T5.5 Streaks, badges, lap model.** _New._
   - Why: gamification must be earned and capped at the plan.
   - Acceptance:
     - Streak counts weeks at 80% compliance or better, with rest days counting. Badges: the eleven in the gamification catalogue, led by first 100 km week, new FTP, first brick and coach kudos.
@@ -142,7 +142,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
   - Owns: `src/domain/gamification.ts` and tests.
   - Depends on: T5.1, T5.3.
 
-- [ ] **T5.6 Plan helpers: phases, weekly targets, target resolution.** _New._
+- [x] **T5.6 Plan helpers: phases, weekly targets, target resolution.** _New._
   - Why: the season planner and the workout view both turn percentages into numbers for a given athlete.
   - Acceptance:
     - `derivePhases(race)` works back from the A race through taper, peak, build and base, with recovery after. B and C races never move phases.
@@ -152,7 +152,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
   - Owns: `src/domain/plan.ts`, `src/domain/steps.ts` and tests.
   - Depends on: T5.1, T5.2.
 
-- [ ] **T5.7 Seed generator.** _New._
+- [x] **T5.7 Seed generator.** _New._
   - Why: the prototype is only convincing with believable data that always looks current.
   - Acceptance:
     - A fixed seed gives identical output on every run (snapshot test).
@@ -163,7 +163,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
   - Owns: `src/data/seed/` (all files), `src/data/seed.test.ts`.
   - Depends on: T5.2, T5.3, T5.4, T5.5, T5.6.
 
-- [ ] **T5.8 Store, persistence, migrations, selectors.** _New._
+- [x] **T5.8 Store, persistence, migrations, selectors.** _New._
   - Why: all screens read and write through one place that survives reload and can be reset.
   - Acceptance:
     - zustand store with `persist` under the key `laree:v1`, versioned, with a migration function and a test that migrates a fabricated v0 payload.
@@ -174,7 +174,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
   - Owns: `src/data/store.ts`, `persist.ts`, `selectors.ts`, `migrations.ts`, `src/app/StorageBanner.tsx`, tests.
   - Depends on: T5.7.
 
-- [ ] **T5.9 Adversarial check of the formulas.** _Review task._
+- [x] **T5.9 Adversarial check of the formulas.** _Review task._
   - Why: the PLAN calls for a second pair of eyes on the maths before screens trust it.
   - Acceptance:
     - A reviewer who did not write T5.2 to T5.6 recomputes five spec test vectors by hand or with a throwaway script and compares.
@@ -191,7 +191,7 @@ All of M5 is pure TypeScript. Target at least 90% coverage on `src/domain/`. Det
 
 Components must look right in both registers. The athlete register uses 17 px base text and race-bib cards; the coach register uses 14 px base text, hairlines and 28 px rows. Use react-aria-components for behaviour. No Tailwind, shadcn or lucide. CSS Modules with `@layer`. Icons are hand-drawn on a 24 px grid.
 
-- [ ] **T6.1 Core primitives and icon set.** _New._
+- [x] **T6.1 Core primitives and icon set.** _New._
   - Why: nearly every screen uses buttons, chips and cards.
   - Acceptance:
     - Button (primary, secondary, quiet, danger; ink label on track red), IconButton, Chip with glyph plus label for status, Badge medal, Card, BibCard (race-bib look), SportMark (swim, bike, run, strength), Tooltip, Skeleton, EmptyState.
@@ -200,7 +200,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/ui/core/`, `src/ui/icons/`.
   - Depends on: M4.
 
-- [ ] **T6.2 Overlays.** _New._
+- [x] **T6.2 Overlays.** _New._
   - Why: the log sheet, check-in sheet, drawers, dialogs, popovers and toasts are used by many features.
   - Acceptance:
     - Sheet (bottom, athlete), Drawer (right, coach), Dialog, ConfirmDialog, Popover, Toast region with an Undo action, all trapping focus and restoring it on close.
@@ -209,7 +209,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/ui/overlay/`.
   - Depends on: M4.
 
-- [ ] **T6.3 Form and data controls.** _New._
+- [x] **T6.3 Form and data controls.** _New._
   - Why: forms, tables and the planning grid need accessible parts.
   - Acceptance:
     - TextField, NumberField (with unit suffix), Select, SegmentedControl, RadioCards, Switch, Slider, multi-thumb PhaseSlider, Rating (1 to 5 and 1 to 10), DropZone, DataTable (sortable, keyboard row selection), DateStrip, GridList for drag and drop with a keyboard move mode.
@@ -217,7 +217,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/ui/form/`, `src/ui/data/`.
   - Depends on: M4.
 
-- [ ] **T6.4 Chart kit, part 1: scales and simple charts.** _New._
+- [x] **T6.4 Chart kit, part 1: scales and simple charts.** _New._
   - Why: roster rows, bars and zones appear on almost every coach screen.
   - Acceptance:
     - `scales.ts`, Axis, Sparkline, Bars (volume against target), ZoneBar, Bullet.
@@ -226,7 +226,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/charts/scales.ts`, `Axis.tsx`, `Sparkline.tsx`, `Bars.tsx`, `ZoneBar.tsx`, `Bullet.tsx`.
   - Depends on: T5.2 (types only), M4.
 
-- [ ] **T6.5 Chart kit, part 2: fitness chart, heatmap, curve, track lap.** _New._
+- [x] **T6.5 Chart kit, part 2: fitness chart, heatmap, curve, track lap.** _New._
   - Why: the Fitness, Fatigue and Form chart is the coach's main view and the track lap is the athlete's.
   - Acceptance:
     - PMC chart (Fitness, Fatigue, Form with a zero line and a race marker), Heatmap (check-in grid cells), Curve (best-effort), TrackLap with one lane per sport, the pace light, the caution state and a text version for screen readers.
@@ -234,7 +234,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/charts/PMC.tsx`, `Heatmap.tsx`, `Curve.tsx`, `TrackLap.tsx`.
   - Depends on: T5.2, T5.5, M4.
 
-- [ ] **T6.8 Keyboard layer, Jump to, Keyboard help.** _New._
+- [x] **T6.8 Keyboard layer, Jump to, Keyboard help.** _New._
   - Why: the coach register is keyboard-first (screens C21, C22).
   - Acceptance:
     - A hotkey provider supports single keys and two-key sequences (`g` then `c`) and ignores keys typed in fields.
@@ -243,7 +243,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/app/keyboard/`.
   - Depends on: T6.2 (for the dialogs), T4.1.
 
-- [ ] **T6.6 UI kit gallery at `#/kit`.** _Replaces stub._
+- [x] **T6.6 UI kit gallery at `#/kit`.** _Replaces stub._
   - Why: one place to check every component in both registers (S4), and the target for impeccable's rendered audits.
   - Acceptance:
     - Every component and chart from T6.1 to T6.5 appears with its states (default, hover, focus, disabled, error, empty) and a toggle for the two registers and for light and dark.
@@ -251,7 +251,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/shared/kit/`.
   - Depends on: T6.1 to T6.5, T6.8.
 
-- [ ] **T6.7 Brand board at `#/brand`.** _Replaces stub._
+- [x] **T6.7 Brand board at `#/brand`.** _Replaces stub._
   - Why: S3 shows the logo, palette, type and downloads.
   - Acceptance:
     - Shows every logo variant from `brand/svg/`, the palette with hex values, the type specimens, usage rules and the tagline ("Every lane counts.").
@@ -265,7 +265,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
 
 ## M7: Athlete app
 
-- [ ] **T7.1 File import parsers (FIT, GPX, TCX).** _New._
+- [x] **T7.1 File import parsers (FIT, GPX, TCX).** _New._
   - Why: the log sheet needs to read real files without trusting their names.
   - Acceptance:
     - Format is detected from content. `@garmin/fitsdk` loads only when a FIT file is chosen.
@@ -274,7 +274,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/io/import/`, `src/io/import/__fixtures__/`.
   - Depends on: T5.1.
 
-- [ ] **T7.2 Today page.** _Replaces stub._
+- [x] **T7.2 Today page.** _Replaces stub._
   - Why: the athlete's first screen. It must answer "what do I do today, and am I on track?" in one glance.
   - Acceptance:
     - Shows today's session as a bib card with title, duration, key-session mark and Coach's note, the track lap, the check-in strip and any new kudos.
@@ -285,7 +285,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/athlete/today/` (except `CheckInStrip.tsx` and `KudosSlot.tsx`).
   - Depends on: M6, T5.8.
 
-- [ ] **T7.3 Check-in sheet and strip.** _Replaces stub._
+- [x] **T7.3 Check-in sheet and strip.** _Replaces stub._
   - Why: the daily check-in feeds the flags.
   - Acceptance:
     - Sheet at `?sheet=check-in` with sleep hours, soreness 1 to 5, mood 1 to 5, resting heart rate and HRV prefilled "from your watch (simulated)", and an optional note.
@@ -295,7 +295,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/athlete/checkin/`, `src/features/athlete/today/CheckInStrip.tsx`.
   - Depends on: T7.2 (stub in place), T5.4, T5.8, T6.2.
 
-- [ ] **T7.4 Log sheet with quick log, import and simulated sync.** _Replaces stub._
+- [x] **T7.4 Log sheet with quick log, import and simulated sync.** _Replaces stub._
   - Why: the main athlete action.
   - Acceptance:
     - Sheet at `?sheet=log` with "Which session?" defaulting to today's, with a "Not planned" option.
@@ -306,7 +306,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/athlete/log/`, `src/features/athlete/badge-moment/`.
   - Depends on: T7.1, T7.2, T5.5, T5.8, T6.2, T6.3.
 
-- [ ] **T7.5 Week page.** _Replaces stub._
+- [x] **T7.5 Week page.** _Replaces stub._
   - Why: A4 shows this week and the next.
   - Acceptance:
     - Seven day rows with planned and done, week total against target, band chips, and the lap. `?w=-1` and `?w=1` show last and next week; labels read "Last week", "This week", "Next week".
@@ -314,7 +314,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/athlete/week/`.
   - Depends on: M6, T5.8.
 
-- [ ] **T7.6 Workout and Activity pages (athlete and shared detail).** _Replaces two stubs, creates a shared view._
+- [x] **T7.6 Workout and Activity pages (athlete and shared detail).** _Replaces two stubs, creates a shared view._
   - Why: A7 and A8, and the coach's activity page (T8.4) reuses the shared view.
   - Acceptance:
     - Workout shows steps with the athlete's own targets ("10 min at 95-100% threshold, 4:25-4:39 /km") and a profile chart. Back returns to Today.
@@ -323,7 +323,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/athlete/workout/`, `src/features/athlete/activity/`, `src/features/shared/activity/`.
   - Depends on: M6, T5.6, T5.8.
 
-- [ ] **T7.7 Progress page.** _Replaces stub._
+- [x] **T7.7 Progress page.** _Replaces stub._
   - Why: A5 answers "Am I getting fitter for my race?"
   - Acceptance:
     - Race countdown, Fitness trend for 16 weeks in plain words, volume against target, streak, and the badge shelf with finish tape.
@@ -331,7 +331,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/athlete/progress/`.
   - Depends on: M6, T5.5, T5.8.
 
-- [ ] **T7.8 Me page.** _Replaces stub._
+- [x] **T7.8 Me page.** _Replaces stub._
   - Why: A6 holds profile, thresholds, data in, AI consent and preferences.
   - Acceptance:
     - Shows thresholds with history (Amir's FTP 245 to 255 W), data-in options with Strava outbound-only note, units, theme, and a reset link to `#/reset`.
@@ -345,7 +345,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
 
 ## M8: Coach roster, athlete page, analytics
 
-- [ ] **T8.1 Overview roster.** _Replaces stub._
+- [x] **T8.1 Overview roster.** _Replaces stub._
   - Why: C1, "Who needs me today?"
   - Acceptance:
     - Dense results-sheet table: one row per athlete with next race, week compliance, Fitness, Form, Ramp, last check-in and flag glyph. Sorting, `j`/`k` row focus, Enter to open.
@@ -353,7 +353,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/coach/overview/`.
   - Depends on: M6, T5.8, T6.8.
 
-- [ ] **T8.2 Athlete summary and thresholds dialog.** _Replaces stub._
+- [x] **T8.2 Athlete summary and thresholds dialog.** _Replaces stub._
   - Why: C2 and C19.
   - Acceptance:
     - Fitness chart, volume against target, flags at the top with the rule and values, recent activities.
@@ -362,7 +362,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/coach/athlete/` (except `FlagDrawerSlot.tsx`).
   - Depends on: M6, T5.8.
 
-- [ ] **T8.3 Analytics page.** _Replaces stub._
+- [x] **T8.3 Analytics page.** _Replaces stub._
   - Why: C12, "Is the training working, and is the load safe?"
   - Acceptance:
     - Fitness, Fatigue, Form with Ramp, weekly load, time in zones with polarisation, best-effort curves, compliance by week. Period selector.
@@ -370,7 +370,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/coach/analytics/`.
   - Depends on: M6, T5.8.
 
-- [ ] **T8.4 Coach activity page.** _Replaces stub._
+- [x] **T8.4 Coach activity page.** _Replaces stub._
   - Why: C17.
   - Acceptance:
     - Renders the shared `ActivityDetail` with the coach viewer, adding "Send kudos" via `KudosButtonSlot.tsx` (stub finished by T10.2) and the coach note field.
@@ -383,7 +383,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
 
 ## M9: Calendar, season planner, builder, exports
 
-- [ ] **T9.1 Calendar and session editor.** _Replaces stub._
+- [x] **T9.1 Calendar and session editor.** _Replaces stub._
   - Why: C3 and C4. The hardest interaction in the coach app, so it starts early.
   - Acceptance:
     - Week grid for the chosen athlete with planned and done. Drag a session to another day; or focus it, press `m`, move with arrows, press Enter. Totals update and a toast offers Undo.
@@ -393,7 +393,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/coach/calendar/` (except the two stub files).
   - Depends on: M6, T5.8, T6.8.
 
-- [ ] **T9.2 Season planner, race dialog, fill from library.** _Replaces stub._
+- [x] **T9.2 Season planner, race dialog, fill from library.** _Replaces stub._
   - Why: C6, C7, C8.
   - Acceptance:
     - Race list, phase band, phase slider with arrow keys, weekly target bars.
@@ -403,7 +403,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/coach/season/`.
   - Depends on: M6, T5.6, T5.8.
 
-- [ ] **T9.3 Library and workout builder.** _Replaces two stubs._
+- [x] **T9.3 Library and workout builder.** _Replaces two stubs._
   - Why: C9, C10.
   - Acceptance:
     - Library with sport and duration filters and search. `n` starts a new workout at `#/coach/library/new`.
@@ -412,7 +412,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/features/coach/library/`, `src/features/coach/builder/` (except the two stub files).
   - Depends on: M6, T5.6, T5.8, T6.8.
 
-- [ ] **T9.4 Workout exporters: .zwo, .mrc, .erg.** _New._
+- [x] **T9.4 Workout exporters: .zwo, .mrc, .erg.** _New._
   - Why: coaches send workouts to trainers.
   - Acceptance:
     - Output follows `docs/spec/io.md` sections 3 to 5, with snapshot tests for a steady, an interval and a repeat-block workout.
@@ -420,7 +420,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/io/export/zwo.ts`, `mrc.ts`, `erg.ts`, their tests.
   - Depends on: T5.6.
 
-- [ ] **T9.5 FIT workout exporter.** _New._
+- [x] **T9.5 FIT workout exporter.** _New._
   - Why: Garmin and Wahoo devices read FIT workouts.
   - Acceptance:
     - Output is built with `@garmin/fitsdk`, loaded only on export.
@@ -428,7 +428,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/io/export/fit.ts` and test.
   - Depends on: T5.6.
 
-- [ ] **T9.6 Calendar exporter (.ics).** _New._
+- [x] **T9.6 Calendar exporter (.ics).** _New._
   - Why: coaches and athletes want the plan in their calendar app.
   - Acceptance:
     - RFC 5545 output with `Asia/Kuala_Lumpur`, lines folded at 75 octets, escaped text, stable UIDs.
@@ -436,7 +436,7 @@ Components must look right in both registers. The athlete register uses 17 px ba
   - Owns: `src/io/export/ics.ts` and test.
   - Depends on: T5.6.
 
-- [ ] **T9.7 Export menu and Add to calendar.** _Fills three stubs._
+- [x] **T9.7 Export menu and Add to calendar.** _Fills three stubs._
   - Why: ties exporters to screens (C11 and the flow in section 7.5).
   - Acceptance:
     - Builder Export menu downloads .zwo, .fit, .mrc and .erg with unsuitable formats disabled and the reason shown.

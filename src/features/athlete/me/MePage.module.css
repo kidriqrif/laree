@@ -1,0 +1,30 @@
+@layer components {
+  .page { display: grid; gap: var(--space-5); padding-block: var(--space-4) var(--space-8); min-width: 0; }
+  .title { margin: 0; font-family: var(--font-display); font-size: var(--text-3xl); }
+  .index { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+  .indexBtn {
+    min-height: var(--target-min); padding-inline: var(--space-3); border: var(--hairline) solid var(--color-control-border);
+    border-radius: var(--radius-pill); background: transparent; color: var(--color-text); font: inherit; font-size: var(--text-sm); cursor: pointer;
+  }
+  .section { display: grid; gap: var(--space-3); scroll-margin-top: var(--space-16); min-width: 0; }
+  .h { margin: 0; font-family: var(--font-display); font-size: var(--text-xl); }
+  .sub { margin: 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+  .list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; }
+  .dd { margin: 0; }
+  .label { color: var(--color-text-muted); font-size: var(--text-sm); }
+  .num { font-family: var(--font-number); font-size: var(--text-lg); }
+  .history { margin: var(--space-2) 0 0; padding: 0; list-style: none; color: var(--color-text-muted); font-size: var(--text-sm); display: grid; gap: var(--space-1); }
+  .zones { font-size: var(--text-sm); }
+  .zones summary { min-height: var(--target-min); display: flex; align-items: center; cursor: pointer; }
+  .zoneTable { width: 100%; border-collapse: collapse; }
+  .zoneTable th, .zoneTable td { text-align: left; padding: var(--space-1) var(--space-2); border-top: var(--hairline) solid var(--color-rule); font-weight: normal; }
+  .note { margin: var(--space-2) 0 0; color: var(--color-text-muted); font-size: var(--text-sm); }
+  .actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .link {
+    display: inline-flex; align-items: center; min-height: var(--target-min); padding-inline: var(--space-4);
+    border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control);
+    color: var(--color-text); text-decoration: none;
+  }
+  .error { margin: 0; color: var(--color-danger); font-size: var(--text-sm); }
+}

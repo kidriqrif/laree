@@ -70,6 +70,7 @@ describe('actions', () => {
     expect(rows).toHaveLength(n + 1)
     expect(rows.some((r) => r.value === 245)).toBe(true)
 
+    useViewer.getState().viewAs('coach')
     useLaree.getState().setAiConsent('coach', true)
     expect(useLaree.getState().data.settings.coach.aiConsent).toBe(true)
     expect(useLaree.getState().data.settings.amir.aiConsent).toBe(false)
@@ -82,7 +83,7 @@ describe('persistence', () => {
   it('saves under laree:v1 with a version', () => {
     useLaree.getState().setPref('rosterSort', 'name')
     const saved = JSON.parse(localStorage.getItem(STORE_KEY)!)
-    expect(saved.version).toBe(1)
+    expect(saved.version).toBe(2)
     expect(saved.state.data.prefs.rosterSort).toBe('name')
     expect(saved.state.anchor).toBe(useLaree.getState().anchor)
   })

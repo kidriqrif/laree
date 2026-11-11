@@ -4,8 +4,9 @@
  * the same object until the data or the arguments change.
  */
 import { isActive } from '../domain/flags.ts'
-import { lap, streak } from '../domain/gamification.ts'
-import type { GamificationInput, LapState, StreakResult } from '../domain/gamification.ts'
+import type { FlagRecord, FlagStatus } from '../domain/flags.ts'
+import { badges as computeBadges, lap, streak } from '../domain/gamification.ts'
+import type { BadgeAward, GamificationInput, LapState, StreakResult } from '../domain/gamification.ts'
 import { evaluateCompliance, weeklyCompliance } from '../domain/metrics/compliance.ts'
 import type { ComplianceEvaluation, PlannedEvaluation } from '../domain/metrics/compliance.ts'
 import { projectedSeries } from '../domain/metrics/fitness.ts'
@@ -17,11 +18,13 @@ import type {
   Badge,
   CheckIn,
   DayOffset,
+  Kudos,
   Phase,
   PlannedWorkout,
   Race,
   Settings,
   WeeklyTarget,
+  WorkoutTemplate,
 } from '../domain/types.ts'
 import type { Severity } from '../domain/flags.ts'
 import type { LareeData } from './store.ts'
@@ -96,6 +99,13 @@ function gamificationInput(data: LareeData, athleteId: AthleteId, today: DayOffs
     excuses: data.excuses,
   }
 }
+
+/** Every badge the athlete has earned by `today`, worked out from the data. */
+export const earnedAwards = memoize(
+  (data: LareeData, athleteId: AthleteId, today: DayOffset): BadgeAward[] =>
+    computeBadges(gamificationInput(data, athleteId, today)),
+  (_d, id, today) => `awards:${id}:${today}`,
+)
 
 // ------------------------------------------------------------------ athlete: day
 
@@ -320,6 +330,103 @@ export const selectAnalytics = memoize(
   },
   (_d, id, lastWeek, today) => `analytics:${id}:${lastWeek}:${today}`,
 )
+
+// ------------------------------------------------------------------ flags, check-ins, consent
+
+/** Flag lifecycle records for one athlete, newest first. Pass a status to keep one kind. */
+export const selectFlagRecords = memoize(
+  (data: LareeData, athleteId: AthleteId, status: FlagStatus | undefined): FlagRecord[] =>
+    data.flagsState[athleteId].flags
+      .filter((f) => status === undefined || f.status === status)
+      .toSorted((a, b) => b.openedDay - a.openedDay || a.id.localeCompare(b.id)),
+  (_d, id, status) => `flagrecs:${id}:${status ?? 'all'}`,
+)
+
+/** Open flags for one athlete, most serious first. Acknowledged and resolved flags are not here. */
+export const selectOpenFlags = memoize(
+  (data: LareeData, athleteId: AthleteId): FlagRecord[] =>
+    selectFlagRecords(data, athleteId, 'open').toSorted(
+      (a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] || b.openedDay - a.openedDay,
+    ),
+  (_d, id) => `openflags:${id}`,
+)
+
+/** The number of open flags for one athlete, or for the whole team when no athlete is given. */
+export function selectOpenFlagCount(data: LareeData, athleteId?: AthleteId): number {
+  return (athleteId ? [athleteId] : ATHLETES).reduce(
+    (n, id) => n + data.flagsState[id].flags.filter((f) => f.status === 'open').length,
+    0,
+  )
+}
+
+/** Whether the athlete has a check-in saved for the day. "Not today" is not a check-in. */
+export function selectHasCheckedIn(data: LareeData, athleteId: AthleteId, day: DayOffset): boolean {
+  return data.checkIns.some((c) => c.athleteId === athleteId && c.day === day)
+}
+
+/** Whether the athlete chose "Not today" for the day. */
+export function selectCheckInSkipped(data: LareeData, athleteId: AthleteId, day: DayOffset): boolean {
+  return data.skippedCheckIns.some((s) => s.athleteId === athleteId && s.day === day)
+}
+
+export type AiState = 'off' | 'athlete-only' | 'waiting-for-athlete' | 'active'
+
+/**
+ * The consent table in docs/spec/ai.md 2.1. 'athlete-only' reads "On for you. Coach hasn't turned
+ * AI on yet." in Me; 'waiting-for-athlete' reads "Waiting for the athlete" in Settings.
+ */
+export function selectAiState(data: LareeData, athleteId: AthleteId): AiState {
+  const athlete = data.settings[athleteId].aiConsent
+  const coach = data.settings.coach.aiConsent
+  if (athlete && coach) return 'active'
+  if (athlete) return 'athlete-only'
+  return coach ? 'waiting-for-athlete' : 'off'
+}
+
+// ------------------------------------------------------------------ badges, kudos, notes, lookups
+
+/** Badges earned and not yet shown in the badge moment, oldest first. */
+export const selectUnseenBadges = memoize(
+  (data: LareeData, athleteId: AthleteId): Badge[] => {
+    const seen = new Set(data.badgeSeen[athleteId] ?? [])
+    return data.badges
+      .filter((b) => b.athleteId === athleteId && !seen.has(b.id))
+      .toSorted((a, b) => a.earnedDay - b.earnedDay)
+  },
+  (_d, id) => `unseenbadges:${id}`,
+)
+
+/** Kudos the athlete has not seen yet, newest first. */
+export const selectUnseenKudos = memoize(
+  (data: LareeData, athleteId: AthleteId): Kudos[] =>
+    data.kudos.filter((k) => k.athleteId === athleteId && !k.seenByAthlete).toSorted((a, b) => b.day - a.day),
+  (_d, id) => `unseenkudos:${id}`,
+)
+
+/** Kudos sent about one activity. */
+export const selectKudosForActivity = memoize(
+  (data: LareeData, activityId: string): Kudos[] => data.kudos.filter((k) => k.activityId === activityId),
+  (_d, id) => `kudosact:${id}`,
+)
+
+/** The coach's note on an activity, or undefined. */
+export const selectActivityCoachNote = (data: LareeData, activityId: string): string | undefined =>
+  data.activityNotes[activityId]
+
+/** An athlete's races, soonest first. */
+export const selectRaces = memoize(
+  (data: LareeData, athleteId: AthleteId): Race[] => mine(data.races, athleteId).toSorted((a, b) => a.day - b.day),
+  (_d, id) => `races:${id}`,
+)
+
+export const selectActivity = (data: LareeData, id: string): Activity | undefined =>
+  data.activities.find((a) => a.id === id)
+
+export const selectPlannedWorkout = (data: LareeData, id: string): PlannedWorkout | undefined =>
+  data.planned.find((w) => w.id === id)
+
+export const selectTemplate = (data: LareeData, id: string): WorkoutTemplate | undefined =>
+  data.templates.find((t) => t.id === id)
 
 // ------------------------------------------------------------------ small helpers
 

@@ -1,0 +1,12 @@
+@layer components {
+  .form {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .note {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+}

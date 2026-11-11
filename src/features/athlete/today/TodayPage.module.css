@@ -1,0 +1,412 @@
+@layer components {
+  /* ------------------------------------------------------------ page */
+
+  .page {
+    display: grid;
+    gap: var(--space-5);
+    min-inline-size: 0;
+  }
+
+  /* "Today" stands on a 2 px ink line, like a name on a start line. */
+  .head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding-block-end: var(--space-3);
+    border-block-end: var(--rule-weight) solid var(--color-text);
+  }
+
+  .title {
+    margin: 0;
+    font-size: var(--text-4xl);
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+  }
+
+  .dateline {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-1);
+    margin: 0;
+    padding-block-end: var(--space-1);
+    text-align: end;
+    font-size: var(--text-sm);
+    line-height: 1.2;
+  }
+
+  .date {
+    font-weight: 700;
+  }
+
+  .phase {
+    color: var(--color-text-muted);
+  }
+
+  .body {
+    display: grid;
+    gap: var(--space-5);
+    min-inline-size: 0;
+  }
+
+  .hero {
+    display: grid;
+    gap: var(--space-4);
+    min-inline-size: 0;
+  }
+
+  .lead {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+
+  .empty {
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .plusLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  /* ------------------------------------------------------------ the bib */
+
+  .session {
+    display: grid;
+    gap: var(--space-3);
+    min-inline-size: 0;
+  }
+
+  .bibLink {
+    display: block;
+    border-radius: var(--radius-card);
+    color: inherit;
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bib {
+    padding-inline: var(--space-5);
+    transition: transform var(--dur-fast) var(--ease-standard);
+  }
+
+  .bibLink:active .bib {
+    transform: translateY(1px);
+  }
+
+  .figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .figureLine {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .unit {
+    font-size: var(--text-xl);
+  }
+
+  .kicker {
+    margin-block-end: var(--space-1);
+    color: var(--color-text-muted);
+    font-family: var(--font-ui);
+    font-size: var(--text-sm);
+    font-style: normal;
+    font-variation-settings: normal;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .caption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    inline-size: 100%;
+    min-inline-size: 0;
+  }
+
+  .sessionTitle {
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-stretch: calc(var(--font-display-wdth) * 1%);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+    font-size: var(--text-xl);
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  /* The bib's top line: sport, and the key-session mark beside it. */
+  .markRow {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  /* Sun with ink: the key session is the one to protect this week. */
+  .key {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-pill);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .mainSet {
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .result {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    font-weight: 400;
+  }
+
+  /* After a save the result lands like a stamp. Only then: never on first paint. */
+  .result[data-stamp] {
+    animation: stamp var(--dur-slow) var(--ease-out) both;
+  }
+
+  @keyframes stamp {
+    from {
+      opacity: 0;
+      transform: scale(1.3) rotate(-4deg);
+    }
+  }
+
+  .load {
+    font-weight: 700;
+  }
+
+  .note {
+    display: grid;
+    gap: var(--space-1);
+    inline-size: 100%;
+    margin-block-start: var(--space-1);
+    padding-block-start: var(--space-3);
+    border-block-start: var(--hairline) solid var(--color-rule-strong);
+    font-weight: 400;
+    text-align: start;
+  }
+
+  .noteLabel {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  /* The first two lines; the workout page has the rest. */
+  .noteText {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .otherMark {
+    font-weight: 700;
+  }
+
+  .restMark {
+    display: inline-flex;
+    color: var(--color-text);
+  }
+
+  .restFigure {
+    line-height: 1;
+    text-wrap: balance;
+  }
+
+  .restText {
+    font-weight: 400;
+  }
+
+  .sessionActions {
+    display: grid;
+  }
+
+  .wide {
+    inline-size: 100%;
+    justify-content: center;
+    text-decoration: none;
+  }
+
+  /* ------------------------------------------------------------ rows */
+
+  .list {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-block-size: 56px;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  a.row {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform var(--dur-fast) var(--ease-standard);
+  }
+
+  a.row:active {
+    transform: translateY(1px);
+  }
+
+  .rowMain {
+    display: grid;
+    flex: 1;
+    gap: 2px;
+    min-inline-size: 0;
+  }
+
+  .rowTitle {
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .rowMeta {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .rowLabel {
+    flex: none;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .chev {
+    flex: none;
+    color: var(--color-text-muted);
+  }
+
+  .race {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-block-size: 56px;
+    padding: var(--space-2) var(--space-4);
+    border: var(--hairline) dashed var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    font-weight: 700;
+  }
+
+  /* ------------------------------------------------------------ lap and next up */
+
+  .sectionLabel {
+    margin: 0;
+    font-size: var(--text-lg);
+  }
+
+  .lapSection {
+    position: relative;
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-4) var(--space-4);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .lapLink {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-block-size: var(--target-min);
+    color: var(--color-text);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* The whole tile is the link's target; the focus ring follows the tile. */
+  .lapLink::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-card);
+  }
+
+  .lapLink:focus-visible {
+    outline: none;
+  }
+
+  .lapLink:focus-visible::after {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .lap {
+    justify-self: center;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    margin: 0;
+  }
+
+  .next {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .tileError {
+    display: block;
+    margin: 0;
+    padding: var(--space-4);
+    border: var(--hairline) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    color: var(--color-text-muted);
+  }
+
+  /* ------------------------------------------------------------ loading */
+
+  .skeletonBib {
+    block-size: 320px;
+    border-radius: var(--radius-card);
+  }
+
+  .skeletonCard {
+    border-radius: var(--radius-card);
+  }
+
+  .skeletonLap {
+    block-size: 160px;
+  }
+
+  @media (forced-colors: active) {
+    .key {
+      border: 1px solid CanvasText;
+    }
+
+    .lapLink:focus-visible::after {
+      outline-color: Highlight;
+    }
+  }
+}

@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { useLaree } from '../data/store.ts'
 import { landingFor } from './RoleSwitcher.tsx'
 import { routes } from './router.tsx'
 import { setLastCoachRoute, useViewer } from './viewer.ts'
@@ -13,22 +14,35 @@ function renderAt(path: string) {
 }
 
 beforeEach(() => {
+  useLaree.getState().reset()
   localStorage.clear()
   setLastCoachRoute(null)
   useViewer.setState({ role: 'athlete', athleteId: 'amir', coachAthleteId: 'amir', chosen: false })
 })
 afterEach(cleanup)
 
-const STUBS: [string, string, 'athlete' | 'coach' | 'standalone'][] = [
+/** Real ids from the seed, so the detail pages render their real content. */
+function ids() {
+  const { planned, activities } = useLaree.getState().data
+  const workout = planned.find((p) => p.athleteId === 'amir' && p.steps.length > 0)!
+  const activity = activities.find((a) => a.athleteId === 'amir')!
+  return { workout, activity }
+}
+
+type Side = 'athlete' | 'coach' | 'standalone'
+type Page = [path: string | (() => string), heading: string | RegExp | (() => string), side: Side]
+
+const PAGES: Page[] = [
   ['/reset', 'Reset demo data', 'standalone'],
   ['/athlete/today', 'Today', 'athlete'],
-  ['/athlete/week', 'Week', 'athlete'],
+  ['/athlete/week', /^This week, /, 'athlete'],
+  ['/athlete/week?w=-1', /^Last week, /, 'athlete'],
   ['/athlete/progress', 'Progress', 'athlete'],
   ['/athlete/me', 'Me', 'athlete'],
-  ['/athlete/workout/w1', 'Workout', 'athlete'],
-  ['/athlete/activity/a1', 'Activity', 'athlete'],
+  [() => `/athlete/workout/${ids().workout.id}`, () => ids().workout.title, 'athlete'],
+  [() => `/athlete/activity/${ids().activity.id}`, () => ids().activity.title, 'athlete'],
   ['/coach/overview', 'Overview', 'coach'],
-  ['/coach/athlete/danial', 'Athlete summary', 'coach'],
+  ['/coach/athlete/danial', 'Danial', 'coach'],
   ['/coach/calendar', 'Calendar', 'coach'],
   ['/coach/calendar/irfan', 'Calendar', 'coach'],
   ['/coach/season', 'Season', 'coach'],
@@ -36,9 +50,9 @@ const STUBS: [string, string, 'athlete' | 'coach' | 'standalone'][] = [
   ['/coach/analytics', 'Analytics', 'coach'],
   ['/coach/analytics/danial', 'Analytics', 'coach'],
   ['/coach/library', 'Library', 'coach'],
-  ['/coach/library/new', 'Workout builder', 'coach'],
+  ['/coach/library/new', 'New workout', 'coach'],
   ['/coach/check-ins', 'Check-ins', 'coach'],
-  ['/coach/activity/a1', 'Activity', 'coach'],
+  [() => `/coach/activity/${ids().activity.id}`, () => ids().activity.title, 'coach'],
   ['/coach/settings', 'Settings', 'coach'],
 ]
 
@@ -52,15 +66,16 @@ describe('routes', () => {
     expect(screen.getByRole('link', { name: 'Brand board' })).toBeTruthy()
   })
 
-  it.each(STUBS)('%s renders its stub in the right shell', async (path, name, side) => {
-    renderAt(path)
-    expect(await screen.findByRole('heading', { level: 1, name })).toBeTruthy()
+  it.each(PAGES)('%s renders its real page in the right shell', async (path, heading, side) => {
+    renderAt(typeof path === 'function' ? path() : path)
+    const name = typeof heading === 'function' ? heading() : heading
+    expect(await screen.findByRole('heading', { level: 1, name }, { timeout: 15000 })).toBeTruthy()
     const registers = [...document.querySelectorAll('[data-register]')].map((el) => el.getAttribute('data-register'))
     expect(registers).toHaveLength(side === 'standalone' ? 0 : 1)
     expect(registers.includes(side)).toBe(side !== 'standalone')
     // The switcher shows on every route.
     expect(screen.getByRole('region', { name: 'Prototype controls' })).toBeTruthy()
-  })
+  }, 20000)
 
   it('renders the brand board (a built page, not a stub)', async () => {
     renderAt('/brand')
@@ -104,7 +119,7 @@ describe('routes', () => {
 describe('athlete shell', () => {
   it('has five bar items with Log opening the sheet on Today', async () => {
     renderAt('/athlete/week')
-    await screen.findByRole('heading', { level: 1, name: 'Week' })
+    await screen.findByRole('heading', { level: 1, name: /^This week, / })
     const bar = screen.getByRole('navigation', { name: 'Athlete' })
     expect(bar.querySelectorAll('a')).toHaveLength(5)
     expect(screen.getByRole('link', { name: 'Week' }).getAttribute('aria-current')).toBe('page')
@@ -112,8 +127,8 @@ describe('athlete shell', () => {
   })
 
   it('keeps Week highlighted on a detail page and offers Back', async () => {
-    renderAt('/athlete/workout/w1')
-    await screen.findByRole('heading', { level: 1, name: 'Workout' })
+    renderAt(`/athlete/workout/${ids().workout.id}`)
+    await screen.findByRole('heading', { level: 1, name: ids().workout.title })
     expect(screen.getByRole('link', { name: 'Week' }).getAttribute('aria-current')).toBe('page')
     expect(screen.getByRole('button', { name: /Back/ })).toBeTruthy()
   })
@@ -133,7 +148,7 @@ describe('coach shell', () => {
 describe('prototype switcher', () => {
   it('shows who is viewing and updates the shell when the viewer changes', async () => {
     const router = renderAt('/athlete/week?w=-1')
-    await screen.findByRole('heading', { level: 1, name: 'Week' })
+    await screen.findByRole('heading', { level: 1, name: /^Last week, / })
     expect(screen.getByRole('radio', { name: 'Amir' }).getAttribute('aria-checked')).toBe('true')
 
     fireEvent.click(screen.getByRole('radio', { name: 'Danial' }))

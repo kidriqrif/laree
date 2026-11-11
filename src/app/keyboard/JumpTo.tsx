@@ -3,7 +3,8 @@ import { useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { Dialog } from '../../ui/overlay/index.ts'
 import { useViewer } from '../viewer.ts'
-import { buildDestinations, filterDestinations, type Destination } from './destinations.ts'
+import { useLaree } from '../../data/store.ts'
+import { buildDestinations, DESTINATION_GROUPS, filterDestinations, type Destination } from './destinations.ts'
 import styles from './Keyboard.module.css'
 
 export interface JumpToProps {
@@ -27,7 +28,9 @@ function JumpToBody({ onDone }: { onDone: () => void }) {
   const [active, setActive] = useState(0)
   const uid = useId()
   const listId = `${uid}-list`
-  const all = useMemo(() => buildDestinations(athleteId), [athleteId])
+  const templates = useLaree((s) => s.data.templates)
+  const races = useLaree((s) => s.data.races)
+  const all = useMemo(() => buildDestinations(athleteId, { templates, races }), [athleteId, templates, races])
   const results = useMemo(() => filterDestinations(all, query), [all, query])
   const current = Math.min(active, Math.max(results.length - 1, 0))
   const optionId = (d: Destination) => `${uid}-${d.id}`
@@ -51,8 +54,7 @@ function JumpToBody({ onDone }: { onDone: () => void }) {
     }
   }
 
-  const groups = (['Athletes', 'Sections'] as const)
-    .map((g) => ({ name: g, items: results.filter((r) => r.group === g) }))
+  const groups = DESTINATION_GROUPS.map((g) => ({ name: g, items: results.filter((r) => r.group === g) }))
     .filter((g) => g.items.length > 0)
 
   return (
@@ -61,12 +63,12 @@ function JumpToBody({ onDone }: { onDone: () => void }) {
         className={styles.search}
         type="text"
         role="combobox"
-        aria-label="Search athletes and sections"
+        aria-label="Search athletes, sections, workouts and races"
         aria-expanded={results.length > 0}
         aria-controls={listId}
         aria-activedescendant={results[current] ? optionId(results[current]) : undefined}
         aria-autocomplete="list"
-        placeholder="Search athletes and sections"
+        placeholder="Search athletes, sections, workouts and races"
         autoComplete="off"
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus

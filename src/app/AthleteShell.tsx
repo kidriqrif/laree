@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import { MeIcon, PlusIcon, ProgressIcon, TodayIcon, WeekIcon } from '../ui/icons/index.ts'
+import { Toasts } from './Toasts.tsx'
 import styles from './AthleteShell.module.css'
 
 const DETAIL = /^\/athlete\/(workout|activity)\//
@@ -56,6 +57,7 @@ export function AthleteShell() {
           </li>
         </ul>
       </nav>
+      <Toasts register="athlete" />
     </div>
   )
 }

@@ -1,0 +1,122 @@
+@layer components {
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+
+  .load {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: 600;
+  }
+
+  .muted {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .error {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-danger);
+  }
+
+  .reading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+  }
+
+  .preview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: var(--color-surface-sunken);
+    border: var(--hairline) solid var(--color-rule);
+    border-radius: var(--radius-card);
+  }
+
+  .cardTitle {
+    margin: 0;
+    font-size: var(--text-lg);
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin: 0;
+  }
+
+  .facts dt {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .facts dd {
+    margin: 0;
+    font-family: var(--font-number);
+    font-size: var(--text-md);
+  }
+
+  .note {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+  }
+
+  .note p {
+    margin: 0;
+  }
+
+  .simulated {
+    margin: 0;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: var(--space-1) var(--space-2);
+    border: var(--hairline) solid var(--color-rule-strong);
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  /* Until Today names a [data-badge-host], the badge moment floats at the top of the column. */
+  .badgeFloat {
+    position: fixed;
+    top: var(--space-3);
+    left: 50%;
+    z-index: var(--z-toast);
+    width: min(calc(100% - 2 * var(--space-4)), 528px);
+    transform: translateX(-50%);
+  }
+
+  .badgeFloat:not(:has(section)) {
+    display: none;
+  }
+}
