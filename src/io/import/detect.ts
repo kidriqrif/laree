@@ -55,7 +55,8 @@ export function firstElementName(text: string): string | null {
   return null;
 }
 
-async function gunzip(bytes: Uint8Array): Promise<Uint8Array | null> {
+/** The unpacked bytes, 'too-large' when they pass the size limit, or null when the gzip data is damaged. */
+async function gunzip(bytes: Uint8Array): Promise<Uint8Array | 'too-large' | null> {
   try {
     const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'));
     const reader = stream.getReader();
@@ -67,7 +68,7 @@ async function gunzip(bytes: Uint8Array): Promise<Uint8Array | null> {
       total += value.byteLength;
       if (total > MAX_BYTES) {
         await reader.cancel();
-        return new Uint8Array(MAX_BYTES + 1);
+        return 'too-large';
       }
       chunks.push(value);
     }
@@ -106,7 +107,7 @@ export async function detectFormat(input: Uint8Array, fileName: string, depth = 
     if (depth > 0) return { ok: false, error: importError('not-supported', fileName) };
     const out = await gunzip(bytes);
     if (!out) return { ok: false, error: importError('damaged', fileName) };
-    if (out.length > MAX_BYTES) {
+    if (out === 'too-large') {
       return { ok: false, error: importError('too-large', fileName, { sizeMb: Infinity }) };
     }
     return detectFormat(out, fileName, depth + 1);
@@ -123,7 +124,6 @@ export async function detectFormat(input: Uint8Array, fileName: string, depth = 
   ) {
     return { ok: true, format: 'fit', bytes };
   }
-  bytes = bytes.length > 0 ? bytes : input;
   const text = decodeText(bytes.subarray(0, 16384));
   const first = firstElementName(text);
   if (first === 'gpx') return { ok: true, format: 'gpx', bytes };

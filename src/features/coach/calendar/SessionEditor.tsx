@@ -7,7 +7,7 @@ import { DurationField, Select, Switch, TextField } from '../../../ui/form/index
 import { ConfirmDialog, Drawer, showUndoToast } from '../../../ui/overlay/index.ts'
 import type { Sport } from '../../../domain/types.ts'
 import styles from './CalendarPage.module.css'
-import { SPORT_OPTIONS, buildPatch, isDirty, sportLabel, undoIfLatest, valuesOf, validate } from './sessionModel.ts'
+import { SPORT_OPTIONS, buildPatch, isDirty, latestUndo, sportLabel, undoIfLatest, valuesOf, validate } from './sessionModel.ts'
 import type { EditorValues } from './sessionModel.ts'
 
 export interface SessionEditorProps {
@@ -41,15 +41,15 @@ export default function SessionEditor({ workoutId, readOnly, onClose }: SessionE
     if (errors.title || errors.duration) return
     const title = values.title.trim()
     useLaree.getState().applyPlanChanges([{ kind: 'update', id: workout.id, patch: buildPatch(workout, values) }], `Edited ${title}`)
-    const length = useLaree.getState().undoStack.length
-    showUndoToast(`Saved ${title}.`, () => undoIfLatest(length))
+    const step = latestUndo()
+    showUndoToast(`Saved ${title}.`, () => undoIfLatest(step))
     onClose()
   }
 
   const remove = () => {
     useLaree.getState().deletePlanned(workout.id)
-    const length = useLaree.getState().undoStack.length
-    showUndoToast(`Removed ${workout.title}.`, () => undoIfLatest(length))
+    const step = latestUndo()
+    showUndoToast(`Removed ${workout.title}.`, () => undoIfLatest(step))
     onClose()
   }
 

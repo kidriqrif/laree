@@ -40,8 +40,9 @@ export function durationLabel(seconds: number): string {
     const r = s % 60
     return r === 0 ? `${m} min` : `${m} min ${r} s`
   }
-  const h = Math.floor(s / 3600)
-  return `${h} h ${String(Math.round((s % 3600) / 60)).padStart(2, '0')} min`
+  // Round the whole duration to minutes first, so 1:59:30 reads "2 h 00 min", never "1 h 60 min".
+  const totalMin = Math.round(s / 60)
+  return `${Math.floor(totalMin / 60)} h ${String(totalMin % 60).padStart(2, '0')} min`
 }
 
 export function distanceLabel(metres: number): string {

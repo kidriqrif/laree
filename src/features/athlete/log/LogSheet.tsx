@@ -125,13 +125,13 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
   const navigate = useNavigate()
   const today = currentDay()
 
-  const options = useMemo(() => matchOptions(data, athleteId, today), [data, athleteId, today])
+  // The session chosen with "Log it", read once: it stays on offer even when older than a week.
+  const [prematched] = useState(() => readLogMatch(useLaree.getState().data.drafts, athleteId, today))
+  const options = useMemo(() => matchOptions(data, athleteId, today, prematched), [data, athleteId, today, prematched])
   const athlete = ATHLETES.find((a) => a.id === athleteId)
   const homeSport: Sport = athlete?.sports.find((s) => s !== 'other') ?? 'run'
 
-  const [matchId, setMatchId] = useState<string>(() =>
-    defaultMatch(options, readLogMatch(useLaree.getState().data.drafts, athleteId, today), today),
-  )
+  const [matchId, setMatchId] = useState<string>(() => defaultMatch(options, prematched, today))
   const workout = options.find((o) => o.workout.id === matchId)?.workout
   const [method, setMethod] = useState<Method>('quick')
 
@@ -283,9 +283,15 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
   const parsed = imp.status === 'ready' ? imp.activities : []
   const plans = parsed.map((p, i) => {
     const s: Sport | null = p.sport ?? fileSports[i] ?? null
-    const issue = s ? importIssue(p, s, data, athleteId, today, existing?.id) : null
-    const load = s ? importLoad(p, s, thresholdsFor(data, athleteId, startOf(p).day), fileRpe ?? existing?.rpe) : null
-    return { p, sport: s, issue, load }
+    const fileDay = startOf(p).day
+    // Only the first session of a file can take the chosen session, and only with the same sport on
+    // the same day (or with "Move"). Anything else saves on its own and leaves the existing log alone.
+    const matches = i === 0 && !!workout && workout.sport === s && (fileDay === workout.day || moveSession)
+    const replaced = matches ? existing : undefined
+    const issue = s ? importIssue(p, s, data, athleteId, today, replaced?.id) : null
+    const keptRpe = replaced?.source === 'manual' ? replaced.rpe : undefined
+    const load = s ? importLoad(p, s, thresholdsFor(data, athleteId, fileDay), fileRpe ?? keptRpe) : null
+    return { p, sport: s, issue, load, matches, replaced }
   })
   const first = plans[0]
   const otherDay = workout && first?.sport === workout.sport && startOf(first.p).day !== workout.day ? startOf(first.p).day : null
@@ -296,12 +302,13 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
     if (importBlocked) return
     attempt(() => {
       let n = 0
-      for (const [i, x] of plans.entries()) {
+      for (const x of plans) {
         if (!x.sport) continue
         const { day: fileDay } = startOf(x.p)
-        const matches = i === 0 && workout && workout.sport === x.sport && (fileDay === workout.day || moveSession)
+        const matches = x.matches && workout !== undefined
         if (matches && moveSession && workout.day !== fileDay) moveWorkout(workout.id, fileDay)
-        const id = i === 0 && existing ? existing.id : newActivityId(useLaree.getState().data, athleteId, 'i', fileDay)
+        // The existing log's id is reused (and so replaced) only when this file takes its session.
+        const id = x.replaced ? x.replaced.id : newActivityId(useLaree.getState().data, athleteId, 'i', fileDay)
         logActivity(
           buildImportedActivity({
             id,
@@ -309,10 +316,10 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
             parsed: x.p,
             sport: x.sport,
             thresholds: thresholdsFor(data, athleteId, fileDay),
-            title: importTitle(workout, x.sport, !!matches),
+            title: importTitle(workout, x.sport, matches),
             ...(fileRpe !== null ? { rpe: fileRpe } : {}),
-            ...(matches && workout ? { matchedWorkoutId: workout.id } : {}),
-            ...(i === 0 && existing && existing.source === 'manual' && matches ? { replaces: existing } : {}),
+            ...(matches ? { matchedWorkoutId: workout.id } : {}),
+            ...(x.replaced?.source === 'manual' ? { replaces: x.replaced } : {}),
           }),
         )
         n++
@@ -472,7 +479,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
                   valueNames={EFFORT_NAMES}
                   showEnds
                 />
-                {existing?.source === 'manual' && workout ? (
+                {plans[0]?.replaced?.source === 'manual' ? (
                   <p className={styles.muted}>This session has a quick log. The file replaces its numbers and keeps your effort and note.</p>
                 ) : null}
               </div>

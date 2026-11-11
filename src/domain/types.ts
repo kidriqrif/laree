@@ -166,6 +166,16 @@ export interface ActivitySummary {
   cadence?: number;
 }
 
+/** Time in zones and best efforts, worked out from an activity's per-second stream. */
+export interface StreamDigest {
+  /** Seconds in zones 1 to 5, or null when there is no usable signal or threshold. */
+  zones: number[] | null;
+  /** Best mean power per window in seconds, for rides with power. */
+  power: Record<number, number | null> | null;
+  /** Best time in seconds per run distance key. */
+  run: Record<string, number | null> | null;
+}
+
 export interface Activity {
   id: string;
   athleteId: AthleteId;
@@ -181,6 +191,11 @@ export interface Activity {
   notes?: string;
   matchedWorkoutId?: string;
   complianceBand?: ComplianceBand;
+  /**
+   * Set on every imported file (and only on those), whose per-second stream is not stored. Zones use
+   * the athlete's thresholds on the day of the activity, as they stood at import.
+   */
+  streamDigest?: StreamDigest;
 }
 
 export interface CheckIn {

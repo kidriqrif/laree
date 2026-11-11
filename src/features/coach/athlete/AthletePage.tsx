@@ -59,7 +59,8 @@ export default function AthletePage() {
       </section>
     )
   }
-  return <AthleteSummary athleteId={athleteId} />
+  // Keyed by athlete, so an open threshold editor closes when the route changes to someone else.
+  return <AthleteSummary key={athleteId} athleteId={athleteId} />
 }
 
 function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
@@ -279,7 +280,7 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
                 emptyState={<p className={styles.empty}>No activities in the last 30 days.</p>}
                 columns={[
                   { id: 'day', label: 'Date', value: (a) => a.day, render: (a) => fmtDay(a.day) },
-                  { id: 'sport', label: 'Sport', value: (a) => SPORT_LABEL[a.sport === 'other' ? 'run' : a.sport] },
+                  { id: 'sport', label: 'Sport', value: (a) => (a.sport === 'other' ? 'Other' : SPORT_LABEL[a.sport]) },
                   {
                     id: 'title',
                     label: 'Title',

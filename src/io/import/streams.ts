@@ -1,5 +1,6 @@
 import type { Sport } from '../../domain/types.ts';
 import type { ImportLap, ImportStreams, ImportSummary, RawPoint } from './types.ts';
+import { MAX_TIMER_S } from './types.ts';
 
 /** A running stretch of real time, in epoch milliseconds. */
 export interface Interval {
@@ -95,6 +96,9 @@ export function buildStreams(
 ): ImportStreams | null {
   const n = Math.round(timerSeconds);
   if (n <= 0 || intervals.length === 0 || points.length === 0) return null;
+  // The timer value comes from the file. One that is not a number, or is over the limit, builds no
+  // per-second arrays at all; parseImportFile then turns the file away as too long.
+  if (!(n <= MAX_TIMER_S)) return null;
   const pts = points.toSorted((a, b) => a.t - b.t);
   const times = realTimes(intervals, n);
   const streams: ImportStreams = { v: 1, n };

@@ -1,76 +1,65 @@
-import { streamFor } from '../../../data/seed/index.ts'
-import type { ActivityStream } from '../../../data/seed/index.ts'
-import {
-  buildCurve,
-  POWER_WINDOWS_S,
-  RUN_DISTANCES_M,
-  bestPowerCurve,
-  bestRunCurve,
-} from '../../../domain/metrics/curves.ts'
+import { seededStream } from '../../../data/seed/index.ts'
+import { buildCurve, POWER_WINDOWS_S, RUN_DISTANCES_M } from '../../../domain/metrics/curves.ts'
 import type { ActivityBests } from '../../../domain/metrics/curves.ts'
 import type { LoadThresholds } from '../../../domain/metrics/load.ts'
-import {
-  collapseToThreeZones,
-  polarisationIndex,
-  timeInZones,
-} from '../../../domain/metrics/zones.ts'
+import { streamDigest } from '../../../domain/metrics/streamDigest.ts'
+import { collapseToThreeZones, polarisationIndex } from '../../../domain/metrics/zones.ts'
 import type { PolarisationResult } from '../../../domain/metrics/zones.ts'
-import type { Activity, DayOffset } from '../../../domain/types.ts'
+import type { Activity, DayOffset, StreamDigest } from '../../../domain/types.ts'
 
 /** What the analytics page needs from one activity's detailed stream. Worked out once, then reused. */
-export interface ActivityDigest {
+export interface ActivityDigest extends StreamDigest {
   id: string
   day: DayOffset
   startMinute: number
   sport: Activity['sport']
   durationS: number
-  /** Seconds in zones 1 to 5, or null when there is no stream or no threshold. */
-  zones: number[] | null
-  /** Best mean power per window in seconds, for rides with power. */
-  power: Record<number, number | null> | null
-  /** Best time in seconds per run distance key. */
-  run: Record<string, number | null> | null
 }
 
-const cache = new Map<string, ActivityDigest>()
+interface CacheEntry {
+  digest: ActivityDigest
+  source: Activity['source']
+  /** The stored digest the entry was built from, compared by reference. */
+  stored: StreamDigest | undefined
+}
 
-function fiveZones(a: Activity, stream: ActivityStream, th: LoadThresholds): number[] | null {
-  let secs: number[] | null = null
-  if (a.sport === 'bike' && stream.powerW && th.ftp) secs = timeInZones('power', stream.powerW, th.ftp)
-  else if (a.sport === 'run' && stream.speedMps && th.thresholdPaceSPerKm)
-    secs = timeInZones('runPace', stream.speedMps, 1000 / th.thresholdPaceSPerKm)
-  else if (a.sport === 'swim' && stream.speedMps && th.cssSPer100m)
-    secs = timeInZones('swim', stream.speedMps, 100 / th.cssSPer100m)
-  else if (th.lthr) secs = timeInZones('heartRate', stream.hrBpm, th.lthr)
-  if (!secs) return null
-  const five = secs.slice(0, 5)
-  while (five.length < 5) five.push(0)
-  five[4] = (five[4] ?? 0) + secs.slice(5).reduce((x, y) => x + y, 0)
-  return five
+/** One entry per activity id and threshold set. A hit is used only while the activity still matches it. */
+const cache = new Map<string, CacheEntry>()
+
+const NO_STREAM: StreamDigest = { zones: null, power: null, run: null }
+
+/** True when the cached digest was built from this same activity, not an older log under the same id. */
+function fresh(e: CacheEntry, a: Activity): boolean {
+  const d = e.digest
+  return (
+    e.source === a.source &&
+    e.stored === a.streamDigest &&
+    d.day === a.day &&
+    d.startMinute === a.startMinute &&
+    d.sport === a.sport &&
+    d.durationS === a.summary.durationS
+  )
 }
 
 export function digestOf(a: Activity, th: LoadThresholds): ActivityDigest {
   const key = `${a.id}|${th.ftp ?? ''}|${th.thresholdPaceSPerKm ?? ''}|${th.cssSPer100m ?? ''}|${th.lthr ?? ''}`
   const hit = cache.get(key)
-  if (hit) return hit
-  const stream = a.source === 'manual' ? null : streamFor(a.id)
-  const out: ActivityDigest = {
+  if (hit && fresh(hit, a)) return hit.digest
+  // Seeded activities make their stream on demand. An imported file keeps the digest it was given on import.
+  const stream = seededStream(a)
+  const detail = stream ? streamDigest(a.sport, stream, th) : (a.streamDigest ?? NO_STREAM)
+  const digest: ActivityDigest = {
     id: a.id,
     day: a.day,
     startMinute: a.startMinute,
     sport: a.sport,
     durationS: a.summary.durationS,
-    zones: stream ? fiveZones(a, stream, th) : null,
-    power: stream && a.sport === 'bike' && stream.powerW ? bestPowerCurve(stream.powerW) : null,
-    run:
-      stream && a.sport === 'run' && stream.distanceM
-        ? Object.fromEntries(
-            Object.entries(bestRunCurve(stream.distanceM)).map(([k, v]) => [k, v ? v.timeS : null]),
-          )
-        : null,
+    zones: detail.zones,
+    power: detail.power,
+    run: detail.run,
   }
-  cache.set(key, out)
-  return out
+  cache.set(key, { digest, source: a.source, stored: a.streamDigest })
+  return digest
 }
 
 export interface ZoneSummary {

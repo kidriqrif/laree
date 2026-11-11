@@ -340,3 +340,11 @@ export function streamFor(activityId: string, source?: Seed): ActivityStream | n
     : undefined;
   return streamOf(activity, matched);
 }
+
+/**
+ * The seeded stream for a stored activity. Null once a quick log or an imported file has taken the
+ * seeded activity's place under the same id: the seed's stream is not that log's data.
+ */
+export function seededStream(a: Pick<Activity, 'id' | 'source' | 'streamDigest'>): ActivityStream | null {
+  return a.source === 'manual' || a.streamDigest ? null : streamFor(a.id);
+}

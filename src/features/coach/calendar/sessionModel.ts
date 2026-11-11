@@ -1,6 +1,7 @@
 /** Pure helpers for the calendar: step summaries, edit patches and new sessions. */
 import { fmtMinutesWords } from '../../../charts/index.ts'
 import { useLaree } from '../../../data/store.ts'
+import type { UndoEntry } from '../../../data/store.ts'
 import { workoutTotals } from '../../../domain/steps.ts'
 import type { AthleteId, DayOffset, PlainStep, PlannedWorkout, Sport, Step } from '../../../domain/types.ts'
 
@@ -145,7 +146,12 @@ export function newSession(
   }
 }
 
-/** Undo the step a call just made, but only if nothing newer sits on top of it. */
-export function undoIfLatest(length: number): void {
-  if (useLaree.getState().undoStack.length === length) useLaree.getState().undo()
+/** The undo step a call just made. Keep it, then hand it to `undoIfLatest`. */
+export function latestUndo(): UndoEntry | undefined {
+  return useLaree.getState().undoStack.at(-1)
+}
+
+/** Undo that step, but only while it is still the newest one. Compared by identity, not by depth. */
+export function undoIfLatest(entry: UndoEntry | undefined): void {
+  if (entry && useLaree.getState().undoStack.at(-1) === entry) useLaree.getState().undo()
 }

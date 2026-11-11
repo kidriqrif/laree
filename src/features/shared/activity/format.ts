@@ -18,7 +18,7 @@ export function fmtClock(minute: number): string {
 }
 
 export const SOURCE_LABEL: Record<ActivitySource, string> = {
-  file: 'From file (.FIT)',
+  file: 'Imported file',
   manual: 'Quick log',
   simulatedDevice: 'Device (simulated)',
 }

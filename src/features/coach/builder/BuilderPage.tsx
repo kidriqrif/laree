@@ -152,9 +152,13 @@ function Editor({ saved, onSaved }: EditorProps) {
 
   const copy = () => {
     if (!savedId) return
+    // The copy is made from the saved workout, so unsaved edits would be left behind.
+    if (dirty) {
+      showToast('Save your changes first, then duplicate.')
+      return
+    }
     const copyId = duplicateTemplate(savedId)
     if (copyId) {
-      dirtyRef.current = false
       showToast(`Copied as "${draft.meta.name} (copy)".`)
       void navigate(`/coach/library/${copyId}`)
     }

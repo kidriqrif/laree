@@ -4,7 +4,7 @@ import { ATHLETES } from '../../../app/people.ts'
 import { useViewer } from '../../../app/viewer.ts'
 import { fmtDistance, fmtDuration, fmtNumber, fmtPace, Sparkline, ZoneBar } from '../../../charts/index.ts'
 import { selectActivityCoachNote, selectKudosForActivity } from '../../../data/selectors.ts'
-import { streamFor } from '../../../data/seed/index.ts'
+import { seededStream } from '../../../data/seed/index.ts'
 import type { ActivityStream } from '../../../data/seed/index.ts'
 import { thresholdsOn } from '../../../data/seed/people.ts'
 import { useLaree } from '../../../data/store.ts'
@@ -165,7 +165,7 @@ function EffortNotes({ activity, editable }: { activity: Activity; editable: boo
 }
 
 function Charts({ activity, th }: { activity: Activity; th: LoadThresholds }) {
-  const stream = useMemo(() => (activity.source === 'manual' ? null : streamFor(activity.id)), [activity.id, activity.source])
+  const stream = useMemo(() => seededStream(activity), [activity])
   if (!stream) {
     return (
       <p className={styles.muted}>

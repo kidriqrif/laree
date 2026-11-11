@@ -83,6 +83,24 @@ describe('xml reader', () => {
   });
 });
 
+describe('limits', () => {
+  it('builds no streams for a timer over the limit, and turns the file away', async () => {
+    const start = Date.UTC(2026, 0, 1);
+    const points = [{ t: start, hr: 120 }, { t: start + 1000, hr: 121 }];
+    const intervals = intervalsFromGaps(points);
+    expect(buildStreams(points, intervals, 2, 'run')).not.toBeNull();
+    expect(buildStreams(points, intervals, 1e12, 'run')).toBeNull();
+    expect(buildStreams(points, intervals, Number.NaN, 'run')).toBeNull();
+    const tcx = fixtureText('ride.tcx').replace(/<TotalTimeSeconds>[^<]*</, '<TotalTimeSeconds>1e12<');
+    expect(errorCode(await parseImportFile(new TextEncoder().encode(tcx), 'ride.tcx'))).toBe('too-long');
+  });
+
+  it('reports a gzip file that unpacks past the size limit as too large', async () => {
+    const big = new Uint8Array(gzipSync(new Uint8Array(41 * 1024 * 1024)));
+    expect(await detectFormat(big, 'big.fit.gz')).toMatchObject({ ok: false, error: { code: 'too-large' } });
+  });
+});
+
 describe('GPX', () => {
   it('returns a summary with heart rate, distance and one lap', async () => {
     const a = only(await parseImportFile(fixture('run.gpx'), 'run.gpx'));

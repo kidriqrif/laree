@@ -59,7 +59,8 @@ function Inner() {
   const unseen = useLaree((s) => selectUnseenBadges(s.data, athleteId))
   const markSeen = useLaree((s) => s.markBadgesSeen)
   const navigate = useNavigate()
-  const first = unseen[0]
+  // Saved data can hold a badge key this version no longer has; those are skipped, not drawn.
+  const first = unseen.find((b) => Object.hasOwn(BADGES, b.key))
   if (!first) return <output aria-live="polite" className={styles.live} />
   const award: BadgeAward = {
     id: first.id,

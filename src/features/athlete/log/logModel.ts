@@ -7,6 +7,7 @@ import { selectEvaluation } from '../../../data/selectors.ts'
 import type { LareeData } from '../../../data/store.ts'
 import { DEFAULT_INTENSITY, sessionLoad } from '../../../domain/metrics/load.ts'
 import type { LoadInput, LoadThresholds } from '../../../domain/metrics/load.ts'
+import { streamDigest } from '../../../domain/metrics/streamDigest.ts'
 import { dateToDay, dayToDate, KL_OFFSET_MS } from '../../../domain/time.ts'
 import type { Activity, ActivitySummary, AthleteId, DayOffset, LoadResult, PlannedWorkout, Sport } from '../../../domain/types.ts'
 import type { ParsedActivity } from '../../../io/import/types.ts'
@@ -104,12 +105,16 @@ export interface MatchOption {
   logged: boolean
 }
 
-/** Sessions the sheet offers: today's, and unlogged ones from the last 7 days. Today first, then newest. */
-export function matchOptions(data: LareeData, athleteId: AthleteId, today: DayOffset): MatchOption[] {
+/**
+ * Sessions the sheet offers: today's, and unlogged ones from the last 7 days. Today first, then newest.
+ * `alsoId` is the session the athlete opened the sheet from ("Log it"): it stays on offer when it is
+ * older than that, so the log lands on the session they chose and not on a stand-in.
+ */
+export function matchOptions(data: LareeData, athleteId: AthleteId, today: DayOffset, alsoId?: string): MatchOption[] {
   const ev = selectEvaluation(data, athleteId, today)
   const loggedIds = new Set(ev.planned.filter((e) => e.activityId !== undefined).map((e) => e.plannedId))
   return data.planned
-    .filter((w) => w.athleteId === athleteId && w.day <= today && w.day >= today - LOG_BACK_DAYS)
+    .filter((w) => w.athleteId === athleteId && w.day <= today && (w.day >= today - LOG_BACK_DAYS || w.id === alsoId))
     .filter((w) => w.day === today || !loggedIds.has(w.id))
     .toSorted((a, b) => (a.day === today ? 0 : 1) - (b.day === today ? 0 : 1) || b.day - a.day || a.order - b.order)
     .map((workout) => ({ workout, logged: loggedIds.has(workout.id) }))
@@ -365,6 +370,14 @@ export function buildImportedActivity(b: ImportBuild): Activity {
   if (rpe !== undefined) a.rpe = rpe
   if (b.replaces?.notes) a.notes = b.replaces.notes
   if (b.matchedWorkoutId) a.matchedWorkoutId = b.matchedWorkoutId
+  // The per-second stream is not stored, so keep what Analytics needs from it: zones and best efforts.
+  // Always set, even when empty: it also marks the activity as an import, so a seeded stream is never shown for it.
+  const s = p.streams
+  a.streamDigest = streamDigest(
+    b.sport,
+    s ? { powerW: s.power, hrBpm: s.hr, speedMps: s.speed, distanceM: s.distance } : {},
+    b.thresholds,
+  )
   return a
 }
 

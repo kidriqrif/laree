@@ -22,7 +22,7 @@ import { Dialog, showToast, showUndoToast } from '../../../ui/overlay/index.ts'
 import { CalendarExport } from './CalendarExport.tsx'
 import { SuggestSlot } from './SuggestSlot.tsx'
 import styles from './CalendarPage.module.css'
-import { newSession, undoIfLatest } from './sessionModel.ts'
+import { latestUndo, newSession, undoIfLatest } from './sessionModel.ts'
 
 const SessionEditor = lazy(() => import('./SessionEditor.tsx'))
 
@@ -183,8 +183,8 @@ export default function CalendarPage() {
 
   // ---- moving
   const moved = (title: string, day: DayOffset) => {
-    const length = useLaree.getState().undoStack.length
-    showUndoToast(`${title} moved to ${dayLabel(day)}.`, () => undoIfLatest(length))
+    const step = latestUndo()
+    showUndoToast(`${title} moved to ${dayLabel(day)}.`, () => undoIfLatest(step))
   }
 
   const handleMove = (m: DragGridMove) => {
@@ -234,8 +234,8 @@ export default function CalendarPage() {
       ],
       `Swapped ${a.title} and ${b.title}`,
     )
-    const length = useLaree.getState().undoStack.length
-    showUndoToast(`Swapped ${a.title} and ${b.title}.`, () => undoIfLatest(length))
+    const step = latestUndo()
+    showUndoToast(`Swapped ${a.title} and ${b.title}.`, () => undoIfLatest(step))
   }
 
   const addSession = (day: DayOffset) => {

@@ -30,7 +30,12 @@ export function deleteTemplate(id: string): WorkoutTemplate | undefined {
   return found
 }
 
-/** Puts a deleted template back (Undo). */
+/**
+ * Puts a deleted template back (Undo). If a newer workout has taken its id since the delete,
+ * the restored one gets a fresh id, so Undo never overwrites that newer workout.
+ */
 export function restoreTemplate(template: WorkoutTemplate): void {
-  useLaree.getState().saveTemplate(template)
+  const { data, saveTemplate } = useLaree.getState()
+  const taken = data.templates.some((t) => t.id === template.id)
+  saveTemplate(taken ? { ...template, id: nextTemplateId(data.templates) } : template)
 }

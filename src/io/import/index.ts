@@ -24,7 +24,8 @@ export async function parseImportFile(input: ArrayBuffer | Uint8Array, fileName:
       result = await parseFit(found.bytes, fileName);
     } else if (found.format === 'gpx') result = parseGpx(found.bytes, fileName);
     else result = parseTcx(found.bytes, fileName);
-    if (result.ok && result.activities.some((a) => a.timerSeconds > MAX_TIMER_S)) {
+    // Written as "not within the limit" so a timer that is not a number is turned away too.
+    if (result.ok && result.activities.some((a) => !(a.timerSeconds >= 0 && a.timerSeconds <= MAX_TIMER_S))) {
       return { ok: false, error: importError('too-long', fileName) };
     }
     return result;
