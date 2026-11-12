@@ -6,6 +6,7 @@ import { buildRideFit, RIDE_START_MS } from './__fixtures__/generate-fit.ts';
 import { detectFormat } from './detect.ts';
 import { parseImportFile } from './index.ts';
 import type { ImportResult, ParsedActivity } from './index.ts';
+import { MAX_TIMER_S } from './types.ts';
 import { buildStreams, intervalsFromGaps } from './streams.ts';
 import { parseXml } from './xml.ts';
 
@@ -91,6 +92,11 @@ describe('limits', () => {
     expect(buildStreams(points, intervals, 2, 'run')).not.toBeNull();
     expect(buildStreams(points, intervals, 1e12, 'run')).toBeNull();
     expect(buildStreams(points, intervals, Number.NaN, 'run')).toBeNull();
+    // The edge: exactly the limit builds, and a fraction over it does not round back under.
+    expect(buildStreams(points, intervals, MAX_TIMER_S, 'run')?.n).toBe(MAX_TIMER_S);
+    expect(buildStreams(points, intervals, MAX_TIMER_S + 0.1, 'run')).toBeNull();
+    const edge = fixtureText('ride.tcx').replace(/<TotalTimeSeconds>[^<]*</, `<TotalTimeSeconds>${MAX_TIMER_S + 0.1}<`);
+    expect(errorCode(await parseImportFile(new TextEncoder().encode(edge), 'ride.tcx'))).toBe('too-long');
     const tcx = fixtureText('ride.tcx').replace(/<TotalTimeSeconds>[^<]*</, '<TotalTimeSeconds>1e12<');
     expect(errorCode(await parseImportFile(new TextEncoder().encode(tcx), 'ride.tcx'))).toBe('too-long');
   });

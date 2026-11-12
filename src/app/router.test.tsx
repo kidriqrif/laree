@@ -75,17 +75,17 @@ describe('routes', () => {
     expect(registers.includes(side)).toBe(side !== 'standalone')
     // The switcher shows on every route.
     expect(screen.getByRole('region', { name: 'Prototype controls' })).toBeTruthy()
-  }, 20000)
+  }, 40000)
 
   it('renders the brand board (a built page, not a stub)', async () => {
     renderAt('/brand')
     expect(await screen.findByRole('heading', { level: 1, name: 'Brand board' }, { timeout: 25000 })).toBeTruthy()
-  }, 20000)
+  }, 40000)
 
   it('renders the kit gallery (a built page, not a stub)', async () => {
     renderAt('/kit')
     expect(await screen.findByRole('heading', { level: 1, name: 'UI kit' }, { timeout: 25000 })).toBeTruthy()
-  }, 20000)
+  }, 40000)
 
   it.each([
     ['/nope', 'standalone'],

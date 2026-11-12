@@ -262,7 +262,7 @@ export interface RosterRow {
   aiConsent: boolean
 }
 
-const SEVERITY_RANK: Record<Severity, number> = { info: 0, watch: 1, act: 2 }
+export const SEVERITY_RANK: Record<Severity, number> = { info: 0, watch: 1, act: 2 }
 
 export const selectRosterRows = memoize(
   (data: LareeData, today: DayOffset): RosterRow[] =>

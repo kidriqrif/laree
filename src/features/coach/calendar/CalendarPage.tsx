@@ -22,7 +22,7 @@ import { Dialog, showToast, showUndoToast } from '../../../ui/overlay/index.ts'
 import { CalendarExport } from './CalendarExport.tsx'
 import { SuggestSlot } from './SuggestSlot.tsx'
 import styles from './CalendarPage.module.css'
-import { latestUndo, newSession, undoIfLatest } from './sessionModel.ts'
+import { newSession, undoIfLatest, undoStepOf } from './sessionModel.ts'
 
 const SessionEditor = lazy(() => import('./SessionEditor.tsx'))
 
@@ -182,9 +182,9 @@ export default function CalendarPage() {
   )
 
   // ---- moving
-  const moved = (title: string, day: DayOffset) => {
-    const step = latestUndo()
-    showUndoToast(`${title} moved to ${dayLabel(day)}.`, () => undoIfLatest(step))
+  const move = (id: string, title: string, day: DayOffset) => {
+    const step = undoStepOf(() => useLaree.getState().moveWorkout(id, day))
+    if (step) showUndoToast(`${title} moved to ${dayLabel(day)}.`, () => undoIfLatest(step))
   }
 
   const handleMove = (m: DragGridMove) => {
@@ -211,8 +211,7 @@ export default function CalendarPage() {
       setConflict({ id: w.id, day, otherId: other.workout.id })
       return
     }
-    useLaree.getState().moveWorkout(w.id, day)
-    moved(w.title, day)
+    move(w.id, w.title, day)
   }
 
   const resolveConflict = (how: 'swap' | 'both') => {
@@ -223,19 +222,19 @@ export default function CalendarPage() {
     const b = plannedAll.find((p) => p.id === c.otherId)
     if (!a) return
     if (how === 'both' || !b) {
-      useLaree.getState().moveWorkout(a.id, c.day)
-      moved(a.title, c.day)
+      move(a.id, a.title, c.day)
       return
     }
-    useLaree.getState().applyPlanChanges(
-      [
-        { kind: 'move', id: a.id, day: c.day },
-        { kind: 'move', id: b.id, day: a.day },
-      ],
-      `Swapped ${a.title} and ${b.title}`,
+    const step = undoStepOf(() =>
+      useLaree.getState().applyPlanChanges(
+        [
+          { kind: 'move', id: a.id, day: c.day },
+          { kind: 'move', id: b.id, day: a.day },
+        ],
+        `Swapped ${a.title} and ${b.title}`,
+      ),
     )
-    const step = latestUndo()
-    showUndoToast(`Swapped ${a.title} and ${b.title}.`, () => undoIfLatest(step))
+    if (step) showUndoToast(`Swapped ${a.title} and ${b.title}.`, () => undoIfLatest(step))
   }
 
   const addSession = (day: DayOffset) => {

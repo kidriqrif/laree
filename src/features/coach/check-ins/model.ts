@@ -5,8 +5,10 @@ import { ATHLETES } from '../../../data/seed/people.ts'
 import type { SeedCheckIn } from '../../../data/seed/index.ts'
 import { useLaree } from '../../../data/store.ts'
 import { baselineOrStored } from '../../../domain/baselines.ts'
-import type { FlagRecord, FlagRuleId, FlagsState, Severity } from '../../../domain/flags.ts'
+import { lifecycleOf, sameLifecycle } from '../../../domain/flags.ts'
+import type { FlagRecord, FlagRuleId, Severity } from '../../../domain/flags.ts'
 import type { AthleteId, DayOffset } from '../../../domain/types.ts'
+import { showToast } from '../../../ui/overlay/index.ts'
 
 export type GridMetric = 'sleep' | 'soreness' | 'mood' | 'rhr' | 'hrv'
 
@@ -160,20 +162,26 @@ export const RULE_SERIES: Partial<Record<FlagRuleId, { label: string; key: 'slee
 
 // ------------------------------------------------------------------ undo
 
+export const FLAG_UNDO_STALE = 'That flag has changed since, so nothing was undone.'
+
 /**
- * Restore one athlete's flags to a snapshot. The store has no undo action, so this writes the
- * lifecycle records and the list rows back with setState.
+ * Run one coach action on one flag and return its Undo, or undefined if the action changed
+ * nothing. Undo puts back that flag's own lifecycle fields and nothing else, and only while the
+ * flag is still as the action left it. A flag that has changed since (resolved, noted, closed by
+ * the rules) is left alone and the coach is told.
  */
-export function snapshotFlags(athleteId: AthleteId): () => void {
-  const { flagsState, flags } = useLaree.getState().data
-  const state: FlagsState = flagsState[athleteId]
-  const rows = new Map(flags.filter((f) => f.athleteId === athleteId).map((f) => [f.id, f]))
-  return () =>
-    useLaree.setState((s) => ({
-      data: {
-        ...s.data,
-        flagsState: { ...s.data.flagsState, [athleteId]: state },
-        flags: s.data.flags.map((f) => rows.get(f.id) ?? f),
-      },
-    }))
+export function flagActionUndo(athleteId: AthleteId, flagId: string, run: () => void): (() => void) | undefined {
+  const read = () => {
+    const state = useLaree.getState().data.flagsState[athleteId]
+    const rec = state.flags.find((f) => f.id === flagId)
+    return rec ? { life: lifecycleOf(rec), quiet: state.quiet[rec.ruleId] === true } : undefined
+  }
+  const before = read()
+  run()
+  const after = read()
+  if (!before || !after || sameLifecycle(before.life, after.life)) return undefined
+  return () => {
+    const done = useLaree.getState().undoFlagAction(athleteId, flagId, before.life, after.life, after.quiet && !before.quiet)
+    if (!done) showToast(FLAG_UNDO_STALE)
+  }
 }

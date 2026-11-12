@@ -1,11 +1,17 @@
 /**
  * The one facts builder (docs/spec/ai.md 3). It reads summaries Laree already shows and nothing more:
- * no names, notes, coordinates, real dates or other athletes. Days are weekdays and relative weeks.
+ * no profile details (name, email, date of birth), notes, coordinates, real dates or other athletes.
+ * Days are weekdays and relative weeks. Session, library and race titles go in as the coach or
+ * athlete wrote them; the consent copy says so. Workout steps stay out, because a step can hold a
+ * free-text note: an accepted "add" copies its steps from the library when it is applied.
+ * Ids are the app's own keys. In this prototype they are built from the three demo first names
+ * (docs/spec/ai.md 3); the MVP uses opaque ids.
  */
-import { selectFitnessSeries, selectOpenFlags, selectWeek } from '../data/selectors.ts'
+import { SEVERITY_RANK, selectFitnessSeries, selectFlagRecords, selectOpenFlags, selectWeek } from '../data/selectors.ts'
 import { ATHLETES } from '../data/seed/people.ts'
 import type { LareeData } from '../data/store.ts'
 import { RULES, summariseValues } from '../domain/flags.ts'
+import type { FlagRecord } from '../domain/flags.ts'
 import { weekOfDay, weekRange, weekdayIndex } from '../domain/time.ts'
 import type { AthleteId, DayOffset, PhaseKind, Sport } from '../domain/types.ts'
 
@@ -135,6 +141,26 @@ export function buildRecapFacts(data: LareeData, athleteId: AthleteId, week: num
   }
 }
 
+/**
+ * The flags that were open on `day`: raised by then, and not yet acknowledged or resolved. For
+ * today this is the open-flag list; for an older check-in it leaves out flags raised later.
+ */
+export function flagsOpenOn(data: LareeData, athleteId: AthleteId, day: DayOffset): FlagRecord[] {
+  const after = (d: number | undefined): boolean => d === undefined || d > day
+  return selectFlagRecords(data, athleteId, undefined)
+    .filter((f) => f.openedDay <= day && after(f.acknowledgedDay) && after(f.resolvedDay))
+    .toSorted(
+      (a, b) => SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity] || b.openedDay - a.openedDay || a.id.localeCompare(b.id),
+    )
+}
+
+/** Rule text with values. Values measured after `day` are not quoted: the values at opening are. */
+function flagFact(f: FlagRecord, day: DayOffset): { ruleId: string; text: string } {
+  const later = f.lastTrueDay > day
+  const values = summariseValues(f.ruleId, later ? f.valuesAtOpen : f.valuesLatest)
+  return { ruleId: f.ruleId, text: `${RULES[f.ruleId].title}, ${values}${later ? ' when it opened' : ''}` }
+}
+
 export function buildCheckInFacts(data: LareeData, athleteId: AthleteId, today: DayOffset): CheckInFacts {
   const base = ATHLETES.find((a) => a.id === athleteId)?.baselines ?? { restingHr: 0, hrvMs: 0 }
   const recent = data.checkIns
@@ -163,7 +189,7 @@ export function buildCheckInFacts(data: LareeData, athleteId: AthleteId, today: 
       ...(c.restingHr === undefined ? {} : { restingHr: c.restingHr }),
       ...(c.hrvMs === undefined ? {} : { hrvMs: c.hrvMs }),
     })),
-    flags: selectOpenFlags(data, athleteId).map((f) => ({ ruleId: f.ruleId, text: `${RULES[f.ruleId].title}, ${summariseValues(f.ruleId, f.valuesLatest)}` })),
+    flags: flagsOpenOn(data, athleteId, today).map((f) => flagFact(f, today)),
     missedKeySessions: missed,
   }
 }

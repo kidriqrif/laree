@@ -99,6 +99,46 @@ export const safeStringStorage: StateStorage = {
   },
 }
 
+const WITHDRAWN_KEY = 'laree:ai-withdrawn'
+
+/**
+ * Who turned AI off while the main save was failing. The store applies this list when it loads,
+ * so a reload cannot bring back consent that was withdrawn.
+ */
+export function readAiWithdrawn(): string[] {
+  try {
+    const raw = area()?.getItem(WITHDRAWN_KEY)
+    const v: unknown = raw ? JSON.parse(raw) : []
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+/** Record or clear one person's withdrawal. False when the browser would not keep even this small note. */
+export function noteAiWithdrawn(owner: string, withdrawn: boolean): boolean {
+  const s = area()
+  if (!s) return false
+  try {
+    const next = readAiWithdrawn().filter((o) => o !== owner)
+    if (withdrawn) next.push(owner)
+    if (next.length === 0) s.removeItem(WITHDRAWN_KEY)
+    else s.setItem(WITHDRAWN_KEY, JSON.stringify(next))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Forget every withdrawal note. Reset does this: nothing of the old choices is left behind. */
+export function clearAiWithdrawn(): void {
+  try {
+    area()?.removeItem(WITHDRAWN_KEY)
+  } catch {
+    // Nothing to clear in a browser that keeps nothing.
+  }
+}
+
 export function createLareeStorage<S>(): PersistStorage<S> {
   // createJSONStorage returns undefined only when the getter throws; ours never does.
   return createJSONStorage<S>(() => safeStringStorage) as PersistStorage<S>

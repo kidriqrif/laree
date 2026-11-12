@@ -6,6 +6,7 @@ import { useLaree } from '../../../data/store.ts'
 import type { AthleteId } from '../../../domain/types.ts'
 import { Button } from '../../../ui/core/index.ts'
 import { Drawer, showUndoToast } from '../../../ui/overlay/index.ts'
+import { undoIfLatest, undoStepOf } from './sessionModel.ts'
 import styles from './SuggestDrawer.module.css'
 
 type Decision = 'accept' | 'reject'
@@ -29,10 +30,18 @@ export default function SuggestDrawer({ athleteId, onClose }: { athleteId: Athle
       setError('The plan changed since this was made. Close this and ask again.')
       return
     }
-    useLaree.getState().applyPlanChanges(toPlanChanges(accepted), 'Suggested changes')
+    const store = useLaree.getState()
+    const step = undoStepOf(() => store.applyPlanChanges(toPlanChanges(accepted, store.data.templates, store.data.planned), 'Suggested changes'))
+    if (!step) {
+      // Nothing changed: say so instead of closing quietly with no toast.
+      setError('Nothing was applied. Close this and ask again.')
+      return
+    }
     onClose()
-    const n = accepted.length
-    showUndoToast(`${n} ${n === 1 ? 'change' : 'changes'} applied to ${name}'s week.`, () => useLaree.getState().undo())
+    // Count what was applied, which can be fewer than what was accepted.
+    const n = step.before.length + step.added.length
+    // The toast undoes its own step only: a later move or edit is never undone from here.
+    showUndoToast(`${n} ${n === 1 ? 'change' : 'changes'} applied to ${name}'s week.`, () => undoIfLatest(step))
   }
 
   const set = (id: string, d: Decision) => setDecisions((p) => ({ ...p, [id]: d }))

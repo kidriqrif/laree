@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router'
+import { WITHDRAWAL_UNSAVED } from '../../../ai/consent.ts'
 import { useKeyboardDialogs } from '../../../app/keyboard/index.ts'
 import { ATHLETES } from '../../../app/people.ts'
 import type { AthleteId } from '../../../app/people.ts'
@@ -73,7 +74,9 @@ export default function SettingsPage() {
       setConsentFor(ATHLETES[0]?.id ?? 'amir')
       return
     }
-    if (setAiConsent('coach', false)) showToast('AI is off for the coach. Every AI panel is hidden.')
+    if (!setAiConsent('coach', false)) return
+    // A withdrawal that could not be saved must not look like one that was.
+    showToast(useLaree.getState().aiWithdrawalUnsaved ? WITHDRAWAL_UNSAVED : 'AI is off for the coach. Every AI panel is hidden.')
   }
 
   return (

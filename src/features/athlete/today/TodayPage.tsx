@@ -108,7 +108,7 @@ function TodayBody({ model, th, athleteId }: { model: TodayModel; th: LoadThresh
       {fresh ? null : <NextUp model={model} />}
 
       <TileBoundary message="Kudos from Coach could not be shown here.">
-        <KudosSlot athleteId={athleteId} />
+        <KudosSlot key={athleteId} athleteId={athleteId} />
       </TileBoundary>
     </div>
   )

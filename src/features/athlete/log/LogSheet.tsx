@@ -256,6 +256,9 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
     setImp({ status: 'reading', name: file.name })
     try {
       const bytes = await file.arrayBuffer()
+      // A read that was cancelled or replaced while the file loaded must not start a worker:
+      // starting one would stop the worker of the file picked after it.
+      if (ticket !== reading.current) return
       const result = await parseInWorker(bytes, file.name, worker)
       if (ticket !== reading.current) return
       setImp(result.ok ? { status: 'ready', name: file.name, activities: result.activities } : { status: 'error', name: file.name, error: result.error })

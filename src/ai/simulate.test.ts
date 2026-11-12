@@ -97,7 +97,7 @@ describe('simulate', () => {
     expect(simulateSuggestion({ ...facts, nextWeek: [] }).status).toBe('declined')
   })
 
-  it('facts hold no names, notes or real dates', () => {
+  it('facts hold no profile details, notes or real dates', () => {
     const today = currentDay()
     const all = JSON.stringify([
       buildRecapFacts(data(), 'amir', weekOfDay(today) - 1, today),

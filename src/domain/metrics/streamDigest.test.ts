@@ -33,6 +33,17 @@ describe('streamDigest', () => {
     expect(d.power).toBeNull();
   });
 
+  it('falls back to heart rate when the power channel has no reading', () => {
+    const gaps = fill(120, Number.NaN);
+    const d = streamDigest('bike', { powerW: gaps, hrBpm: fill(120, 150) }, { ftp: 250, lthr: 165 });
+    expect(d.zones?.reduce((a, b) => a + b, 0)).toBe(120);
+    // No best efforts of 0 W from a channel that never read anything.
+    expect(d.power).toBeNull();
+    expect(streamDigest('bike', { powerW: gaps, hrBpm: gaps }, { ftp: 250, lthr: 165 })).toEqual({ zones: null, power: null, run: null });
+    expect(streamDigest('run', { speedMps: gaps, hrBpm: fill(120, 150) }, { thresholdPaceSPerKm: 250, lthr: 165 }).zones?.reduce((a, b) => a + b, 0)).toBe(120);
+    expect(streamDigest('run', { speedMps: gaps }, { thresholdPaceSPerKm: 250 }).zones).toBeNull();
+  });
+
   it('skips missing readings and gives nothing without a signal or threshold', () => {
     const hr = [150, Number.NaN, 150];
     expect(streamDigest('strength', { hrBpm: hr }, { lthr: 165 }).zones?.reduce((a, b) => a + b, 0)).toBe(2);

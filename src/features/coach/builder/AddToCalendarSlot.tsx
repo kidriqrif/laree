@@ -9,7 +9,7 @@ import type { PlannedWorkout, WorkoutTemplate } from '../../../domain/types.ts'
 import { Button } from '../../../ui/core/index.ts'
 import { SegmentedControl, TextField } from '../../../ui/form/index.ts'
 import { Dialog, showUndoToast } from '../../../ui/overlay/index.ts'
-import { latestUndo, undoIfLatest } from '../calendar/sessionModel.ts'
+import { undoIfLatest, undoStepOf } from '../calendar/sessionModel.ts'
 import styles from './ExportDialogs.module.css'
 
 export interface AddToCalendarSlotProps {
@@ -66,10 +66,9 @@ export function AddToCalendarSlot({ template }: AddToCalendarSlotProps) {
   const add = () => {
     if (invalid || past) return
     const w = sessionFromTemplate(template, planned, athleteId, day)
-    applyPlanChanges([{ kind: 'add', workout: w }], `Added ${w.title}`)
-    const step = latestUndo()
+    const step = undoStepOf(() => applyPlanChanges([{ kind: 'add', workout: w }], `Added ${w.title}`))
     setOpen(false)
-    showUndoToast(`Added ${w.title} to ${name}'s plan on ${date}.`, () => undoIfLatest(step))
+    if (step) showUndoToast(`Added ${w.title} to ${name}'s plan on ${date}.`, () => undoIfLatest(step))
   }
 
   return (

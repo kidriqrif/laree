@@ -15,15 +15,25 @@ export interface DigestStream {
 
 const list = (a: ArrayLike<number>): number[] => Array.from(a);
 
+/** The readings, when at least one of them is a real number. A channel of gaps only is no signal. */
+function usable(a: ArrayLike<number> | undefined): number[] | null {
+  if (!a) return null;
+  const xs = list(a);
+  return xs.some((v) => Number.isFinite(v)) ? xs : null;
+}
+
 /** Seconds in zones 1 to 5 by the best signal the sport has, or null with no usable signal or threshold. */
 function fiveZones(sport: Sport, stream: DigestStream, th: LoadThresholds): number[] | null {
+  // A signal is chosen only when it has a reading: a power or speed channel of gaps only falls
+  // back to heart rate, and with no usable signal at all there are no zones.
+  const power = sport === 'bike' && th.ftp ? usable(stream.powerW) : null;
+  const speed = sport === 'run' || sport === 'swim' ? usable(stream.speedMps) : null;
+  const hr = th.lthr ? usable(stream.hrBpm) : null;
   let secs: number[] | null = null;
-  if (sport === 'bike' && stream.powerW && th.ftp) secs = timeInZones('power', list(stream.powerW), th.ftp);
-  else if (sport === 'run' && stream.speedMps && th.thresholdPaceSPerKm)
-    secs = timeInZones('runPace', list(stream.speedMps), 1000 / th.thresholdPaceSPerKm);
-  else if (sport === 'swim' && stream.speedMps && th.cssSPer100m)
-    secs = timeInZones('swim', list(stream.speedMps), 100 / th.cssSPer100m);
-  else if (stream.hrBpm && th.lthr) secs = timeInZones('heartRate', list(stream.hrBpm), th.lthr);
+  if (power && th.ftp) secs = timeInZones('power', power, th.ftp);
+  else if (sport === 'run' && speed && th.thresholdPaceSPerKm) secs = timeInZones('runPace', speed, 1000 / th.thresholdPaceSPerKm);
+  else if (sport === 'swim' && speed && th.cssSPer100m) secs = timeInZones('swim', speed, 100 / th.cssSPer100m);
+  else if (hr && th.lthr) secs = timeInZones('heartRate', hr, th.lthr);
   if (!secs) return null;
   const five = secs.slice(0, 5);
   while (five.length < 5) five.push(0);
@@ -36,9 +46,11 @@ function fiveZones(sport: Sport, stream: DigestStream, th: LoadThresholds): numb
  * Small enough to store with an imported activity, whose stream itself is not kept.
  */
 export function streamDigest(sport: Sport, stream: DigestStream, th: LoadThresholds): StreamDigest {
+  // Best efforts from a power channel with no reading would all be zero, so there are none.
+  const power = sport === 'bike' ? usable(stream.powerW) : null;
   return {
     zones: fiveZones(sport, stream, th),
-    power: sport === 'bike' && stream.powerW ? bestPowerCurve(list(stream.powerW)) : null,
+    power: power ? bestPowerCurve(power) : null,
     run:
       sport === 'run' && stream.distanceM
         ? Object.fromEntries(

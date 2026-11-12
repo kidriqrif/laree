@@ -4,7 +4,7 @@
  * panels do not change when a real model arrives. Nothing here writes a flag.
  */
 import type { PlanChange } from '../data/store.ts'
-import type { PlannedWorkout } from '../domain/types.ts'
+import type { PlannedWorkout, WorkoutTemplate } from '../domain/types.ts'
 import { WEEKDAYS } from './facts.ts'
 import type { CheckInFacts, FactsSession, RecapFacts, SuggestFacts } from './facts.ts'
 import { AI_LABEL, MODEL_PLAN, MODEL_SUMMARY } from './types.ts'
@@ -87,6 +87,17 @@ export function simulateRecap(f: RecapFacts): AiRecapOutput {
 
 // ------------------------------------------------------------------ check-in summary
 
+/** The spec's limit for a check-in summary (docs/spec/ai.md 6.2). */
+export const CHECKIN_MAX_LINES = 4
+
+/** Every open flag on one line: the first two by rule text, the rest as a count. */
+function flagLine(flags: CheckInFacts['flags']): string {
+  const named = flags.slice(0, 2).map((x) => x.text)
+  const more = flags.length - named.length
+  const label = flags.length === 1 ? 'Open flag' : `${flags.length} open flags`
+  return `${label}: ${named.join('; ')}${more > 0 ? `; and ${more} more` : ''}.`
+}
+
 export function simulateCheckIn(f: CheckInFacts): AiCheckInOutput {
   const base = { feature: 'checkin' as const, label: AI_LABEL, model: MODEL_SUMMARY, athleteId: f.athleteId } as const
   if (f.checkInsLast7 < 3) {
@@ -121,8 +132,14 @@ export function simulateCheckIn(f: CheckInFacts): AiCheckInOutput {
   tail.push(`${f.checkInsLast7} check-ins in 7 days.`)
   tail.push(f.missedKeySessions === 0 ? 'No key session missed.' : `${f.missedKeySessions} key ${plural(f.missedKeySessions, 'session', 'sessions')} missed.`)
   lines.push(tail.join(' '))
-const flagLines = f.flags.slice(0, 2).map((x) => `Open flag: ${x.text}.`)
-  const out = [...flagLines, ...lines].slice(0, 4)
+  // Flags take one line, however many are open, so no metric line is pushed out by them.
+  const out = f.flags.length > 0 ? [flagLine(f.flags), ...lines] : lines
+  // Over the limit, the last two lines share one: nothing is dropped.
+  while (out.length > CHECKIN_MAX_LINES) {
+    const b = out.pop() ?? ''
+    const a = out.pop() ?? ''
+    out.push(`${a} ${b}`)
+  }
   const cites = [`${f.checkInsLast7} check-ins`, ...last.map((c) => `${r1(c.sleepHours)} h sleep`)]
   return { ...base, status: 'ok', headline: 'Last 14 days', lines: out, cites, text: out.join(' ') }
 }
@@ -135,10 +152,20 @@ function sumOf(sessions: readonly FactsSession[]): { d: number; l: number } {
   return { d: sessions.reduce((s, x) => s + x.durationS, 0), l: sessions.reduce((s, x) => s + x.load, 0) }
 }
 
-/** A fingerprint of next week's plan, for the stale-plan check. */
+/**
+ * A fingerprint of next week's plan, for the stale-plan check. It holds every session field a
+ * suggestion reads, so a change to any of them (day, sport, title, time, Load, key flag) makes the
+ * saved change set stale.
+ */
 export function planVersionOf(sessions: readonly FactsSession[]): string {
-  return sessions.map((s) => `${s.id}:${s.durationS}:${s.weekday}`).join('|')
+  return JSON.stringify(sessions.map((s) => [s.id, s.weekday, s.sport, s.title, s.durationS, s.load, s.key]))
 }
+
+/** The shortest a session is cut to. A session at or under this is never "shortened". */
+const MIN_SESSION_S = 1800
+
+/** Three quarters of the time, to the nearest 5 minutes, and never under the floor. */
+const shortened = (durationS: number): number => Math.max(MIN_SESSION_S, Math.round((durationS * 0.75) / 300) * 300)
 
 export function simulateSuggestion(f: SuggestFacts): AiSuggestOutput {
   const base = { feature: 'suggest' as const, label: AI_LABEL, model: MODEL_PLAN, athleteId: f.athleteId } as const
@@ -160,9 +187,13 @@ export function simulateSuggestion(f: SuggestFacts): AiSuggestOutput {
         ? `Form is ${signed(f.form)} and ${f.flagRuleIds.length} ${plural(f.flagRuleIds.length, 'flag is', 'flags are')} open.`
         : `Form is ${signed(f.form)} and Ramp is ${signed1(f.ramp)} a week.`,
     )
-    const longest = open.toSorted((a, b) => b.durationS - a.durationS || a.id.localeCompare(b.id))[0]
+    // Only a session that really gets shorter is a candidate, and an easy one goes before a key one.
+    const cuttable = open
+      .filter((s) => shortened(s.durationS) < s.durationS)
+      .toSorted((a, b) => b.durationS - a.durationS || a.id.localeCompare(b.id))
+    const longest = cuttable.find((s) => !s.key) ?? cuttable[0]
     if (longest) {
-      const newDur = Math.max(1800, Math.round((longest.durationS * 0.75) / 300) * 300)
+      const newDur = shortened(longest.durationS)
       const newLoad = Math.round(longest.load * (newDur / longest.durationS))
       changes.push({
         id: `edit-${longest.id}`,
@@ -188,7 +219,14 @@ export function simulateSuggestion(f: SuggestFacts): AiSuggestOutput {
         workoutId: easy.id,
       })
     }
-    reasons.push('Keep the key sessions and ease the rest, so Form recovers before the next block.')
+    // The reason says what the change set does, not what it set out to do.
+    reasons.push(
+      changes.length === 0
+        ? 'No session next week is long enough to shorten or free to remove, so the plan stands.'
+        : longest?.key
+          ? `No easy session is long enough to shorten, so ${longest.weekday}'s key session is trimmed instead of dropped.`
+          : 'This keeps the key sessions and eases the rest, so Form recovers before the next block.',
+    )
   } else if (f.form > 5 && f.ramp < 4 && !f.downWeek) {
     const usedDays = new Set(f.nextWeek.map((s) => s.weekday))
     const freeDay = WEEKDAYS.findIndex((d) => !usedDays.has(d) && !raceDays.has(d) && d !== 'Sunday')
@@ -203,6 +241,7 @@ export function simulateSuggestion(f: SuggestFacts): AiSuggestOutput {
         order: 1,
         sport: tpl.sport,
         title: tpl.title,
+        // Filled from the library when the change is applied (toPlanChanges): steps are not in the facts.
         steps: [],
         plannedDurationS: tpl.durationS,
         plannedLoad: tpl.load,
@@ -219,7 +258,12 @@ export function simulateSuggestion(f: SuggestFacts): AiSuggestOutput {
         workoutId: undefined,
       })
     }
-    reasons.push(`Form is ${signed(f.form)} and Ramp is ${signed1(f.ramp)} a week, so there is room for one more easy session.`)
+    // The reason says what the change set does: with nothing to add, it says why.
+    reasons.push(
+      changes.length > 0
+        ? `Form is ${signed(f.form)} and Ramp is ${signed1(f.ramp)} a week, so there is room for one more easy session.`
+        : `Form is ${signed(f.form)} and Ramp is ${signed1(f.ramp)} a week, so there is room for more, but no free day or easy library workout fits. The plan stands.`,
+    )
   } else {
     reasons.push(
       f.downWeek
@@ -258,7 +302,32 @@ export function simulateSuggestion(f: SuggestFacts): AiSuggestOutput {
   }
 }
 
-/** The plan changes for the accepted suggestions, ready for the store's `applyPlanChanges`. */
-export function toPlanChanges(accepted: readonly SuggestedChange[]): PlanChange[] {
-  return accepted.map((c) => c.change)
+/**
+ * The plan changes for the accepted suggestions, ready for the store's `applyPlanChanges`.
+ * An added session takes its steps and distance from `library`, as adding it from the library
+ * would: the suggestion only names the template, it never carries the steps.
+ *
+ * A suggested id is built from the day and the template, so the same suggestion gives the same
+ * id. If a session in `planned` already holds it (an earlier suggestion, accepted and then
+ * moved to another day), the new session gets a fresh id instead of being dropped as a repeat.
+ */
+export function toPlanChanges(
+  accepted: readonly SuggestedChange[],
+  library: readonly WorkoutTemplate[] = [],
+  planned: readonly PlannedWorkout[] = [],
+): PlanChange[] {
+  const taken = new Set(planned.map((p) => p.id))
+  return accepted.map((c) => {
+    const change = c.change
+    if (change.kind !== 'add') return change
+    const workout: PlannedWorkout = { ...change.workout }
+    for (let n = 2; taken.has(workout.id); n++) workout.id = `${change.workout.id}-${n}`
+    taken.add(workout.id)
+    const tpl = library.find((t) => t.id === workout.sourceTemplateId)
+    if (tpl) {
+      workout.steps = structuredClone(tpl.steps)
+      if (tpl.estimatedDistanceM !== undefined) workout.plannedDistanceM = tpl.estimatedDistanceM
+    }
+    return { kind: 'add', workout }
+  })
 }

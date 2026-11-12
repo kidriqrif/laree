@@ -17,11 +17,11 @@ import { SegmentedControl } from '../../../ui/form/index.ts'
 import {
   cellFor,
   filterFlags,
+  flagActionUndo,
   isGridMetric,
   isStatusFilter,
   METRICS,
   metricInfo,
-  snapshotFlags,
   SEVERITY_LABEL,
   STATUS_FILTERS,
   STATUS_TEXT,
@@ -142,9 +142,9 @@ export default function CheckInsPage() {
         handler: () => {
           const f = flags[selected]
           if (!f || f.status !== 'open') return
-          const undo = snapshotFlags(f.athleteId as AthleteId)
-          acknowledgeFlag(f.id, f.athleteId as AthleteId, today)
-          showUndoToast('Flag acknowledged', undo)
+          const who = f.athleteId as AthleteId
+          const undo = flagActionUndo(who, f.id, () => acknowledgeFlag(f.id, who, today))
+          if (undo) showUndoToast('Flag acknowledged', undo)
         },
       },
       {

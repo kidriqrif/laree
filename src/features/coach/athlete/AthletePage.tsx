@@ -105,6 +105,21 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
       return next
     })
 
+  // A flag that has left the list (resolved here) takes its link with it. Otherwise undoing the
+  // resolve would reopen the drawer, and opening a flag acknowledges it again.
+  const staleFlagLink = flagId !== null && !shownFlag
+  useEffect(() => {
+    if (!staleFlagLink) return
+    setParams(
+      (p) => {
+        const next = new URLSearchParams(p)
+        next.delete(FLAG_PARAM)
+        return next
+      },
+      { replace: true },
+    )
+  }, [staleFlagLink, setParams])
+
   // ---- header
   const races = selectRaces(data, athleteId)
   const aRace = races.find((r) => r.priority === 'A' && r.day >= today)

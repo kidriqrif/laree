@@ -151,6 +151,17 @@ export function latestUndo(): UndoEntry | undefined {
   return useLaree.getState().undoStack.at(-1)
 }
 
+/**
+ * Run a plan action and return the undo step it pushed. An action that changes nothing pushes no
+ * step, and then this returns undefined instead of an older step that belongs to something else.
+ */
+export function undoStepOf(run: () => void): UndoEntry | undefined {
+  const before = latestUndo()
+  run()
+  const after = latestUndo()
+  return after === before ? undefined : after
+}
+
 /** Undo that step, but only while it is still the newest one. Compared by identity, not by depth. */
 export function undoIfLatest(entry: UndoEntry | undefined): void {
   if (entry && useLaree.getState().undoStack.at(-1) === entry) useLaree.getState().undo()

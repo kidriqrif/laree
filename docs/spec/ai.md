@@ -56,11 +56,11 @@ AI reads summaries Laree already shows, and nothing more. One facts builder, `sr
 | Open flags: rule id, rule text, values, state | Never | Yes | Yes |
 | Library templates: id, title, sport, phase tag, duration, Load | No | No | Up to 40 that suit the phase |
 
-The recap never receives flags, because flags are coach-only. No feature ever receives GPS tracks or other coordinates, second-by-second streams, the original .FIT, .GPX or .TCX files, athletes' free-text notes (check-in notes, activity notes, kudos messages), names, email addresses, dates of birth, body weight (power-to-weight goes as W/kg, as the app shows it), real calendar dates (facts use weekdays and relative weeks) or anything about another athlete. A test checks every facts object against this list. Outputs are written without names; the panel heading supplies the name.
+The recap never receives flags, because flags are coach-only. No feature ever receives GPS tracks or other coordinates, second-by-second streams, the original .FIT, .GPX or .TCX files, athletes' free-text notes (check-in notes, activity notes, kudos messages), profile details (names, email addresses, dates of birth), body weight (power-to-weight goes as W/kg, as the app shows it), real calendar dates (facts use weekdays and relative weeks) or anything about another athlete. Library steps are not sent, because a step can hold a free-text note: an accepted "add" names its template and copies the steps on the device. Ids are the app's own keys; in the prototype they are built from the three demo first names, and the MVP uses opaque ids. Titles are the exception to watch: session, library and race titles go in as written, so a name typed into a title would be read, and the consent text says so. A test checks every facts object against this list. Outputs are written without names; the panel heading supplies the name.
 
 ## 4. Retention
 
-The prototype stores no AI output: templates fill in when a panel renders. Consent choices stay in `laree:v1` until Reset.
+The prototype stores no AI output: templates fill in when a panel renders. Consent choices stay in `laree:v1` until Reset. If AI is turned off while that save is failing, the choice is kept in a small note of its own (`laree:ai-withdrawn`) and applied on load; agreeing again or Reset clears it.
 
 | MVP item | Kept for |
 |---|---|
@@ -92,7 +92,7 @@ It shows on past weeks in Week (`#/athlete/week?w=-1` and earlier) and on the co
 
 ### 6.2 Check-in summary (coach-facing)
 
-The summary gives Coach one athlete's last 14 days of check-ins in at most four lines, in the results-sheet register: terse, with a unit on every number. It states values against the athlete's own baseline, quotes open flags by their rule text, and notes missed check-ins and missed key sessions. It never calls a value good or bad unless a flag rule has, and never guesses at causes. It shows in Check-ins (`#/coach/check-ins`). A check-in that arrives after 10:00 marks it out of date, and Refresh rewrites it.
+The summary gives Coach one athlete's last 14 days of check-ins in at most four lines, in the results-sheet register: terse, with a unit on every number. It states values against the athlete's own baseline, quotes open flags by their rule text on one line (the flags open on the day being read, not ones raised later), and notes missed check-ins and missed key sessions. It never calls a value good or bad unless a flag rule has, and never guesses at causes. It shows in Check-ins (`#/coach/check-ins`). A check-in that arrives after 10:00 marks it out of date, and Refresh rewrites it.
 
 ### 6.3 Suggest next week (coach-facing)
 

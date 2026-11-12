@@ -28,7 +28,8 @@ async function renderPage(search = '') {
 const allFlags = () =>
   (['amir', 'danial', 'irfan'] as AthleteId[]).flatMap((a) => useLaree.getState().data.flagsState[a].flags)
 const firstOpen = () => {
-  const f = filterFlags(allFlags(), 'open', currentDay())[0]
+  // The "open" filter also lists acknowledged flags, so pick one that is really open.
+  const f = filterFlags(allFlags(), 'open', currentDay()).find((x) => x.status === 'open')
   if (!f) throw new Error('seed has no open flag')
   return f
 }
@@ -82,8 +83,12 @@ describe('flag inbox', () => {
 
   it('opening a flag acknowledges it', async () => {
     const f = firstOpen()
+    // The flag must start open, or "acknowledged" below would prove nothing.
+    expect(record(f)?.status).toBe('open')
     const router = await renderPage()
-    const row = screen.getAllByTestId('inbox-row')[0]!
+    // Click that flag's own row: the first row may be one that is already acknowledged.
+    const at = filterFlags(allFlags(), 'open', currentDay()).findIndex((x) => x.id === f.id)
+    const row = screen.getAllByTestId('inbox-row')[at]!
     fireEvent.click(row)
     await screen.findByTestId('flag-detail')
     await waitFor(() => expect(router.state.location.search).toContain('flag='))
@@ -92,6 +97,7 @@ describe('flag inbox', () => {
 
   it('resolving needs a note', async () => {
     const f = firstOpen()
+    expect(record(f)?.status).toBe('open')
     await renderPage(`?flag=${encodeURIComponent(f.id)}`)
     const drawer = await screen.findByTestId('flag-detail')
     fireEvent.click(within(drawer).getByRole('button', { name: 'Resolve' }))

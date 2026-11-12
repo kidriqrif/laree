@@ -67,7 +67,8 @@ const grid = () => screen.findByRole('group', { name: /sessions by day/i }, { ti
 /** Pick a session up with m, press the arrows `steps` times and press `end`. */
 async function keyboardMove(title: string, steps: number, end: 'Enter' | 'Escape' = 'Enter') {
   const g = await grid()
-  const row = within(g).getByRole('row', { name: new RegExp(title) })
+  // The grid can be on screen a moment before its rows are, so wait for the row.
+  const row = await within(g).findByRole('row', { name: new RegExp(title) })
   row.focus()
   fireEvent.keyDown(row, { key: 'm' })
   const button = within(row).getByRole('button', { name: new RegExp(`Move ${title}`) })

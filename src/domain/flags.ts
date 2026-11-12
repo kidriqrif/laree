@@ -641,6 +641,62 @@ export function resolveFlag(state: FlagsState, id: string, day: number, note?: s
   return stillTrue ? { ...next, quiet: { ...next.quiet, [target.ruleId]: true } } : next;
 }
 
+/** The fields a coach action changes. Everything else on a record belongs to the rules. */
+export type FlagLifecycle = Pick<FlagRecord, 'status' | 'acknowledgedDay' | 'resolvedDay' | 'resolution' | 'notes'>;
+
+export function lifecycleOf(f: FlagRecord): FlagLifecycle {
+  return {
+    status: f.status,
+    notes: f.notes,
+    ...(f.acknowledgedDay === undefined ? {} : { acknowledgedDay: f.acknowledgedDay }),
+    ...(f.resolvedDay === undefined ? {} : { resolvedDay: f.resolvedDay }),
+    ...(f.resolution === undefined ? {} : { resolution: f.resolution }),
+  };
+}
+
+export function sameLifecycle(a: FlagLifecycle, b: FlagLifecycle): boolean {
+  return (
+    a.status === b.status &&
+    a.acknowledgedDay === b.acknowledgedDay &&
+    a.resolvedDay === b.resolvedDay &&
+    a.resolution === b.resolution &&
+    a.notes.length === b.notes.length &&
+    a.notes.every((n, i) => n.day === b.notes[i]?.day && n.text === b.notes[i]?.text)
+  );
+}
+
+/**
+ * Undo one coach action on one flag. `after` is how the action left the flag and `before` is how
+ * it was. Only that flag's lifecycle fields go back, so other flags and the values the rules have
+ * measured since are untouched. `unquiet` removes the quiet mark the action put on the rule.
+ *
+ * Returns null, and changes nothing, when the undo is stale: the flag is gone, it has changed
+ * since the action (another action, a note, or the rules closing it), or the rule has opened a
+ * newer flag that an undone resolve would sit beside.
+ */
+export function undoFlagAction(
+  state: FlagsState,
+  id: string,
+  before: FlagLifecycle,
+  after: FlagLifecycle,
+  unquiet: boolean,
+): FlagsState | null {
+  const target = state.flags.find((f) => f.id === id);
+  if (!target || !sameLifecycle(lifecycleOf(target), after)) return null;
+  // A newer flag of the same rule, active or already closed, owns the rule's state now (the quiet
+  // mark too), so an undone resolve would sit beside it and take its mark away.
+  const twin = state.flags.some(
+    (f) => f.id !== id && f.ruleId === target.ruleId && (isActive(f) || f.openedDay > target.openedDay),
+  );
+  if (before.status !== 'resolved' && after.status === 'resolved' && twin) return null;
+  const { acknowledgedDay: _a, resolvedDay: _r, resolution: _n, ...rest } = target;
+  const restored: FlagRecord = { ...rest, ...before };
+  const next = update(state, id, () => restored);
+  if (!unquiet) return next;
+  const { [target.ruleId]: _q, ...quiet } = next.quiet;
+  return { ...next, quiet };
+}
+
 /** Add a coach-only note of up to 280 characters, in any state. Blank notes are ignored. */
 export function addFlagNote(state: FlagsState, id: string, day: number, text: string): FlagsState {
   const t = text.trim().slice(0, NOTE_MAX_CHARS);

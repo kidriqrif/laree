@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { aiStateOf, athleteStatusLine } from '../../../ai/consent.ts'
+import { aiStateOf, athleteStatusLine, WITHDRAWAL_UNSAVED } from '../../../ai/consent.ts'
 import { useLaree } from '../../../data/store.ts'
 import type { AthleteId } from '../../../domain/types.ts'
 import { Card } from '../../../ui/core/index.ts'
@@ -34,8 +34,9 @@ export function AiSection({ athleteId }: AiSectionProps) {
     } catch {
       ok = false
     }
-    if (ok) showToast('AI summaries are off.')
-    else setError("Couldn't save your choice. AI stays as it was.")
+    if (!ok) setError("Couldn't save your choice. AI stays as it was.")
+    else if (useLaree.getState().aiWithdrawalUnsaved) setError(WITHDRAWAL_UNSAVED)
+    else showToast('AI summaries are off.')
   }
 
   return (

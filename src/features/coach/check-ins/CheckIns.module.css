@@ -103,6 +103,19 @@
     border-inline-start-color: var(--status-partial);
   }
 
+  /* Narrow screens: the title takes a line of its own, so the fixed columns cannot squeeze it out. */
+  @media (max-width: 639px) {
+    .row {
+      grid-template-columns: 4.5rem minmax(0, 1fr) auto auto;
+    }
+
+    .row .rowTitle {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      white-space: normal;
+    }
+  }
+
   .row[data-status='resolved'] {
     color: var(--color-text-muted);
   }

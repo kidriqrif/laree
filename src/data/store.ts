@@ -7,8 +7,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { ATHLETES } from '../app/people.ts'
 import { useViewer } from '../app/viewer.ts'
-import { acknowledgeFlag, addFlagNote, resolveFlag, stepFlags } from '../domain/flags.ts'
-import type { AthleteData, FlagRecord, FlagsState } from '../domain/flags.ts'
+import { acknowledgeFlag, addFlagNote, resolveFlag, stepFlags, undoFlagAction } from '../domain/flags.ts'
+import type { AthleteData, FlagLifecycle, FlagRecord, FlagsState } from '../domain/flags.ts'
 import type { BadgeSeen, WeekExcuse } from '../domain/gamification.ts'
 import { evaluateCompliance } from '../domain/metrics/compliance.ts'
 import { derivePhases } from '../domain/plan.ts'
@@ -34,7 +34,16 @@ import type {
   WorkoutTemplate,
 } from '../domain/types.ts'
 import { defaultSettingsMap, migrate, STORE_VERSION } from './migrations.ts'
-import { createLareeStorage, isSavedDataUnreadable, onStorageStatus, STORE_KEY } from './persist.ts'
+import {
+  createLareeStorage,
+  isSavedDataUnreadable,
+  clearAiWithdrawn,
+  isStorageFailed,
+  noteAiWithdrawn,
+  onStorageStatus,
+  readAiWithdrawn,
+  STORE_KEY,
+} from './persist.ts'
 import { generateSeed } from './seed/index.ts'
 import type { SeedCheckIn } from './seed/index.ts'
 import { earnedAwards, selectFitnessSeries } from './selectors.ts'
@@ -99,6 +108,11 @@ interface Persisted {
 export interface LareeState extends Persisted {
   /** Not saved: browser storage is unavailable or full. */
   storageFailed: boolean
+  /**
+   * True when the last "turn AI off" could not be saved in any form, so a reload could turn it
+   * back on. Screens say so instead of the usual confirmation.
+   */
+  aiWithdrawalUnsaved: boolean
   /** Not saved: the banner was dismissed for this visit. */
   bannerDismissed: boolean
   /** Not saved: saved text was found but could not be used. */
@@ -134,6 +148,11 @@ export interface LareeState extends Persisted {
   acknowledgeFlag: (flagId: string, athleteId: AthleteId, day?: DayOffset) => void
   resolveFlag: (flagId: string, athleteId: AthleteId, note?: string, day?: DayOffset) => void
   addFlagNote: (flagId: string, athleteId: AthleteId, text: string, day?: DayOffset) => void
+  /**
+   * Undo one acknowledge or resolve on one flag: `after` is how the action left it, `before` how
+   * it was. False, with nothing changed, when the flag has changed since.
+   */
+  undoFlagAction: (athleteId: AthleteId, flagId: string, before: FlagLifecycle, after: FlagLifecycle, unquiet: boolean) => boolean
   sendKudos: (input: { athleteId: AthleteId; activityId?: string; message?: string }, day?: DayOffset) => void
   /** The athlete has seen these kudos (default: all of theirs). */
   markKudosSeen: (athleteId: AthleteId, kudosIds?: readonly string[]) => void
@@ -244,6 +263,15 @@ function flagRow(rec: FlagRecord, data: LareeData, existing: Flag | undefined): 
   return row
 }
 
+/** Consent withdrawn while the main save was failing stays withdrawn after a reload. */
+function withAiWithdrawals(data: LareeData): LareeData {
+  const owners = readAiWithdrawn().filter((o): o is PersonId => o in data.settings && data.settings[o as PersonId].aiConsent)
+  if (owners.length === 0) return data
+  const settings = { ...data.settings }
+  for (const o of owners) settings[o] = { ...settings[o], aiConsent: false }
+  return { ...data, settings }
+}
+
 /** Flags in list shape follow their lifecycle records, including records the rules just opened. */
 function syncFlags(data: LareeData, athleteId: AthleteId, state: FlagsState): Pick<LareeData, 'flags' | 'flagsState'> {
   const existing = new Map(data.flags.map((f) => [f.id, f]))
@@ -315,6 +343,8 @@ function awardBadges(data: LareeData, athleteId: AthleteId, today: DayOffset): B
 }
 
 /** Apply a batch to a working list of workouts. Returns the new list, and what undo needs. */
+const sameValue = (a: unknown, b: unknown): boolean => a === b || JSON.stringify(a) === JSON.stringify(b)
+
 function applyChanges(planned: readonly PlannedWorkout[], changes: readonly PlanChange[]) {
   let list = planned.slice()
   const before = new Map<string, PlannedWorkout>()
@@ -330,6 +360,10 @@ function applyChanges(planned: readonly PlannedWorkout[], changes: readonly Plan
     }
     const w = list.find((p) => p.id === c.id)
     if (!w) continue
+    // A change that leaves the session as it is (a save with no edits, a move to where it
+    // already sits) is not a change: it records nothing, so it pushes no undo step.
+    if (c.kind === 'update' && Object.entries(c.patch).every(([k, v]) => sameValue(w[k as keyof PlannedWorkout], v))) continue
+    if (c.kind === 'move' && c.day === w.day && (c.order === undefined || c.order === w.order)) continue
     athletes.add(w.athleteId)
     if (!before.has(w.id) && !added.includes(w.id)) before.set(w.id, w)
     if (c.kind === 'delete') list = list.filter((p) => p.id !== c.id)
@@ -368,6 +402,7 @@ export const useLaree = create<LareeState>()(
         data: freshData(),
         anchor: runtimeStartEpochDay(),
         storageFailed: false,
+        aiWithdrawalUnsaved: false,
         bannerDismissed: false,
         unreadable: isSavedDataUnreadable(),
         undoStack: [],
@@ -465,6 +500,13 @@ export const useLaree = create<LareeState>()(
           patch((d) => syncFlags(d, athleteId, resolveFlag(d.flagsState[athleteId], flagId, day, note))),
         addFlagNote: (flagId, athleteId, text, day = clockToday()) =>
           patch((d) => syncFlags(d, athleteId, addFlagNote(d.flagsState[athleteId], flagId, day, text))),
+        undoFlagAction: (athleteId, flagId, before, after, unquiet) => {
+          const next = undoFlagAction(get().data.flagsState[athleteId], flagId, before, after, unquiet)
+          if (!next) return false
+          // Through syncFlags, so the list rows and the lifecycle records never disagree.
+          patch((d) => syncFlags(d, athleteId, next))
+          return true
+        },
         sendKudos: (input, day = clockToday()) => {
           patch((d) => {
             const n = d.kudos.filter((k) => k.athleteId === input.athleteId).length + 1
@@ -539,6 +581,12 @@ export const useLaree = create<LareeState>()(
           if (on && !isOwnerViewing) return false
           if (!on && !isOwnerViewing && !(viewer.role === 'coach' && owner !== 'coach')) return false
           patch((d) => ({ settings: { ...d.settings, [owner]: { ...d.settings[owner], aiConsent: on } } }))
+          // The save above is synchronous, so its outcome is known here. A withdrawal that did not
+          // reach the main save is written as a small note of its own, which loading applies.
+          let unsaved = false
+          if (on || !isStorageFailed()) noteAiWithdrawn(owner, false)
+          else unsaved = !noteAiWithdrawn(owner, true)
+          if (get().aiWithdrawalUnsaved !== unsaved) set({ aiWithdrawalUnsaved: unsaved })
           return true
         },
         setSettings: (owner, change) =>
@@ -552,7 +600,11 @@ export const useLaree = create<LareeState>()(
         setPref: (key, value) => patch((d) => ({ prefs: { ...d.prefs, [key]: value } })),
         dismissStorageBanner: () => set({ bannerDismissed: true }),
         reset: () => {
-          set({ data: freshData(), anchor: runtimeStartEpochDay(), undoStack: [], unreadable: false })
+          set({ data: freshData(), anchor: runtimeStartEpochDay(), undoStack: [], unreadable: false, aiWithdrawalUnsaved: false })
+          // Reset clears every consent choice, the withdrawal note included (docs/spec/ai.md 4).
+          // Only once the fresh data is saved: if that save failed, a reload brings the old copy
+          // back, and the note must still be there to keep AI off.
+          if (!isStorageFailed()) clearAiWithdrawn()
           // IA 7.8: after a reset the switcher returns to the role picker state.
           useViewer.setState({ role: 'athlete', athleteId: 'amir', coachAthleteId: 'amir', chosen: false })
         },
@@ -575,7 +627,7 @@ export const useLaree = create<LareeState>()(
         // Day offsets count from the Monday 16 weeks before this week. A saved copy from an
         // earlier week would sit on the wrong dates, so a new week starts from a fresh seed.
         if (p.anchor !== current.anchor) return current
-        return { ...current, data: { ...current.data, ...p.data } }
+        return { ...current, data: withAiWithdrawals({ ...current.data, ...p.data }) }
       },
     },
   ),

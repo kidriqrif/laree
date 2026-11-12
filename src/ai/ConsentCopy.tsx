@@ -22,15 +22,18 @@ export function ConsentCopy({ audience }: { audience: 'athlete' | 'coach' }) {
       <div>
         <dt>What it reads</dt>
         <dd>
-          Summaries Laree already shows: planned sessions, activity totals, Fitness, Fatigue, Form and Ramp, check-in
-          scores, thresholds, races and open flags where a feature needs them. One athlete at a time.
+          Summaries Laree already shows: planned sessions and library workouts with their titles, activity totals,
+          Fitness, Fatigue, Form and Ramp, check-in scores, thresholds, races by name and open flags where a feature
+          needs them. One athlete at a time.
         </dd>
       </div>
       <div>
         <dt>What it never reads</dt>
         <dd>
-          GPS tracks, second-by-second data, original files, free-text notes, names, body weight, real dates or anything
-          about another athlete. It never opens, changes or resolves a flag, and it gives no medical advice.
+          GPS tracks, second-by-second data, original files, free-text notes, profile details (name, email, date of
+          birth), body weight, real dates or anything about another athlete. Titles are read as written, so a name
+          typed into a session or race title would be read. It never opens, changes or resolves a flag, and it gives
+          no medical advice.
         </dd>
       </div>
       <div>

@@ -4,7 +4,7 @@ import { useLaree } from '../data/store.ts'
 import type { AthleteId } from '../domain/types.ts'
 import { Button } from '../ui/core/index.ts'
 import { Dialog } from '../ui/overlay/index.ts'
-import { aiStateFor, coachRowLabel } from './consent.ts'
+import { aiStateFor, coachRowLabel, WITHDRAWAL_UNSAVED } from './consent.ts'
 import { ConsentCopy } from './ConsentCopy.tsx'
 import styles from './ai.module.css'
 
@@ -28,7 +28,10 @@ export default function CoachConsentDialog({ athleteId, isOpen, onClose }: Coach
     } catch {
       ok = false
     }
-    if (ok) {
+    if (ok && !on && useLaree.getState().aiWithdrawalUnsaved) {
+      // Off in memory only: stay open and say so, instead of closing as if it were saved.
+      setError(WITHDRAWAL_UNSAVED)
+    } else if (ok) {
       setError('')
       onClose()
     } else {

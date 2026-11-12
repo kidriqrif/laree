@@ -49,6 +49,10 @@ export function canTurnOff(owner: PersonId, viewer: ViewerLike): boolean {
   return isOwnerViewing(owner, viewer) || (viewer.role === 'coach' && owner !== 'coach')
 }
 
+/** Shown instead of the usual confirmation when turning AI off could not be saved at all. */
+export const WITHDRAWAL_UNSAVED =
+  'AI is off for now, but this device could not save that choice. After a reload it may be on again, so check this setting then.'
+
 /** What Me says under the toggle, for each state (docs/ia 7.6). */
 export function athleteStatusLine(state: AiState): string {
   switch (state) {

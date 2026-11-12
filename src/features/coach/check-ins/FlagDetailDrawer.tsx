@@ -11,7 +11,7 @@ import type { AthleteId, DayOffset } from '../../../domain/types.ts'
 import { Button, buttonClass } from '../../../ui/core/index.ts'
 import { TextField } from '../../../ui/form/index.ts'
 import { Drawer, showUndoToast } from '../../../ui/overlay/index.ts'
-import { RULE_SERIES, SEVERITY_LABEL, snapshotFlags, STATUS_TEXT } from './model.ts'
+import { flagActionUndo, RULE_SERIES, SEVERITY_LABEL, STATUS_TEXT } from './model.ts'
 import styles from './CheckIns.module.css'
 
 export interface FlagDetailDrawerProps {
@@ -47,9 +47,8 @@ export default function FlagDetailDrawer({ athleteId, flagId, onClose, onOpenChe
   useEffect(() => {
     if (readOnly || !flag || flag.status !== 'open' || acked.current === flag.id) return
     acked.current = flag.id
-    const undo = snapshotFlags(athleteId)
-    acknowledgeFlag(flag.id, athleteId, today)
-    showUndoToast('Flag acknowledged', undo)
+    const undo = flagActionUndo(athleteId, flag.id, () => acknowledgeFlag(flag.id, athleteId, today))
+    if (undo) showUndoToast('Flag acknowledged', undo)
   }, [flag, athleteId, acknowledgeFlag, today, readOnly])
 
   if (!flag) return null
@@ -96,9 +95,8 @@ export default function FlagDetailDrawer({ athleteId, flagId, onClose, onOpenChe
     const t = text.trim()
     if (!t) return
     if (mode === 'resolve') {
-      const undo = snapshotFlags(athleteId)
-      resolveFlag(flag.id, athleteId, t, today)
-      showUndoToast('Flag resolved', undo)
+      const undo = flagActionUndo(athleteId, flag.id, () => resolveFlag(flag.id, athleteId, t, today))
+      if (undo) showUndoToast('Flag resolved', undo)
     } else {
       addFlagNote(flag.id, athleteId, t, today)
     }
@@ -207,9 +205,8 @@ export default function FlagDetailDrawer({ athleteId, flagId, onClose, onOpenChe
             {pending ? (
               <Button
                 onPress={() => {
-                  const undo = snapshotFlags(athleteId)
-                  acknowledgeFlag(flag.id, athleteId, today)
-                  showUndoToast('Flag acknowledged', undo)
+                  const undo = flagActionUndo(athleteId, flag.id, () => acknowledgeFlag(flag.id, athleteId, today))
+                  if (undo) showUndoToast('Flag acknowledged', undo)
                 }}
               >
                 Acknowledge
