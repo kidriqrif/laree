@@ -186,6 +186,20 @@ function stubStore(seed: Record<string, string>, full: boolean) {
   }
 }
 
+/** A stand-in for storage the browser blocks outright: every read and write throws. */
+function blockedStore() {
+  const refuse = () => {
+    throw new DOMException('blocked', 'SecurityError')
+  }
+  return { getItem: refuse, setItem: refuse, removeItem: refuse }
+}
+
+/** A full page load: fresh copies of the store and its modules, reading only what storage holds. */
+async function freshPageLoad() {
+  vi.resetModules()
+  return (await import('./store.ts')).useLaree
+}
+
 describe('AI withdrawal that could not be saved', () => {
   const consent = (id: 'amir' | 'danial' | 'coach') => useLaree.getState().data.settings[id].aiConsent
   const asAthlete = () => useViewer.setState({ role: 'athlete', athleteId: 'amir' })
@@ -250,6 +264,33 @@ describe('AI withdrawal that could not be saved', () => {
     expect(consent('amir')).toBe(false)
     expect(useLaree.getState().aiUnsavedOwners).toEqual(['amir'])
     expect(useLaree.getState().aiWithdrawalUnsaved).toBe(true)
+  })
+
+  it('on a full page load, a session-only withdrawal keeps AI off and brings the warning back', async () => {
+    asAthlete()
+    useLaree.getState().setAiConsent('amir', true)
+    const raw = localStorage.getItem(STORE_KEY)!
+    vi.stubGlobal('localStorage', stubStore({ [STORE_KEY]: raw }, true))
+    useLaree.getState().setAiConsent('amir', false)
+    expect(sessionStorage.getItem('laree:ai-withdrawn')).toContain('amir')
+    // New copies of the modules, so nothing from this page's memory survives: only storage does.
+    const page = await freshPageLoad()
+    expect(page.persist.hasHydrated()).toBe(true)
+    expect(JSON.parse(raw).state.data.settings.amir.aiConsent).toBe(true)
+    expect(page.getState().data.settings.amir.aiConsent).toBe(false)
+    expect(page.getState().aiUnsavedOwners).toEqual(['amir'])
+    expect(page.getState().aiWithdrawalUnsaved).toBe(true)
+  })
+
+  it('on a full page load with storage blocked, AI starts off: the earlier choice cannot be read', async () => {
+    asAthlete()
+    useLaree.getState().setAiConsent('amir', true)
+    vi.stubGlobal('localStorage', blockedStore())
+    vi.stubGlobal('sessionStorage', blockedStore())
+    useLaree.getState().setAiConsent('amir', false)
+    expect(useLaree.getState().aiUnsavedOwners).toEqual(['amir'])
+    const page = await freshPageLoad()
+    expect(page.getState().data.settings.amir.aiConsent).toBe(false)
   })
 
   it('does not warn after a reload when the withdrawal note lasts in localStorage', async () => {

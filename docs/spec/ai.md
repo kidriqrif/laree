@@ -68,7 +68,7 @@ Turning AI off always takes effect on screen at once. Making it stick across a r
 
 The store tracks each person's unsaved withdrawal separately (the athlete, each athlete the coach switches off, and the coach). The warning stays up while any one of them is unsaved. A person leaves that list only when a save that holds their choice works (the main save, or their own note in local storage), or when they turn AI on again. A note kept only in session storage still counts as unsaved, because closing the browser drops it. A later save for someone else does not clear it. In the coach dialog, while the warning is up, the main button reads "Try saving again" and retries the save for the withdrawal.
 
-Still not covered: if both stores are full and the browser session is then closed and reopened, the earlier saved copy can bring consent back on, and the warning says so. The MVP keeps consent on the server, which removes this gap.
+Still not covered: if the browser still reads the earlier saved copy but refuses the note in both stores, the next reload or browser restart can bring consent back on. The warning says exactly that, so the person knows to check the setting. If storage is blocked outright, the earlier copy cannot be read either, so AI starts off. Tests load the store as a fresh page to check both cases. The MVP keeps consent on the server, which removes this gap.
 
 | MVP item | Kept for |
 |---|---|
