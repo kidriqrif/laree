@@ -20,6 +20,8 @@ export default function CoachConsentDialog({ athleteId, isOpen, onClose }: Coach
   const setAiConsent = useLaree((s) => s.setAiConsent)
   const [error, setError] = useState('')
   const coachOn = settings.coach.aiConsent
+  // Off in memory but not saved anywhere: the only useful action is to try saving the withdrawal again.
+  const unsaved = useLaree((s) => s.aiUnsavedOwners.includes('coach')) && !coachOn
 
   const save = (on: boolean) => {
     let ok = false
@@ -28,7 +30,7 @@ export default function CoachConsentDialog({ athleteId, isOpen, onClose }: Coach
     } catch {
       ok = false
     }
-    if (ok && !on && useLaree.getState().aiWithdrawalUnsaved) {
+    if (ok && !on && useLaree.getState().aiUnsavedOwners.includes('coach')) {
       // Off in memory only: stay open and say so, instead of closing as if it were saved.
       setError(WITHDRAWAL_UNSAVED)
     } else if (ok) {
@@ -48,14 +50,20 @@ export default function CoachConsentDialog({ athleteId, isOpen, onClose }: Coach
           onClose()
         }
       }}
-      title={coachOn ? 'Turn off AI features?' : 'Turn on AI features?'}
+      title={unsaved ? 'AI is off, but not saved' : coachOn ? 'Turn off AI features?' : 'Turn on AI features?'}
       data-testid="ai-consent-dialog"
       footer={
         <div className={styles.actions}>
-          <Button onPress={onClose}>{coachOn ? 'Cancel' : 'Not now'}</Button>
-          <Button variant={coachOn ? 'secondary' : 'primary'} onPress={() => save(!coachOn)}>
-            {coachOn ? 'Turn off' : 'Turn on'}
-          </Button>
+          <Button onPress={onClose}>{unsaved ? 'Close' : coachOn ? 'Cancel' : 'Not now'}</Button>
+          {unsaved ? (
+            <Button variant="primary" onPress={() => save(false)}>
+              Try saving again
+            </Button>
+          ) : (
+            <Button variant={coachOn ? 'secondary' : 'primary'} onPress={() => save(!coachOn)}>
+              {coachOn ? 'Turn off' : 'Turn on'}
+            </Button>
+          )}
         </div>
       }
     >
@@ -75,9 +83,9 @@ export default function CoachConsentDialog({ athleteId, isOpen, onClose }: Coach
           )
         })}
       </ul>
-      {error ? (
+      {error || unsaved ? (
         <p role="alert" className={styles.error}>
-          {error}
+          {error || WITHDRAWAL_UNSAVED}
         </p>
       ) : null}
     </Dialog>

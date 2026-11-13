@@ -1,8 +1,31 @@
 /** Small formatters shared by the workout and activity screens. */
 import { BAND_LABELS } from '../../../domain/metrics/compliance.ts'
 import { dayToDate } from '../../../domain/time.ts'
-import type { ActivitySource, ComplianceBand, DayOffset, LoadMethod } from '../../../domain/types.ts'
+import type { ActivitySource, ComplianceBand, DayOffset, LoadMethod, Sport } from '../../../domain/types.ts'
 import type { StatusKey } from '../../../ui/core/index.ts'
+
+const SPORT_NAME: Record<Sport, string> = {
+  swim: 'Swim',
+  bike: 'Bike',
+  run: 'Run',
+  strength: 'Strength',
+  other: 'Other',
+}
+
+export function sportName(sport: Sport): string {
+  return SPORT_NAME[sport]
+}
+
+/**
+ * A title without its sport prefix, for places where the sport already shows as a mark or a word:
+ * "Run: Easy run" becomes "Easy run". Other titles are left as they are.
+ */
+export function sessionName(title: string, sport: Sport): string {
+  const prefix = `${SPORT_NAME[sport]}:`
+  if (!title.toLowerCase().startsWith(prefix.toLowerCase())) return title
+  const rest = title.slice(prefix.length).trim()
+  return rest === '' ? title : rest
+}
 
 const dayFmt = new Intl.DateTimeFormat('en-MY', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' })
 

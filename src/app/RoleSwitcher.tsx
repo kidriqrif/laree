@@ -1,7 +1,7 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- ARIA patterns on non-native elements: region, status, radiogroup and menu */
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { ChevronDownIcon } from '../ui/icons/index.ts'
+import { IconChevronDown as ChevronDownIcon } from '../ui/icons/icons-core.tsx'
 import { PEOPLE, personName, type ViewerChoice } from './people.ts'
 import { getLastCoachRoute, useViewer, viewerChoice } from './viewer.ts'
 import styles from './RoleSwitcher.module.css'
@@ -90,17 +90,17 @@ export function RoleSwitcher() {
 
 function RadioPicker({ choice, onChoose }: { choice: ViewerChoice; onChoose: (c: ViewerChoice) => void }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([])
+  // Arrows only move focus: each choice navigates, so Space or Enter (the button's click) commits it.
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    const i = PEOPLE.findIndex((p) => p.id === choice)
+    const at = refs.current.indexOf(document.activeElement as HTMLButtonElement)
+    const i = at >= 0 ? at : PEOPLE.findIndex((p) => p.id === choice)
     let next = -1
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % PEOPLE.length
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + PEOPLE.length) % PEOPLE.length
     else if (e.key === 'Home') next = 0
     else if (e.key === 'End') next = PEOPLE.length - 1
-    const person = PEOPLE[next]
-    if (!person) return
+    if (next < 0) return
     e.preventDefault()
-    onChoose(person.id)
     refs.current[next]?.focus()
   }
   return (

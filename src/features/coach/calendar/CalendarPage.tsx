@@ -64,9 +64,25 @@ function dayTotals(d: AthleteDay) {
   }
 }
 
-function SessionChip({ item, onOpen }: { item: PlannedItem; onOpen: (id: string) => void }) {
-  const { workout, evaluation, activity } = item
-  const band = evaluation?.band
+/** The key-session tag and the done mark. On the board they sit in the card foot, beside Move. */
+function SessionMarks({ item }: { item: PlannedItem }) {
+  const band = item.evaluation?.band
+  return (
+    <>
+      {item.workout.keySession ? <span className={styles.key}>Key</span> : null}
+      {band ? (
+        <span className={styles.status} title={band}>
+          <StatusGlyph status={BAND_STATUS[band]} size={14} />
+        </span>
+      ) : null}
+    </>
+  )
+}
+
+const hasMarks = (item: PlannedItem): boolean => Boolean(item.workout.keySession || item.evaluation?.band)
+
+function SessionChip({ item, onOpen, marks = true }: { item: PlannedItem; onOpen: (id: string) => void; marks?: boolean }) {
+  const { workout, activity } = item
   const sport: SportKey | null = workout.sport === 'other' ? null : (workout.sport as SportKey)
   return (
     <span className={styles.chip}>
@@ -75,12 +91,7 @@ function SessionChip({ item, onOpen }: { item: PlannedItem; onOpen: (id: string)
         <AriaButton className={styles.titleButton} onPress={() => onOpen(workout.id)}>
           {workout.title}
         </AriaButton>
-        {workout.keySession ? <span className={styles.key}>Key</span> : null}
-        {band ? (
-          <span className={styles.status} title={band}>
-            <StatusGlyph status={BAND_STATUS[band]} size={14} />
-          </span>
-        ) : null}
+        {marks ? <SessionMarks item={item} /> : null}
       </span>
       <span className={styles.chipMeta} data-numeric>
         {fmtDuration(workout.plannedDurationS)} planned, load {Math.round(workout.plannedLoad)}
@@ -175,7 +186,8 @@ export default function CalendarPage() {
         items: d.planned.map((p) => ({
           id: p.workout.id,
           label: p.workout.title,
-          content: <SessionChip item={p} onOpen={setEditing} />,
+          content: <SessionChip item={p} onOpen={setEditing} marks={false} />,
+          foot: hasMarks(p) ? <SessionMarks item={p} /> : undefined,
         })),
       })),
     [summary],
@@ -419,6 +431,7 @@ export default function CalendarPage() {
             onMove={handleMove}
             moveLabel="Move"
             emptyLabel="Rest"
+            headingLevel={2}
           />
         </div>
       )}

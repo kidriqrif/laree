@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { formatDuration, parseDuration, parsePace } from './clock.ts'
-import { DurationField, NumberField, PaceField, PhaseSlider, Rating, SegmentedControl, TextField } from './index.ts'
+import { DurationField, NumberField, PaceField, PhaseSlider, Rating, SegmentedControl, Slider, Switch, TextField } from './index.ts'
 
 afterEach(cleanup)
 
@@ -31,6 +31,21 @@ describe('field layout', () => {
     expect(text).toContain('Shown on the calendar')
     expect(text).toContain('Give it a title')
     expect(input.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('marks plain-footer controls invalid and announces their error', () => {
+    render(
+      <>
+        <Switch label="Key session" error="Pick a key session" />
+        <Slider label="Effort" defaultValue={5} minValue={0} maxValue={10} error="Too hard for a recovery week" />
+        <PhaseSlider label="Season phases" phases={[{ id: 'a', label: 'Base' }, { id: 'b', label: 'Build' }]} weeks={[4, 4]} error="Build is too short" />
+        <Switch label="Share check-ins" />
+      </>,
+    )
+    expect(screen.getByRole('switch', { name: 'Key session' }).getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByRole('switch', { name: 'Share check-ins' }).getAttribute('aria-invalid')).toBeNull()
+    expect(thumbs().map((t) => t.getAttribute('aria-invalid'))).toEqual(['true', 'true'])
+    expect(screen.getAllByRole('alert').map((a) => a.textContent)).toEqual(['Pick a key session', 'Too hard for a recovery week', 'Build is too short'])
   })
 
   it('names the unit for screen readers', () => {

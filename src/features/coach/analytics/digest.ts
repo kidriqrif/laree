@@ -1,4 +1,4 @@
-import { seededStream } from '../../../data/seed/index.ts'
+import { seededStream } from '../../../data/seed/onDemand.ts'
 import { buildCurve, POWER_WINDOWS_S, RUN_DISTANCES_M } from '../../../domain/metrics/curves.ts'
 import type { ActivityBests } from '../../../domain/metrics/curves.ts'
 import type { LoadThresholds } from '../../../domain/metrics/load.ts'

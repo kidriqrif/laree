@@ -31,9 +31,10 @@
     overflow-x: auto;
   }
 
+  /* 44 px, or 36 px on the compact coach desk (--switcher-target, register-coach.css). */
   .option,
   .menuButton {
-    min-block-size: 36px;
+    min-block-size: var(--switcher-target);
     padding-inline: var(--space-3);
     border-radius: var(--radius-pill);
     font-weight: 700;
@@ -60,13 +61,23 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
+    max-inline-size: 100%;
+  }
+
+  /* On the narrowest phones the compact label truncates instead of pushing the bar wider than the screen. */
+  .menuButton > span {
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .popoverRoot {
     position: relative;
+    min-inline-size: 0;
   }
 
   .end {
+    flex: none;
     margin-inline-start: auto;
   }
 

@@ -101,6 +101,10 @@
   .status {
     display: inline-flex;
     flex: none;
+  }
+
+  /* In the read-only list the mark ends the title row; on the board it sits in the card foot. */
+  .chipHead .status {
     margin-inline-start: auto;
   }
 

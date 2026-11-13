@@ -105,18 +105,4 @@
     font-size: var(--text-sm);
     font-weight: 600;
   }
-
-  /* Until Today names a [data-badge-host], the badge moment floats at the top of the column. */
-  .badgeFloat {
-    position: fixed;
-    top: var(--space-3);
-    left: 50%;
-    z-index: var(--z-toast);
-    width: min(calc(100% - 2 * var(--space-4)), 528px);
-    transform: translateX(-50%);
-  }
-
-  .badgeFloat:not(:has(section)) {
-    display: none;
-  }
 }

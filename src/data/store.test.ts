@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useViewer } from '../app/viewer.ts'
 import type { Activity } from '../domain/types.ts'
 import { resetStorageStatus, STORE_KEY } from './persist.ts'
@@ -168,5 +168,83 @@ describe('reset', () => {
     expect(useLaree.getState().data).toEqual(freshData())
     expect(useLaree.getState().undoStack).toEqual([])
     expect(useViewer.getState().chosen).toBe(false)
+  })
+})
+
+/** A stand-in for browser storage that reads fine and, when asked, refuses every write. */
+function stubStore(seed: Record<string, string>, full: boolean) {
+  const map = new Map(Object.entries(seed))
+  return {
+    getItem: (k: string) => map.get(k) ?? null,
+    removeItem: (k: string) => {
+      map.delete(k)
+    },
+    setItem: (k: string, v: string) => {
+      if (full) throw new DOMException('full', 'QuotaExceededError')
+      map.set(k, v)
+    },
+  }
+}
+
+describe('AI withdrawal that could not be saved', () => {
+  const consent = (id: 'amir' | 'danial' | 'coach') => useLaree.getState().data.settings[id].aiConsent
+  const asAthlete = () => useViewer.setState({ role: 'athlete', athleteId: 'amir' })
+  const asCoach = () => useViewer.setState({ role: 'coach' })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    sessionStorage.clear()
+  })
+
+  it('keeps the warning up when a later coach turn-on succeeds in the same session', () => {
+    asAthlete()
+    useLaree.getState().setAiConsent('amir', true)
+    vi.stubGlobal('localStorage', stubStore({}, true))
+    vi.stubGlobal('sessionStorage', stubStore({}, true))
+    asCoach()
+    useLaree.getState().setAiConsent('amir', false)
+    expect(useLaree.getState().aiWithdrawalUnsaved).toBe(true)
+    useLaree.getState().setAiConsent('coach', true)
+    expect(useLaree.getState().aiWithdrawalUnsaved).toBe(true)
+    expect(useLaree.getState().aiUnsavedOwners).toEqual(['amir'])
+  })
+
+  it('keeps the warning up when another owner withdraws and that note saves', () => {
+    asAthlete()
+    useLaree.getState().setAiConsent('amir', true)
+    useLaree.getState().setAiConsent('danial', true)
+    vi.stubGlobal('localStorage', stubStore({}, true))
+    vi.stubGlobal('sessionStorage', stubStore({}, true))
+    asCoach()
+    useLaree.getState().setAiConsent('amir', false)
+    expect(useLaree.getState().aiWithdrawalUnsaved).toBe(true)
+    vi.stubGlobal('sessionStorage', stubStore({}, false))
+    useLaree.getState().setAiConsent('danial', false)
+    expect(useLaree.getState().aiWithdrawalUnsaved).toBe(true)
+  })
+
+  it('clears the warning once the main save works again', () => {
+    asAthlete()
+    useLaree.getState().setAiConsent('amir', true)
+    vi.stubGlobal('localStorage', stubStore({}, true))
+    vi.stubGlobal('sessionStorage', stubStore({}, true))
+    useLaree.getState().setAiConsent('amir', false)
+    expect(useLaree.getState().aiWithdrawalUnsaved).toBe(true)
+    vi.unstubAllGlobals()
+    useLaree.getState().setAiConsent('amir', false)
+    expect(useLaree.getState().aiWithdrawalUnsaved).toBe(false)
+  })
+
+  it('stays off after a reload when only the session note could be saved, and still warns', async () => {
+    asAthlete()
+    useLaree.getState().setAiConsent('amir', true)
+    const raw = localStorage.getItem(STORE_KEY)!
+    vi.stubGlobal('localStorage', stubStore({ [STORE_KEY]: raw }, true))
+    useLaree.getState().setAiConsent('amir', false)
+    // The session note ends with the browser, so the warning stays for that owner.
+    expect(useLaree.getState().aiUnsavedOwners).toEqual(['amir'])
+    expect(sessionStorage.getItem('laree:ai-withdrawn')).toContain('amir')
+    await useLaree.persist.rehydrate()
+    expect(consent('amir')).toBe(false)
   })
 })

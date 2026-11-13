@@ -2,7 +2,7 @@
   .page {
     display: grid;
     gap: var(--space-4);
-    max-inline-size: 560px;
+    max-inline-size: var(--column-max);
     margin-inline: auto;
     padding-block: var(--space-4);
     touch-action: pan-y;
@@ -27,6 +27,14 @@
     font-family: var(--font-display);
     font-size: var(--text-2xl);
     line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  /* The dates sit on their own smaller line, so the label keeps one line between the arrows at 390. */
+  .range {
+    display: block;
+    margin-block-start: var(--space-1);
+    font-size: var(--text-md);
   }
 
   .phase {

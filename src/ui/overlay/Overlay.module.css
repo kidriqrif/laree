@@ -53,6 +53,11 @@
     padding-block-end: env(safe-area-inset-bottom);
   }
 
+  /* An athlete sheet stays inside the athlete column. */
+  .overlay[data-register="athlete"] .modal[data-kind="sheet"] {
+    max-inline-size: var(--column-max);
+  }
+
   .modal[data-kind="sheet"][data-entering] {
     animation: slide-up var(--dur-base) var(--ease-out);
   }

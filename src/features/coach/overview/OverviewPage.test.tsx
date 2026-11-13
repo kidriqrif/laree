@@ -83,7 +83,7 @@ describe('Overview roster', () => {
       expect(cell(grid, id, 'Athlete')).toContain(NAMES[id])
       expect(cell(grid, id, 'Fitness')).toContain(fmtNumber(r.fitness))
       expect(cell(grid, id, 'Form')).toContain(fmtSigned(r.form))
-      expect(cell(grid, id, 'Ramp')).toContain(fmtSigned(r.ramp, 1))
+      expect(cell(grid, id, 'Ramp /wk')).toContain(fmtSigned(r.ramp, 1))
       const week = r.compliance === null ? DASH : `${fmtNumber(displayPct(roundHalfAway(r.compliance, 1)))}%`
       expect(cell(grid, id, 'This week')).toContain(week)
       const days = r.nextRace ? r.nextRace.day - today : null

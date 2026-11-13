@@ -87,7 +87,7 @@
     background: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-ui);
-    font-size: var(--text-base, 17px);
+    font-size: var(--text-base, 1.0625rem);
     line-height: var(--line-height-body, 1.5);
     font-weight: 400;
     font-synthesis: none;
@@ -161,6 +161,11 @@
   [data-focus-visible] {
     outline: var(--focus-ring-width) solid var(--color-focus);
     outline-offset: var(--focus-ring-offset);
+  }
+
+  /* A heading or landmark that script focuses (tabindex -1) is a reading start point, not a control: no ring. */
+  :is(h1, h2, h3, h4, h5, h6, main)[tabindex="-1"]:focus-visible {
+    outline: none;
   }
 
   hr {

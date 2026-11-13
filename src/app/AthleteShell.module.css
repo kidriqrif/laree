@@ -2,13 +2,13 @@
   .shell {
     flex: 1;
     min-block-size: calc(100dvh - var(--switcher-h));
-    /* Room for the bar (64 px), the raised disc and the home-indicator inset. */
-    padding-block-end: calc(64px + var(--space-4) + env(safe-area-inset-bottom));
+    /* Room for the bar, the raised disc and the home-indicator inset. */
+    padding-block-end: calc(var(--bar-h) + var(--space-4) + env(safe-area-inset-bottom));
   }
 
   .column {
     inline-size: 100%;
-    max-inline-size: 560px;
+    max-inline-size: var(--column-max);
     margin-inline: auto;
     padding-inline: var(--space-4);
     padding-block: var(--space-4);
@@ -46,8 +46,8 @@
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     align-items: end;
-    max-inline-size: 560px;
-    block-size: 64px;
+    max-inline-size: var(--column-max);
+    block-size: var(--bar-h);
     margin-inline: auto;
     padding: 0;
     list-style: none;
@@ -61,7 +61,7 @@
     justify-content: center;
     gap: 2px;
     min-block-size: var(--target-min);
-    block-size: 64px;
+    block-size: var(--bar-h);
     color: var(--color-text);
     text-decoration: none;
   }

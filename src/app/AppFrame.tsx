@@ -1,6 +1,7 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role, react/set-state-in-effect -- status region; the toast reports the viewer syncing to the router location */
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useMatches } from 'react-router'
+import { docTitle } from './pageTitle.ts'
 import { personName } from './people.ts'
 import { RoleSwitcher } from './RoleSwitcher.tsx'
 import { StorageBanner } from './StorageBanner.tsx'
@@ -31,10 +32,20 @@ export function AppFrame() {
   const { pathname, search } = useLocation()
   const title = useRouteTitle()
   const [toast, setToast] = useState('')
+  const [arrived, setArrived] = useState('')
+  const lastPath = useRef(pathname)
 
-  useEffect(() => {
-    document.title = title ? `${title} · Laree` : 'Laree'
+  // A layout effect, so a page's usePageTitle (a passive effect) can name itself after this.
+  useLayoutEffect(() => {
+    document.title = docTitle(title)
   }, [title])
+
+  // A new page (not a search-only change) is announced by its title; focus stays where the page puts it.
+  useEffect(() => {
+    if (pathname === lastPath.current) return
+    lastPath.current = pathname
+    setArrived(document.title)
+  }, [pathname])
 
   // Role follows route (IA section 9.5): the address decides, the switcher catches up, a toast says so.
   useEffect(() => {
@@ -76,6 +87,9 @@ export function AppFrame() {
       <div role="status" className={styles.toastRegion}>
         {toast ? <p className={styles.toast}>{toast}</p> : null}
       </div>
+      <p aria-live="polite" className="sr-only">
+        {arrived}
+      </p>
     </div>
   )
 }

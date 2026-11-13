@@ -14,7 +14,7 @@ AI writes three things, all optional. The numbers they mention are on screen any
 | Check-in summary | Coach | Check-ins, one per athlete | `claude-haiku-5-5` | Daily at 10:00, and on Refresh |
 | Suggest next week | Coach | Calendar toolbar, opening drawer C5 | `claude-sonnet-5-5` | Only when Coach asks |
 
-AI never opens, changes or resolves a flag: flags come only from the rule table in `docs/spec/checkins-flags.md`. It never changes the plan unless Coach accepts each change. It never gives medical advice. It never sees GPS tracks, raw data streams, original files, free-text notes or anyone's name, and each call covers one athlete. When AI is not active for an athlete, its panels are absent, not disabled, and the toggles in Me and Settings explain what turning it on would add.
+AI never opens, changes or resolves a flag: flags come only from the rule table in `docs/spec/checkins-flags.md`. It never changes the plan unless Coach accepts each change. It never gives medical advice. It never sees GPS tracks, raw data streams, original files, free-text notes or profile details (names, email addresses, dates of birth), and each call covers one athlete. When AI is not active for an athlete, its panels are absent, not disabled, and the toggles in Me and Settings explain what turning it on would add.
 
 ## 2. Consent
 
@@ -61,6 +61,14 @@ The recap never receives flags, because flags are coach-only. No feature ever re
 ## 4. Retention
 
 The prototype stores no AI output: templates fill in when a panel renders. Consent choices stay in `laree:v1` until Reset. If AI is turned off while that save is failing, the choice is kept in a small note of its own (`laree:ai-withdrawn`) and applied on load; agreeing again or Reset clears it.
+
+### 4.1 When turning AI off cannot be saved
+
+Turning AI off always takes effect on screen at once. Making it stick across a reload goes through three layers, tried in order: the main save in `laree:v1`; if that fails, the small note in the browser's local storage; if that fails too, the same note in session storage, which has its own space. Everything stays on the device. No cookies are used, because a cookie is sent to the server. On load, both notes are read and merged, and anyone named in them is switched off.
+
+The store tracks each person's unsaved withdrawal separately (the athlete, each athlete the coach switches off, and the coach). The warning stays up while any one of them is unsaved. A person leaves that list only when a save that holds their choice works (the main save, or their own note in local storage), or when they turn AI on again. A note kept only in session storage still counts as unsaved, because closing the browser drops it. A later save for someone else does not clear it. In the coach dialog, while the warning is up, the main button reads "Try saving again" and retries the save for the withdrawal.
+
+Still not covered: if both stores are full and the browser session is then closed and reopened, the earlier saved copy can bring consent back on, and the warning says so. The MVP keeps consent on the server, which removes this gap.
 
 | MVP item | Kept for |
 |---|---|

@@ -9,6 +9,8 @@ export interface DragGridItem {
   label: string
   /** Optional richer content for the card. */
   content?: ReactNode
+  /** Optional small marks (tags, status) for the card foot, beside Move, so the title keeps the full width. */
+  foot?: ReactNode
 }
 
 export interface DragGridColumn {
@@ -34,6 +36,8 @@ export interface DragGridProps {
   className?: string
   emptyLabel?: string
   moveLabel?: string
+  /** Level of each column heading, so the page outline does not skip a level. Default 3. */
+  headingLevel?: 2 | 3 | 4
 }
 
 const DRAG_TYPE = 'application/x-laree-session'
@@ -44,11 +48,13 @@ interface DayListProps {
   movingId: string | null
   emptyLabel: string
   moveLabel: string
+  headingLevel: 2 | 3 | 4
   onStartMove: (itemId: string, from: string) => void
   onMove: (move: DragGridMove) => void
 }
 
-function DayList({ column, isMoveTarget, movingId, emptyLabel, moveLabel, onStartMove, onMove }: DayListProps) {
+function DayList({ column, isMoveTarget, movingId, emptyLabel, moveLabel, headingLevel, onStartMove, onMove }: DayListProps) {
+  const Heading = `h${headingLevel}` as const
   const { dragAndDropHooks } = useDragAndDrop({
     getItems: (keys) =>
       [...keys].map((k) => ({ [DRAG_TYPE]: JSON.stringify({ id: String(k), from: column.key }) })),
@@ -78,7 +84,7 @@ function DayList({ column, isMoveTarget, movingId, emptyLabel, moveLabel, onStar
 
   return (
     <section className={styles.column} data-move-target={isMoveTarget || undefined} aria-label={column.label}>
-      <h3 className={styles.heading}>{column.label}</h3>
+      <Heading className={styles.heading}>{column.label}</Heading>
       <GridList
         aria-label={column.label}
         className={styles.list}
@@ -94,6 +100,7 @@ function DayList({ column, isMoveTarget, movingId, emptyLabel, moveLabel, onStar
             data-moving={item.id === movingId || undefined}
           >
             <span className={styles.itemBody}>{item.content ?? item.label}</span>
+            {item.foot ? <span className={styles.itemFoot}>{item.foot}</span> : null}
             <Button
               className={styles.moveButton}
               aria-label={`${moveLabel} ${item.label}`}
@@ -126,6 +133,7 @@ export function DragGrid({
   className,
   emptyLabel = 'Nothing planned',
   moveLabel = 'Move',
+  headingLevel = 3,
 }: DragGridProps) {
   const [moving, setMoving] = useState<MoveState | null>(null)
   const [announcement, setAnnouncement] = useState('')
@@ -222,6 +230,7 @@ export function DragGrid({
           movingId={moving?.itemId ?? null}
           emptyLabel={emptyLabel}
           moveLabel={moveLabel}
+          headingLevel={headingLevel}
           onStartMove={start}
           onMove={onMove}
         />

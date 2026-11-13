@@ -78,6 +78,45 @@
     color: var(--zone-on-5);
   }
 
+  /*
+   * Status scale (compliance): the status palette, never the zone ramp or brand red.
+   * 0 on plan (green tint), 1 short or under (sun with an ink edge), 2 over (violet hatch),
+   * 3 well over (violet hatch, heavy edge), 4 missed (hollow ring). Glyphs carry the band too.
+   */
+  .wrap[data-scale="status"] :is(.cell, .chip)[data-level="0"] {
+    background: color-mix(in srgb, var(--status-on-plan) 22%, var(--color-bg));
+    box-shadow: inset 0 0 0 var(--hairline) var(--status-on-plan);
+    color: var(--color-text);
+  }
+
+  .wrap[data-scale="status"] :is(.cell, .chip)[data-level="1"] {
+    background: var(--status-partial);
+    box-shadow: inset 0 0 0 var(--hairline) var(--status-partial-outline);
+    color: var(--color-on-accent);
+  }
+
+  .wrap[data-scale="status"] :is(.cell, .chip)[data-level="2"],
+  .wrap[data-scale="status"] :is(.cell, .chip)[data-level="3"] {
+    background: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--status-over) 40%, transparent) 0 2px,
+      transparent 2px 6px
+    );
+    box-shadow: inset 0 0 0 var(--hairline) var(--status-over);
+    color: var(--color-text);
+  }
+
+  .wrap[data-scale="status"] :is(.cell, .chip)[data-level="3"] {
+    box-shadow: inset 0 0 0 var(--rule-weight) var(--status-over);
+  }
+
+  .wrap[data-scale="status"] :is(.cell, .chip)[data-level="4"] {
+    background: transparent;
+    border-radius: var(--radius-pill);
+    box-shadow: inset 0 0 0 var(--rule-weight) var(--status-missed);
+    color: var(--status-missed-text);
+  }
+
   .hollow {
     background: transparent;
     border: var(--hairline, 1px) dashed var(--color-control-border);

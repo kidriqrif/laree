@@ -11,6 +11,7 @@ import { streamDigest } from '../../../domain/metrics/streamDigest.ts'
 import { dateToDay, dayToDate, KL_OFFSET_MS } from '../../../domain/time.ts'
 import type { Activity, ActivitySummary, AthleteId, DayOffset, LoadResult, PlannedWorkout, Sport } from '../../../domain/types.ts'
 import type { ParsedActivity } from '../../../io/import/types.ts'
+import { sessionName } from '../../shared/activity/format.ts'
 
 export const NOT_PLANNED = 'none'
 const DAY_MS = 86_400_000
@@ -127,8 +128,10 @@ export function defaultMatch(options: readonly MatchOption[], prematched: string
   return (todays.find((o) => !o.logged) ?? todays[0])?.workout.id ?? NOT_PLANNED
 }
 
+/** "Today · Run · Easy run": the sport is named once, so a "Run:" prefix on the title is dropped. */
 export function matchLabel(o: MatchOption, today: DayOffset): string {
-  return `${dayLabel(o.workout.day, today)} · ${SPORT_NAMES[o.workout.sport]} · ${o.workout.title}${o.logged ? ' (logged)' : ''}`
+  const { day, sport, title } = o.workout
+  return `${dayLabel(day, today)} · ${SPORT_NAMES[sport]} · ${sessionName(title, sport)}${o.logged ? ' (logged)' : ''}`
 }
 
 /** The log the chosen session already has, if any. */

@@ -101,13 +101,17 @@ export const safeStringStorage: StateStorage = {
 
 const WITHDRAWN_KEY = 'laree:ai-withdrawn'
 
-/**
- * Who turned AI off while the main save was failing. The store applies this list when it loads,
- * so a reload cannot bring back consent that was withdrawn.
- */
-export function readAiWithdrawn(): string[] {
+function sessionArea(): Storage | null {
   try {
-    const raw = area()?.getItem(WITHDRAWN_KEY)
+    return sessionStorage
+  } catch {
+    return null
+  }
+}
+
+function readNote(s: Storage | null): string[] {
+  try {
+    const raw = s?.getItem(WITHDRAWN_KEY)
     const v: unknown = raw ? JSON.parse(raw) : []
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
   } catch {
@@ -115,12 +119,11 @@ export function readAiWithdrawn(): string[] {
   }
 }
 
-/** Record or clear one person's withdrawal. False when the browser would not keep even this small note. */
-export function noteAiWithdrawn(owner: string, withdrawn: boolean): boolean {
-  const s = area()
+/** Write one note into one store. False when that store would not keep it. */
+function writeNote(s: Storage | null, owner: string, withdrawn: boolean): boolean {
   if (!s) return false
   try {
-    const next = readAiWithdrawn().filter((o) => o !== owner)
+    const next = readNote(s).filter((o) => o !== owner)
     if (withdrawn) next.push(owner)
     if (next.length === 0) s.removeItem(WITHDRAWN_KEY)
     else s.setItem(WITHDRAWN_KEY, JSON.stringify(next))
@@ -130,14 +133,45 @@ export function noteAiWithdrawn(owner: string, withdrawn: boolean): boolean {
   }
 }
 
-/** Forget every withdrawal note. Reset does this: nothing of the old choices is left behind. */
+/**
+ * Who turned AI off while the main save was failing. The store applies this list when it loads,
+ * so a reload cannot bring back consent that was withdrawn. Reads the local note and the
+ * session note and merges them. Nothing leaves the device.
+ */
+export function readAiWithdrawn(): string[] {
+  return [...new Set([...readNote(area()), ...readNote(sessionArea())])]
+}
+
+/**
+ * Record or clear one person's withdrawal. A withdrawal goes to localStorage; only when that
+ * fails does it go to sessionStorage, which has its own quota. Clearing removes it from both.
+ * Says where the note was kept: 'local' lasts, 'session' ends when the browser closes, and
+ * null means neither store would keep even this small note.
+ */
+export function noteAiWithdrawn(owner: string, withdrawn: boolean): 'local' | 'session' | null {
+  if (!withdrawn) {
+    const a = writeNote(area(), owner, false)
+    const b = writeNote(sessionArea(), owner, false)
+    return a ? 'local' : b ? 'session' : null
+  }
+  if (writeNote(area(), owner, true)) {
+    writeNote(sessionArea(), owner, false)
+    return 'local'
+  }
+  return writeNote(sessionArea(), owner, true) ? 'session' : null
+}
+
+/** Forget every withdrawal note, in both stores. Reset does this: nothing of the old choices is left behind. */
 export function clearAiWithdrawn(): void {
-  try {
-    area()?.removeItem(WITHDRAWN_KEY)
-  } catch {
-    // Nothing to clear in a browser that keeps nothing.
+  for (const s of [area(), sessionArea()]) {
+    try {
+      s?.removeItem(WITHDRAWN_KEY)
+    } catch {
+      // Nothing to clear in a browser that keeps nothing.
+    }
   }
 }
+
 
 export function createLareeStorage<S>(): PersistStorage<S> {
   // createJSONStorage returns undefined only when the getter throws; ours never does.

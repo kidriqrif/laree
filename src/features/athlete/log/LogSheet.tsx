@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useInRouterContext, useNavigate } from 'react-router'
 import { useViewer } from '../../../app/viewer.ts'
 import { ATHLETES } from '../../../data/seed/people.ts'
@@ -38,7 +37,6 @@ async function parseInWorker(bytes: ArrayBuffer, fileName: string, slot: { curre
 import { Button } from '../../../ui/core/index.ts'
 import { DropZone, DurationField, NumberField, Rating, SegmentedControl, Select, TextField } from '../../../ui/form/index.ts'
 import { Sheet, showToast, useSheetParam } from '../../../ui/overlay/index.ts'
-import { BadgeMoment } from '../badge-moment/index.ts'
 import { LOG_MATCH_DRAFT, readLogMatch } from '../today/logMatch.ts'
 import {
   buildImportedActivity,
@@ -82,7 +80,7 @@ const METHODS = [
 const SPORT_OPTIONS = SPORTS.map((s) => ({ id: s, label: SPORT_NAMES[s] }))
 
 /**
- * Opens at ?sheet=log. Also hosts the badge moment, so a badge earned by a log shows once the sheet closes.
+ * Opens at ?sheet=log. A badge a log earns shows in Today's badge moment once the sheet closes.
  * Renders nothing outside a router.
  */
 export function LogSheet() {
@@ -91,23 +89,7 @@ export function LogSheet() {
 
 function LogSheetInner() {
   const sheet = useSheetParam('log')
-  return (
-    <>
-      {sheet.isOpen ? <OpenSheet onClose={sheet.close} onOpenChange={sheet.onOpenChange} /> : null}
-      <BadgeHost />
-    </>
-  )
-}
-
-/** Today can name a `[data-badge-host]` element at the top of its column; with none, the card floats at the top. */
-function BadgeHost() {
-  const host = typeof document === 'undefined' ? null : document.querySelector('[data-badge-host]')
-  if (host) return createPortal(<BadgeMoment />, host)
-  return (
-    <div className={styles.badgeFloat}>
-      <BadgeMoment />
-    </div>
-  )
+  return sheet.isOpen ? <OpenSheet onClose={sheet.close} onOpenChange={sheet.onOpenChange} /> : null
 }
 
 type ImportState =
@@ -156,6 +138,16 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
   const worker = useRef<Worker | null>(null)
 
   useEffect(() => () => clearDraft(LOG_MATCH_DRAFT), [clearDraft])
+
+  // Closing the sheet cancels a file read: a read still loading never starts a worker, and a running one stops.
+  useEffect(
+    () => () => {
+      reading.current++
+      worker.current?.terminate()
+      worker.current = null
+    },
+    [],
+  )
 
   const chooseMatch = (id: string) => {
     setMatchId(id)

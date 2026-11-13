@@ -43,7 +43,7 @@ function Moment({ award, onDone, onSee }: { award: BadgeAward; onDone: () => voi
         <p className={styles.date}>{dateText(award.earnedDay)}</p>
       </div>
       <div className={styles.actions}>
-        <Button variant="primary" onPress={onSee}>
+        <Button variant="secondary" onPress={onSee}>
           See your badges
         </Button>
         <Button variant="quiet" onPress={onDone}>
@@ -61,7 +61,7 @@ function Inner() {
   const navigate = useNavigate()
   // Saved data can hold a badge key this version no longer has; those are skipped, not drawn.
   const first = unseen.find((b) => Object.hasOwn(BADGES, b.key))
-  if (!first) return <output aria-live="polite" className={styles.live} />
+  if (!first) return null
   const award: BadgeAward = {
     id: first.id,
     athleteId: first.athleteId,
@@ -70,23 +70,22 @@ function Inner() {
     sourceItemId: first.sourceItemId ?? '',
   }
   return (
-    <output aria-live="polite" className={styles.live}>
-      <Moment
-        key={award.id}
-        award={award}
-        onDone={() => markSeen(athleteId, [award.id])}
-        onSee={() => {
-          markSeen(athleteId, [award.id])
-          void navigate('/athlete/progress')
-        }}
-      />
-    </output>
+    <Moment
+      key={award.id}
+      award={award}
+      onDone={() => markSeen(athleteId, [award.id])}
+      onSee={() => {
+        markSeen(athleteId, [award.id])
+        void navigate('/athlete/progress')
+      }}
+    />
   )
 }
 
 /**
- * The badge moment (A10): an inline card that shows each unseen badge once, one after another.
- * It is not modal, so it never takes focus. Mount it at the top of Today; the log sheet mounts one too.
+ * The badge moment (A10): an inline card that shows each unseen badge once, one after another,
+ * whether a log or Coach's kudos earned it. It is not modal, so it never takes focus. Today loads it
+ * at the top of its body inside a polite live region, so a new badge is announced.
  */
 export function BadgeMoment() {
   return useInRouterContext() ? <Inner /> : null

@@ -14,6 +14,8 @@ export interface BarDatum {
   value: number;
   /** Target for this bar; drawn as a marker across it. */
   target?: number | null;
+  /** The period is not over yet (this week): drawn dashed and light, labelled "so far". */
+  partial?: boolean;
 }
 
 export interface BarsProps {
@@ -48,6 +50,9 @@ function texture(sport: Sport | undefined): 'h' | 'd' | 'x' | null {
 }
 
 /** Bar with only its top corners rounded, anchored to the baseline. */
+/** A bar's period name; an unfinished one says "so far". */
+const periodOf = (d: BarDatum): string => (d.partial ? `${d.label}, so far` : d.label);
+
 function barPath(x: number, y: number, w: number, h: number, r: number): string {
   const rr = Math.max(0, Math.min(r, w / 2, h));
   return `M${x},${y + h}V${y + rr}Q${x},${y} ${x + rr},${y}H${x + w - rr}Q${x + w},${y} ${x + w},${y + rr}V${y + h}Z`;
@@ -100,7 +105,10 @@ export function Bars({
   const last = safe[lastIdx];
 
   const withTarget = safe.filter((d) => d.target != null);
-  const met = withTarget.filter((d) => d.value >= (d.target ?? 0)).length;
+  // An unfinished period cannot have met or missed its target yet.
+  const judged = withTarget.filter((d) => !d.partial);
+  const met = judged.filter((d) => d.value >= (d.target ?? 0)).length;
+  const anyPartial = safe.some((d) => d.partial);
   const sportText = sport ? ` Sport: ${SPORT_NAME[sport]}.` : '';
   let summary: string;
   if (safe.length === 0) {
@@ -109,10 +117,10 @@ export function Bars({
     const hiBar = safe.reduce((a, b) => (b.value > a.value ? b : a), safe[0] ?? { key: '', label: '', value: 0, target: null });
     summary =
       `${name}: ${safe.length} ${safe.length === 1 ? 'bar' : 'bars'}.${sportText} ` +
-      `Latest, ${last?.label ?? ''}: ${formatValue(last?.value ?? 0)}` +
+      `Latest, ${last ? periodOf(last) : ''}: ${formatValue(last?.value ?? 0)}` +
       (last?.target != null ? ` against a target of ${formatValue(last.target)}.` : '.') +
-      ` Highest, ${hiBar.label}: ${formatValue(hiBar.value)}.` +
-      (withTarget.length > 0 ? ` Target met in ${met} of ${withTarget.length}.` : '');
+      ` Highest, ${periodOf(hiBar)}: ${formatValue(hiBar.value)}.` +
+      (judged.length > 0 ? ` Target met in ${met} of ${judged.length}.` : '');
   }
 
   return (
@@ -122,7 +130,7 @@ export function Bars({
       table={{
         columns: ['Period', valueHeading, 'Target'],
         rows: safe.map((d) => [
-          d.label,
+          periodOf(d),
           formatValue(d.value),
           d.target == null ? 'None' : formatValue(d.target),
         ]),
@@ -155,14 +163,14 @@ export function Bars({
               const bx = x(d.key) ?? 0;
               const bh = Math.max(0, ih - at(y, d.value));
               const by = ih - bh;
-              const tip = `${d.label}: ${formatValue(d.value)}${d.target != null ? `, target ${formatValue(d.target)}` : ''}`;
+              const tip = `${periodOf(d)}: ${formatValue(d.value)}${d.target != null ? `, target ${formatValue(d.target)}` : ''}`;
               return (
-                <g key={d.key + i} className={styles.group}>
+                <g key={d.key + i} className={styles.group} data-partial={d.partial || undefined}>
                   <title>{tip}</title>
                   {bh > 0 && (
                     <>
-                      <path className={styles.bar} d={barPath(bx, by, bw, bh, 4)} />
-                      {pattern && <path d={barPath(bx, by, bw, bh, 4)} fill={`url(#${patId})`} />}
+                      <path className={d.partial ? styles.partial : styles.bar} d={barPath(bx, by, bw, bh, 4)} />
+                      {pattern && !d.partial && <path d={barPath(bx, by, bw, bh, 4)} fill={`url(#${patId})`} />}
                     </>
                   )}
                   {d.target != null && (
@@ -191,6 +199,12 @@ export function Bars({
             <span className={styles.keyBar} aria-hidden="true" />
             {sport ? SPORT_NAME[sport] : valueHeading}
           </li>
+          {anyPartial && (
+            <li>
+              <span className={`${styles.keyBar} ${styles.keyPartial}`} aria-hidden="true" />
+              This week so far
+            </li>
+          )}
           {withTarget.length > 0 && (
             <li>
               <span className={styles.keyTick} aria-hidden="true" />

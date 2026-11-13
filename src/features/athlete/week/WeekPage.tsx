@@ -14,6 +14,7 @@ import type { Activity, ComplianceBand, Sport } from '../../../domain/types.ts'
 import { Button, Chip, EmptyState, IconButton, SportChip, StatusChip } from '../../../ui/core/index.ts'
 import type { SportKey, StatusKey } from '../../../ui/core/index.ts'
 import { IconChevronLeft, IconChevronRight } from '../../../ui/icons/index.ts'
+import { sessionName } from '../../shared/activity/format.ts'
 import { WeeklyRecapPanel } from '../../shared/ai-panels/index.ts'
 import styles from './WeekPage.module.css'
 
@@ -68,7 +69,7 @@ function PlannedRow({ item }: { item: PlannedItem }) {
     <li>
       <Link to={to} className={styles.item}>
         <SportTag sport={workout.sport} />
-        <span className={styles.itemTitle}>{workout.title}</span>
+        <span className={styles.itemTitle}>{sessionName(workout.title, workout.sport)}</span>
         <span className={styles.itemMeta}>{fmtMinutesWords(workout.plannedDurationS / 60)}</span>
         {band ? <StatusChip status={BAND_STATUS[band]} label={BAND_LABELS[band]} /> : <Chip>Upcoming</Chip>}
       </Link>
@@ -81,7 +82,7 @@ function UnplannedRow({ activity }: { activity: Activity }) {
     <li>
       <Link to={`/athlete/activity/${activity.id}`} className={styles.item}>
         <SportTag sport={activity.sport} />
-        <span className={styles.itemTitle}>{activity.title}</span>
+        <span className={styles.itemTitle}>{sessionName(activity.title, activity.sport)}</span>
         <span className={styles.itemMeta}>{fmtMinutesWords(activity.summary.durationS / 60)}</span>
         <StatusChip status="unplanned" />
       </Link>
@@ -89,11 +90,11 @@ function UnplannedRow({ activity }: { activity: Activity }) {
   )
 }
 
-function DayRow({ day, today, raceNames }: { day: AthleteDay; today: number; raceNames: string[] }) {
+function DayRow({ day, today, raceNames, notPlanned }: { day: AthleteDay; today: number; raceNames: string[]; notPlanned: boolean }) {
   const empty = day.planned.length === 0 && day.unplanned.length === 0
   return (
     <li className={styles.day} data-today={day.day === today}>
-      <h3 className={styles.dayHead}>
+      <h2 className={styles.dayHead}>
         <span>{WEEKDAYS[weekdayIndex(day.day)]}</span>
         <span className={styles.dayMeta}>{fmtDay(day.day)}</span>
         <span className={styles.marks}>
@@ -103,9 +104,10 @@ function DayRow({ day, today, raceNames }: { day: AthleteDay; today: number; rac
           ))}
           {day.checkIn ? <Chip>Checked in</Chip> : null}
         </span>
-      </h3>
+      </h2>
       {empty ? (
-        <p className={styles.rest}>Rest</p>
+        // An empty day in a week Coach has not planned yet is not a rest day.
+        <p className={styles.rest}>{notPlanned ? 'Not planned yet' : 'Rest'}</p>
       ) : (
         <ul className={styles.items}>
           {day.planned.map((p) => (
@@ -224,7 +226,9 @@ export default function WeekPage() {
         </IconButton>
         <div className={styles.headText}>
           <h1 className={styles.title}>
-            {label}, {range}
+            {label}
+            <span className="sr-only">, </span>
+            <span className={styles.range}>{range}</span>
           </h1>
           {phaseName ? <span className={styles.phase}>{phaseName}</span> : null}
         </div>
@@ -255,7 +259,13 @@ export default function WeekPage() {
 
       <ol className={styles.days} aria-label="Days of the week">
         {summary.days.map((d) => (
-          <DayRow key={d.day} day={d} today={today} raceNames={races.filter((r) => r.day === d.day).map((r) => r.name)} />
+          <DayRow
+            key={d.day}
+            day={d}
+            today={today}
+            raceNames={races.filter((r) => r.day === d.day).map((r) => r.name)}
+            notPlanned={summary.unplanned && d.day >= today}
+          />
         ))}
       </ol>
 

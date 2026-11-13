@@ -45,6 +45,19 @@ describe('chart kit', () => {
     expect(screen.getAllByRole('row')).toHaveLength(4);
   });
 
+  it('Bars marks an unfinished period and leaves it out of the target count', () => {
+    // Weeks 1 and 2 beat the 4000 target; week 2 is still in progress, so only 1 of 2 counts.
+    const data = bars(3).map((d, i) => (i === 2 ? { ...d, partial: true } : d));
+    const { container } = render(<Bars data={data} title="Volume" width={300} />);
+    const text = container.querySelector('p')?.textContent ?? '';
+    expect(text).toContain('Latest, W2, so far');
+    expect(text).toContain('Target met in 1 of 2.');
+    expect(container.querySelectorAll('[data-partial]')).toHaveLength(1);
+    expect(screen.getByText('This week so far')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Show table' }));
+    expect(screen.getByRole('table').textContent).toContain('W2, so far');
+  });
+
   it('ZoneBar states zone minutes', () => {
     const { container } = render(<ZoneBar seconds={[600, 1800, 900, 300, 0]} width={300} />);
     noNaN(container);
@@ -92,6 +105,8 @@ describe('format', () => {
     expect(fmtDuration(3725)).toBe('1:02');
     expect(fmtDuration(5430)).toBe('1:31');
     expect(fmtDuration(45)).toBe('45 s');
+    // A zero total reads like every other total, not "0 s".
+    expect(fmtDuration(0)).toBe('0:00');
     expect(fmtPace(1000 / 300, 'run')).toBe('5:00 /km');
     expect(fmtPace(0.9259, 'swim')).toBe('1:48 /100 m');
     expect(fmtPace(7.5, 'bike')).toBe('27.0 km/h');

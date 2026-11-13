@@ -3,14 +3,14 @@ import { lazy, Suspense, useEffect, useId, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useViewer } from '../../../app/viewer.ts'
 import { TrackLap } from '../../../charts/index.ts'
-import { currentDay } from '../../../data/selectors.ts'
+import { currentDay, selectUnseenBadges } from '../../../data/selectors.ts'
 import { thresholdsOn } from '../../../data/seed/people.ts'
 import { useLaree } from '../../../data/store.ts'
 import type { LapState } from '../../../domain/gamification.ts'
 import type { LoadThresholds } from '../../../domain/metrics/load.ts'
 import type { AthleteId } from '../../../domain/types.ts'
 import { EmptyState, PlainButton } from '../../../ui/core/index.ts'
-import { IconChevronRight, IconPlus, IconRace } from '../../../ui/icons/index.ts'
+import { IconChevronRight, IconPlus, IconRace } from '../../../ui/icons/icons-core.tsx'
 import { isSheetName, SHEET_PARAM } from '../../../ui/overlay/index.ts'
 import { fmtWeekdayDate } from '../../shared/activity/format.ts'
 import { CheckInStrip } from './CheckInStrip.tsx'
@@ -27,6 +27,7 @@ import styles from './TodayPage.module.css'
 // The sheets load only once their ?sheet= value is set, so Today's first load stays small.
 const LogSheet = lazy(() => import('../log/LogSheet.tsx').then((m) => ({ default: m.LogSheet })))
 const CheckInSheet = lazy(() => import('../checkin/CheckInSheet.tsx').then((m) => ({ default: m.CheckInSheet })))
+const BadgeMoment = lazy(() => import('../badge-moment/BadgeMoment.tsx').then((m) => ({ default: m.BadgeMoment })))
 
 /** A1 Today: what do I do today, and am I on track this week? */
 export default function TodayPage() {
@@ -67,6 +68,7 @@ function TodayBody({ model, th, athleteId }: { model: TodayModel; th: LoadThresh
 
   return (
     <div className={styles.body} data-today={model.kind}>
+      <BadgeSlot athleteId={athleteId} />
       <section aria-label={sessions.length > 1 ? 'First session today' : "Today's session"} className={styles.hero}>
         {lead ? (
           <SessionBib item={lead} th={th} primary={lead.workout.id === primaryId} onLog={openLog} />
@@ -110,6 +112,25 @@ function TodayBody({ model, th, athleteId }: { model: TodayModel; th: LoadThresh
       <TileBoundary message="Kudos from Coach could not be shown here.">
         <KudosSlot key={athleteId} athleteId={athleteId} />
       </TileBoundary>
+    </div>
+  )
+}
+
+/**
+ * A badge earned by a log or by Coach's kudos shows here once, at the top. The live region is always
+ * there so the card is announced when it appears; the card's code loads only while a badge is unseen.
+ */
+function BadgeSlot({ athleteId }: { athleteId: AthleteId }) {
+  const unseen = useLaree((s) => selectUnseenBadges(s.data, athleteId).length > 0)
+  return (
+    <div aria-live="polite" className={styles.badgeSlot}>
+      {unseen ? (
+        <TileBoundary message="Your new badge could not be shown here. It is on the Progress page.">
+          <Suspense fallback={null}>
+            <BadgeMoment />
+          </Suspense>
+        </TileBoundary>
+      ) : null}
     </div>
   )
 }

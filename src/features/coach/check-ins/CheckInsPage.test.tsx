@@ -9,7 +9,8 @@ import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
 import type { AthleteId } from '../../../domain/types.ts'
 import { FlagDrawerSlot } from '../athlete/FlagDrawerSlot.tsx'
-import { filterFlags } from './model.ts'
+import { cellFor, filterFlags, legendFor, metricInfo } from './model.ts'
+import type { GridMetric } from './model.ts'
 
 beforeEach(() => {
   localStorage.clear()
@@ -59,6 +60,31 @@ describe('check-ins grid', () => {
     fireEvent.click(await screen.findByRole('radio', { name: 'HRV' }))
     await waitFor(() => expect(router.state.location.search).toContain('metric=hrv'))
     await screen.findByRole('grid', { name: /HRV/ })
+  })
+
+  it('draws the worrying end hottest for each metric, and the legend follows', () => {
+    const history = useLaree.getState().data.checkIns.filter((c) => c.athleteId === 'amir')
+    const base = history.at(-1)!
+    const level = (metric: GridMetric, patch: Partial<typeof base>) => cellFor(metric, { ...base, ...patch }, history, 'amir')?.level
+    // Low is the worry: short sleep, low mood, low HRV.
+    expect([level('sleep', { sleepHours: 4.5 }), level('sleep', { sleepHours: 8.5 })]).toEqual([4, 0])
+    expect([level('mood', { mood: 1 }), level('mood', { mood: 5 })]).toEqual([4, 0])
+    expect(level('hrv', { hrvMs: 1 })).toBe(4)
+    // High is the worry: soreness and resting heart rate.
+    expect([level('soreness', { soreness: 5 }), level('soreness', { soreness: 1 })]).toEqual([4, 0])
+    expect(level('rhr', { restingHr: 200 })).toBe(4)
+    expect(legendFor(metricInfo('sleep'))[0]).toEqual({ level: 4, label: 'Under 5 h' })
+    expect(legendFor(metricInfo('soreness'))[4]).toEqual({ level: 4, label: '5 very sore' })
+  })
+})
+
+describe('kudos', () => {
+  it('lists recent activities as a sheet with athlete, session, date and action columns', async () => {
+    await renderPage()
+    const sheet = await screen.findByRole('table', { name: 'Recent activities' })
+    expect(within(sheet).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Athlete', 'Session', 'Date', 'Kudos'])
+    const first = within(sheet).getAllByRole('row')[1]!
+    expect(within(first).getAllByRole('cell')).toHaveLength(4)
   })
 })
 

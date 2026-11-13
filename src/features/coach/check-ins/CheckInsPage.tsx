@@ -4,7 +4,6 @@ import { useHotkeys } from '../../../app/keyboard/index.ts'
 import { ATHLETES, isAthleteId } from '../../../app/people.ts'
 import { useCoachReadOnly } from '../../../app/useCoachReadOnly.ts'
 import { fmtDay, Heatmap } from '../../../charts/index.ts'
-import type { HeatLegendItem } from '../../../charts/index.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
 import { RULES, summariseValues } from '../../../domain/flags.ts'
@@ -20,6 +19,7 @@ import {
   flagActionUndo,
   isGridMetric,
   isStatusFilter,
+  legendFor,
   METRICS,
   metricInfo,
   SEVERITY_LABEL,
@@ -87,7 +87,7 @@ export default function CheckInsPage() {
       ),
     }
   })
-  const legend: HeatLegendItem[] = info.legend.map((label, i) => ({ level: i as 0 | 1 | 2 | 3 | 4, label }))
+  const legend = legendFor(info)
 
   // ---- inbox
   const allFlags: FlagRecord[] = ATHLETES.flatMap((a) => data.flagsState[a.id].flags)
@@ -322,28 +322,57 @@ function KudosPanel({ readOnly, today }: { readOnly: boolean; today: DayOffset }
       {recent.length === 0 ? (
         <EmptyState title="No activities in the last 7 days." headingLevel={3} />
       ) : (
-        <ul className={styles.plain} aria-label="Recent activities">
-          {recent.map((a) => (
-            <li key={a.id}>
-              <span>{NAME_BY_ID[a.athleteId as AthleteId] ?? a.athleteId}</span> <span>{a.title}</span>{' '}
-              <span className={styles.muted}>{fmtDay(a.day)}</span>{' '}
-              {readOnly ? null : <KudosButtonSlot athleteId={a.athleteId as AthleteId} activityId={a.id} />}
-            </li>
-          ))}
-        </ul>
+        <table className={styles.sheet} aria-label="Recent activities">
+          <thead>
+            <tr>
+              <th scope="col">Athlete</th>
+              <th scope="col">Session</th>
+              <th scope="col">Date</th>
+              {readOnly ? null : (
+                <th scope="col">
+                  <span className="sr-only">Kudos</span>
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {recent.map((a) => (
+              <tr key={a.id}>
+                <td>{NAME_BY_ID[a.athleteId as AthleteId] ?? a.athleteId}</td>
+                <td>{a.title}</td>
+                <td className={styles.date}>{fmtDay(a.day)}</td>
+                {readOnly ? null : (
+                  <td className={styles.action}>
+                    <KudosButtonSlot athleteId={a.athleteId as AthleteId} activityId={a.id} />
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
       <h3>Already sent</h3>
       {sent.length === 0 ? (
         <p className={styles.muted}>No kudos sent yet.</p>
       ) : (
-        <ul className={styles.plain} aria-label="Kudos sent">
-          {sent.map((k) => (
-            <li key={k.id}>
-              <span>{NAME_BY_ID[k.athleteId as AthleteId] ?? k.athleteId}</span> <span>{k.message ?? 'Nice work.'}</span>{' '}
-              <span className={styles.muted}>{fmtDay(k.day)}</span>
-            </li>
-          ))}
-        </ul>
+        <table className={styles.sheet} aria-label="Kudos sent">
+          <thead>
+            <tr>
+              <th scope="col">Athlete</th>
+              <th scope="col">Message</th>
+              <th scope="col">Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sent.map((k) => (
+              <tr key={k.id}>
+                <td>{NAME_BY_ID[k.athleteId as AthleteId] ?? k.athleteId}</td>
+                <td>{k.message ?? 'Nice work.'}</td>
+                <td className={styles.date}>{fmtDay(k.day)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </section>
   )

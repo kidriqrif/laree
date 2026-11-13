@@ -66,13 +66,7 @@ export function todayModel(data: LareeData, athleteId: AthleteId, day: DayOffset
 
 // ------------------------------------------------------------------ words
 
-const SPORT_NAME: Record<Sport, string> = {
-  swim: 'Swim',
-  bike: 'Bike',
-  run: 'Run',
-  strength: 'Strength',
-  other: 'Other',
-}
+export { sessionName, sportName } from '../../shared/activity/format.ts'
 
 export const PHASE_LABEL: Record<PhaseKind, string> = {
   base: 'Base phase',
@@ -81,21 +75,6 @@ export const PHASE_LABEL: Record<PhaseKind, string> = {
   taper: 'Taper',
   race: 'Race week',
   recovery: 'Recovery',
-}
-
-export function sportName(sport: Sport): string {
-  return SPORT_NAME[sport]
-}
-
-/**
- * A title without its sport prefix, for places where the sport already shows as a mark or a word:
- * "Run: Easy run" becomes "Easy run". Other titles are left as they are.
- */
-export function sessionName(title: string, sport: Sport): string {
-  const prefix = `${SPORT_NAME[sport]}:`
-  if (!title.toLowerCase().startsWith(prefix.toLowerCase())) return title
-  const rest = title.slice(prefix.length).trim()
-  return rest === '' ? title : rest
 }
 
 /** The sport mark's key, or null for "other", which has no glyph. */

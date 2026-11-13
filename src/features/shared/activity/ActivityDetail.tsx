@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
+import { usePageTitle } from '../../../app/pageTitle.ts'
 import { ATHLETES } from '../../../app/people.ts'
 import { useViewer } from '../../../app/viewer.ts'
 import { fmtDistance, fmtDuration, fmtNumber, fmtPace, Sparkline, ZoneBar } from '../../../charts/index.ts'
 import { selectActivityCoachNote, selectKudosForActivity } from '../../../data/selectors.ts'
-import { seededStream } from '../../../data/seed/index.ts'
+import { seededStream } from '../../../data/seed/onDemand.ts'
 import type { ActivityStream } from '../../../data/seed/index.ts'
 import { thresholdsOn } from '../../../data/seed/people.ts'
 import { useLaree } from '../../../data/store.ts'
@@ -21,6 +22,7 @@ import {
   fmtWeekdayDate,
   METHOD_LABEL,
   SOURCE_LABEL,
+  sessionName,
   statusOf,
 } from './format.ts'
 import styles from './ActivityDetail.module.css'
@@ -208,8 +210,10 @@ function Charts({ activity, th }: { activity: Activity; th: LoadThresholds }) {
 export function ActivityDetail({ activityId, viewer }: ActivityDetailProps) {
   const viewerAthlete = useViewer((s) => s.athleteId)
   const data = useLaree((s) => s.data)
-  const activity = data.activities.find((a) => a.id === activityId)
-  if (!activity || (viewer === 'athlete' && activity.athleteId !== viewerAthlete)) {
+  const found = data.activities.find((a) => a.id === activityId)
+  const activity = found && (viewer === 'coach' || found.athleteId === viewerAthlete) ? found : undefined
+  usePageTitle(activity?.title)
+  if (!activity) {
     return (
       <EmptyState
         headingLevel={2}
@@ -251,7 +255,8 @@ export function ActivityDetail({ activityId, viewer }: ActivityDetailProps) {
           {isCoach ? <span>{athleteName}</span> : null}
         </p>
         <h1 id="activity-title" className={styles.title}>
-          {activity.title}
+          {/* The athlete's heading sits under the sport mark, so it drops the sport prefix. Coach keeps the full title. */}
+          {isCoach ? activity.title : sessionName(activity.title, activity.sport)}
         </h1>
         <p className={styles.band}>
           <StatusChip status={statusOf(band)} label={bandText} />

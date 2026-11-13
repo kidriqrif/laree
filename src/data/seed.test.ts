@@ -3,7 +3,8 @@ import { badges, streak } from '../domain/gamification.ts';
 import type { GamificationInput } from '../domain/gamification.ts';
 import { setNow, weekOfDay } from '../domain/time.ts';
 import type { AthleteId } from '../domain/types.ts';
-import { generateSeed, streamFor } from './seed/index.ts';
+import { generateSeed } from './seed/index.ts';
+import { streamFor } from './seed/onDemand.ts';
 import type { Seed } from './seed/index.ts';
 import { hashString, mulberry32 } from './seed/rng.ts';
 

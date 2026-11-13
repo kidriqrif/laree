@@ -42,7 +42,10 @@ export function FieldFooter({ hint, error }: Pick<FieldProps, 'hint' | 'error'>)
   )
 }
 
-/** For controls that are not react-aria field roots: plain text with ids for aria-describedby. */
+/**
+ * For controls that are not react-aria field roots: plain text with ids for aria-describedby.
+ * The error is an alert so it is announced when it appears, not only when the control is next focused.
+ */
 export function PlainFooter({
   hintId,
   errorId,
@@ -57,7 +60,7 @@ export function PlainFooter({
         </span>
       ) : null}
       {error ? (
-        <span id={errorId} className={styles.error}>
+        <span id={errorId} className={styles.error} role="alert">
           {error}
         </span>
       ) : null}

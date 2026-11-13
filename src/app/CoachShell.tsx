@@ -187,7 +187,7 @@ function Shell() {
         </nav>
         <div className={styles.content}>
           <p className={styles.readOnly} role="note">
-            Planning and editing need a screen at least 1024 px wide. Everything here is read-only.
+            Everything here is read-only on a small touch screen. Plan and edit on a wider screen or with a mouse.
           </p>
           <main id="main" tabIndex={-1} className={styles.main}>
             <Outlet />

@@ -81,7 +81,8 @@ describe('Calendar page', () => {
   it('shows seven days for the chosen athlete and keeps the week in the URL', async () => {
     const router = renderAt('/coach/calendar/amir?w=1')
     const g = await grid()
-    expect(within(g).getAllByRole('heading', { level: 3 })).toHaveLength(7)
+    // Day headings sit straight under the h1, so the outline does not skip a level.
+    expect(within(g).getAllByRole('heading', { level: 2 })).toHaveLength(7)
     expect(await within(g).findByText('Threshold run')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Next week' }))
     await waitFor(() => expect(router.state.location.search).toBe('?w=2'))

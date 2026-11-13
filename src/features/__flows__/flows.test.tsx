@@ -25,6 +25,7 @@ import { buildFile, buildInput } from '../coach/builder/exportFiles.ts'
 import { thresholdsFor } from '../coach/builder/TargetPreview.tsx'
 import { EMPTY_SEASON } from '../coach/season/SeasonPage.tsx'
 import { SuggestSlot } from '../coach/calendar/SuggestSlot.tsx'
+import { sessionName } from '../shared/activity/format.ts'
 import { CheckInSummaryPanel, WeeklyRecapPanel } from '../shared/ai-panels/index.ts'
 
 // Flows 7.1 to 7.6 of docs/ia/information-architecture.md, run against the real store, the real
@@ -92,7 +93,7 @@ describe('7.1 Athlete: from today session to a logged activity', () => {
 
     const router = renderAt('/athlete/today?sheet=log')
     const dialog = await screen.findByRole('dialog', { name: 'Log a session' })
-    expect(within(dialog).getAllByText(new RegExp(open!.workout.title)).length).toBeGreaterThan(0)
+    expect(within(dialog).getAllByText(new RegExp(sessionName(open!.workout.title, open!.workout.sport))).length).toBeGreaterThan(0)
     expect(within(dialog).getByTestId('load-estimate').textContent).toMatch(/^Load \d+, from .+, (high|medium|low) confidence$/)
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
 

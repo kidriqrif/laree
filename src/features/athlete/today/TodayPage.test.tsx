@@ -221,6 +221,51 @@ describe('TodayPage', () => {
   })
 })
 
+// Every badge seen, then one taken back: the store re-awards it under the same id, unseen.
+const takeBack = (keep: (b: LareeData['badges'][number]) => boolean) =>
+  setData((d) => {
+    const badges = d.badges.filter(keep)
+    return { badges, badgeSeen: { ...d.badgeSeen, amir: badges.map((b) => b.id) } }
+  })
+const slot = () => document.querySelector('[aria-live="polite"]:has([data-testid="badge-moment"])')
+
+describe('badge moment on Today', () => {
+  it('stays away while every badge is seen', () => {
+    takeBack(() => true)
+    renderToday()
+    expect(screen.queryByTestId('badge-moment')).toBeNull()
+  })
+
+  it('shows at the top of Today, in a live region, when a log earns a badge', async () => {
+    // The next log re-awards the badge through the real gamification rules.
+    const badge = data().badges.find((b) => b.athleteId === 'amir' && b.key !== 'coach-kudos')!
+    takeBack((b) => b.id !== badge.id)
+    renderToday()
+    expect(screen.queryByTestId('badge-moment')).toBeNull()
+    const first = amirPlanned(currentDay()).toSorted((a, b) => a.order - b.order)[0]!
+    fireEvent.click(screen.getByRole('button', { name: `Log it: ${sessionName(first.title, first.sport)}` }))
+    const dialog = await screen.findByRole('dialog', { name: 'Log a session' }, { timeout: 5000 })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }))
+    const moment = await screen.findByTestId('badge-moment', undefined, { timeout: 5000 })
+    expect(moment.getAttribute('data-badge')).toBe(badge.key)
+    expect(slot()).toBe(document.querySelector('[data-today]')?.firstElementChild)
+    fireEvent.click(within(moment).getByRole('button', { name: 'Dismiss' }))
+    expect(screen.queryByTestId('badge-moment')).toBeNull()
+    expect(data().badgeSeen.amir).toContain(badge.id)
+  })
+
+  it('shows when Coach’s kudos earn a badge', async () => {
+    setData((d) => ({ kudos: d.kudos.filter((k) => k.athleteId !== 'amir') }))
+    takeBack((b) => !(b.athleteId === 'amir' && b.key === 'coach-kudos'))
+    renderToday()
+    expect(screen.queryByTestId('badge-moment')).toBeNull()
+    act(() => useLaree.getState().sendKudos({ athleteId: 'amir' }))
+    const moment = await screen.findByTestId('badge-moment', undefined, { timeout: 5000 })
+    expect(moment.getAttribute('data-badge')).toBe('coach-kudos')
+    expect(slot()).toBeTruthy()
+  })
+})
+
 describe('todayModel words', () => {
   it('formats the bib figure', () => {
     expect(durationFigure(55 * 60)).toEqual({ value: '55', unit: 'min', words: '55 min' })

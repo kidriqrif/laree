@@ -52,6 +52,14 @@ describe('LibraryPage', () => {
     expect(rowCount()).toBe(all.length)
   })
 
+  it('shows durations in whole minutes', () => {
+    setup()
+    // The seed has templates that run to odd seconds (swims), so this checks something real.
+    const odd = useLaree.getState().data.templates.some((t) => t.estimatedDurationS >= 60 && t.estimatedDurationS % 60 !== 0)
+    expect(odd).toBe(true)
+    expect(screen.getByRole('grid', { name: 'Workouts' }).textContent).not.toMatch(/min \d+ s/)
+  })
+
   it('n opens a new workout', async () => {
     const router = setup()
     await act(async () => {

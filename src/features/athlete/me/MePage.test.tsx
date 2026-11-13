@@ -42,8 +42,11 @@ describe('Me page', () => {
 
   it('explains why Strava is outbound only and disables sharing', async () => {
     renderAt('/athlete/me')
-    await heading('Data in')
+    await heading('Data in and out')
     expect(screen.getByText(/Strava only shows activities to the athlete who owns them/)).toBeTruthy()
+    // The row says what it does; the button does not repeat it.
+    expect(screen.getByText('Send a session to Strava')).toBeTruthy()
+    expect(screen.getAllByText('Share to Strava')).toHaveLength(1)
     expect((screen.getByRole('button', { name: 'Share to Strava' }) as HTMLButtonElement).disabled).toBe(true)
   })
 

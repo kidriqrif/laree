@@ -23,7 +23,7 @@ const THEMES: ReadonlyArray<{ id: ThemePreference; label: string }> = [
 const SECTIONS = [
   ['profile', 'Profile'],
   ['thresholds', 'Thresholds'],
-  ['data-in', 'Data in'],
+  ['data-in', 'Data in and out'],
   ['ai', 'AI summaries'],
   ['preferences', 'Preferences'],
   ['prototype', 'Prototype'],
@@ -179,7 +179,7 @@ export default function MePage() {
 
       <section id="me-data-in" tabIndex={-1} className={styles.section} aria-labelledby="me-data-h">
         <h2 id="me-data-h" className={styles.h}>
-          Data in
+          Data in and out
         </h2>
         <Card>
           <ul className={styles.list}>
@@ -201,7 +201,7 @@ export default function MePage() {
             </li>
             <li>
               <div className={styles.row}>
-                <span>Share to Strava</span>
+                <span>Send a session to Strava</span>
                 <Button isDisabled>Share to Strava</Button>
               </div>
               <p className={styles.note}>

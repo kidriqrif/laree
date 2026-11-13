@@ -30,6 +30,7 @@ import { formBand } from '../../../domain/metrics/fitness.ts'
 import { weekdayIndex } from '../../../domain/time.ts'
 import type { ComplianceBand, Sport } from '../../../domain/types.ts'
 import { SportGlyph, StatusGlyph } from '../../../ui/core/index.ts'
+import { SeverityGlyph } from '../../../ui/core/SeverityGlyph.tsx'
 import type { SportKey, StatusKey } from '../../../ui/core/index.ts'
 import { DataTable } from '../../../ui/data/index.ts'
 import type { DataTableColumn } from '../../../ui/data/index.ts'
@@ -37,7 +38,6 @@ import { IconChevronRight, IconFlag, IconWarning } from '../../../ui/icons/index
 import {
   DEFAULT_SORT,
   PHASE_LABEL,
-  RAMP_CAUTION,
   SEVERITY_LABEL,
   SORT_PREF,
   SORT_VALUE,
@@ -45,6 +45,7 @@ import {
   attentionItems,
   formatSort,
   parseSort,
+  rampAboveCaution,
   rosterEntries,
   sortEntries,
   statusPhrases,
@@ -252,7 +253,7 @@ function rampArrow(ramp: number): { glyph: string; word: string } {
 
 function RampCell({ e }: { e: RosterEntry }) {
   if (e.ramp === null) return dash('No data.')
-  const warn = e.ramp > RAMP_CAUTION
+  const warn = rampAboveCaution(e.ramp)
   const { glyph, word } = rampArrow(e.ramp)
   return (
     <span className={styles.ramp} data-warn={warn || undefined}>
@@ -270,7 +271,7 @@ function FlagsCell({ e }: { e: RosterEntry }) {
   if (!top) return <span className="sr-only">None</span>
   return (
     <span className={styles.flags} data-severity={top.severity}>
-      <IconFlag size={12} />
+      <SeverityGlyph severity={top.severity} />
       <span>{e.flags.length}</span>
       <span className="sr-only">
         {e.flags.length === 1 ? ' open flag' : ' open flags'}, most serious {SEVERITY_LABEL[top.severity]}
@@ -305,7 +306,7 @@ function columns(width: Width): DataTableColumn<RosterEntry>[] {
     col('fitness', 'Fitness', (e) => <FitnessCell e={e} trend={wide} />, { numeric: true }),
     wide ? col('fatigue', 'Fatigue', (e) => (e.fatigue === null ? dash('No data.') : fmtNumber(e.fatigue)), { numeric: true }) : null,
     col('form', 'Form', (e) => <FormCell e={e} />, { numeric: true }),
-    col('ramp', 'Ramp', (e) => <RampCell e={e} />, { numeric: true }),
+    col('ramp', 'Ramp /wk', (e) => <RampCell e={e} />, { numeric: true }),
     col('flags', 'Flags', (e) => <FlagsCell e={e} />, { numeric: true }),
   ]
   return all.filter((c): c is DataTableColumn<RosterEntry> => c !== null)
@@ -356,7 +357,7 @@ function Stack({ entries }: { entries: RosterEntry[] }) {
               </dd>
             </div>
             <div>
-              <dt>Ramp</dt>
+              <dt>Ramp /wk</dt>
               <dd data-numeric>
                 <RampCell e={e} />
               </dd>
@@ -404,7 +405,7 @@ function Attention({ items }: { items: AttentionItem[] }) {
           <li key={item.flag.id}>
             <Link to={`/coach/athlete/${item.athleteId}?flag=${item.flag.id}`} className={styles.attnRow}>
               <span className={styles.flags} data-severity={item.flag.severity}>
-                <IconFlag size={12} />
+                <SeverityGlyph severity={item.flag.severity} />
                 {SEVERITY_LABEL[item.flag.severity]}
               </span>
               <span className={styles.attnWho}>{item.name}</span>

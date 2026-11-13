@@ -44,6 +44,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* Focus never lands under the sticky switcher or the fixed bottom bar. */
+  :root:has([data-register="athlete"]) {
+    scroll-padding-block: calc(var(--switcher-h) + var(--space-4)) calc(var(--bar-h) + var(--space-4) + env(safe-area-inset-bottom));
+  }
+
   /* The lap-fill used by the track lap and progress rings. */
   [data-register="athlete"] {
     --lap-fill-duration: var(--dur-fill);

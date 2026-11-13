@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { seededStream } from '../../data/seed/index.ts'
+import { seededStream } from '../../data/seed/onDemand.ts'
 import { thresholdsOn } from '../../data/seed/people.ts'
 import { currentDay } from '../../data/selectors.ts'
 import { useLaree } from '../../data/store.ts'

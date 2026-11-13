@@ -60,6 +60,15 @@ describe('Analytics page', () => {
     }
   })
 
+  it('names the band on every week of the compliance grid, not just a colour', async () => {
+    renderAt('/coach/analytics/amir?range=8w')
+    await heading()
+    const fig = await figure(/compliance by week/)
+    const names = within(fig).getAllByLabelText(/^Week of /).map((c) => c.getAttribute('aria-label') ?? '')
+    expect(names.length).toBeGreaterThan(0)
+    expect(names.filter((n) => !/: \d+%, (short|under|on plan|over|well over|missed)$/.test(n))).toEqual([])
+  })
+
   it('shows a note instead of a power curve for an athlete without power', async () => {
     renderAt('/coach/analytics/danial')
     await heading()

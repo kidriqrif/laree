@@ -1,10 +1,11 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useViewer } from '../app/viewer.ts'
 import { selectAiState } from '../data/selectors.ts'
 import { useLaree } from '../data/store.ts'
 import { AiSection } from '../features/athlete/me/AiSection.tsx'
 import { AiConsentDialog } from '../features/coach/settings/AiConsentDialog.tsx'
+import CoachConsentDialog from './CoachConsentDialog.tsx'
 
 const state = (id: 'amir' | 'danial' = 'amir') => selectAiState(useLaree.getState().data, id)
 
@@ -73,5 +74,29 @@ describe('AiConsentDialog', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Turn on' }))
     expect(useLaree.getState().data.settings.coach.aiConsent).toBe(false)
     expect(await screen.findByRole('alert')).toBeTruthy()
+  })
+})
+
+describe('CoachConsentDialog unsaved withdrawal', () => {
+  it('offers Try saving again instead of Turn on, and clears once the save works', async () => {
+    useViewer.setState({ role: 'coach' })
+    useLaree.getState().setAiConsent('coach', true)
+    const failing = { getItem: () => null, removeItem: () => undefined, setItem: () => { throw new DOMException('full') } }
+    vi.stubGlobal('localStorage', failing)
+    vi.stubGlobal('sessionStorage', failing)
+    try {
+      render(<CoachConsentDialog athleteId="amir" isOpen onClose={() => undefined} />)
+      fireEvent.click(await screen.findByRole('button', { name: 'Turn off' }))
+      expect(await screen.findByRole('button', { name: 'Try saving again' })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Turn on' })).toBeNull()
+      expect(screen.getAllByRole('button', { name: 'Close' }).length).toBeGreaterThan(0)
+      expect(screen.getByRole('alert').textContent).toMatch(/could not save/)
+      vi.unstubAllGlobals()
+      fireEvent.click(screen.getByRole('button', { name: 'Try saving again' }))
+      expect(useLaree.getState().aiWithdrawalUnsaved).toBe(false)
+      expect(useLaree.getState().data.settings.coach.aiConsent).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

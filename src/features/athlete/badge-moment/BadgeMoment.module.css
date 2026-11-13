@@ -1,8 +1,4 @@
 @layer components {
-  .live {
-    display: block;
-  }
-
   .moment {
     display: flex;
     flex-direction: column;
@@ -31,10 +27,15 @@
     fill: none;
   }
 
+  /* The label straddles the gap between the halves, so it carries its own sun halo: ink on sun in both themes. */
   .face {
     font-family: var(--font-display);
-    font-size: 22px;
-    fill: var(--color-text);
+    font-size: var(--text-lg);
+    fill: var(--color-on-accent);
+    stroke: var(--color-accent);
+    stroke-width: 6px;
+    stroke-linejoin: round;
+    paint-order: stroke;
   }
 
   /* Already broken: the halves sit apart. With motion allowed they snap apart from the middle. */

@@ -48,6 +48,10 @@ function parseSort(raw: string | null): SortDescriptor {
   return { column, direction: desc ? 'descending' : 'ascending' }
 }
 
+/** A whole template at a glance: whole minutes, so a swim reads "40 min", not "40 min 23 s". */
+const listDuration =(seconds: number): string =>
+  durationLabel(seconds < 60 ? seconds : Math.round(seconds / 60) * 60)
+
 const shortDate = (day: number): string =>
   new Date(dayToIso(day)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
@@ -139,7 +143,7 @@ export default function LibraryPage() {
       numeric: true,
       sortable: true,
       value: (t) => t.estimatedDurationS,
-      render: (t) => durationLabel(t.estimatedDurationS),
+      render: (t) => listDuration(t.estimatedDurationS),
     },
     {
       id: 'distance',
@@ -269,7 +273,7 @@ export default function LibraryPage() {
                       {t.name}
                     </Link>
                     <span className={styles.meta}>
-                      {durationLabel(t.estimatedDurationS)} · Load {Math.round(t.estimatedLoad)}
+                      {listDuration(t.estimatedDurationS)} · Load {Math.round(t.estimatedLoad)}
                     </span>
                   </li>
                 ))}

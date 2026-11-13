@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useHotkeys } from '../../../app/keyboard/index.ts'
+import { usePageTitle } from '../../../app/pageTitle.ts'
 import { ATHLETES, isAthleteId } from '../../../app/people.ts'
 import { useCoachReadOnly } from '../../../app/useCoachReadOnly.ts'
 import { useViewer } from '../../../app/viewer.ts'
@@ -20,6 +21,7 @@ import type { FlagRecord } from '../../../domain/flags.ts'
 import { weekdayIndex, weekOfDay, weekRange } from '../../../domain/time.ts'
 import type { Activity, AthleteId } from '../../../domain/types.ts'
 import { buttonClass, Card, EmptyState, SPORT_LABEL } from '../../../ui/core/index.ts'
+import { SeverityGlyph } from '../../../ui/core/SeverityGlyph.tsx'
 import { DataTable } from '../../../ui/data/index.ts'
 import { SegmentedControl } from '../../../ui/form/index.ts'
 import { FlagDrawerSlot } from './FlagDrawerSlot.tsx'
@@ -64,6 +66,7 @@ export default function AthletePage() {
 }
 
 function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
+  usePageTitle(ATHLETES.find((a) => a.id === athleteId)?.name)
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const readOnly = useCoachReadOnly()
@@ -146,6 +149,7 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
       label: fmtDay(s.firstDay),
       value: Math.round((s.doneDurationS / 3600) * 10) / 10,
       target: s.target?.hoursTarget ?? null,
+      partial: w === thisWeek,
     })
   }
 
@@ -212,7 +216,10 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
                 <li key={f.id} className={styles.flag} data-severity={f.severity} data-testid="flag-card">
                   <div className={styles.flagHead}>
                     <h3>{RULES[f.ruleId].title}</h3>
-                    <span className={styles.severity}>{SEVERITY_LABEL[f.severity]}</span>
+                    <span className={styles.severity} data-severity={f.severity}>
+                      <SeverityGlyph severity={f.severity} />
+                      {SEVERITY_LABEL[f.severity]}
+                    </span>
                   </div>
                   <p className={styles.rule}>{RULES[f.ruleId].ruleText}</p>
                   <p className={styles.values} data-numeric>
@@ -292,7 +299,7 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
                 rows={recent}
                 getRowId={(a) => a.id}
                 onRowAction={(a) => navigate(`/coach/activity/${a.id}`)}
-                emptyState={<p className={styles.empty}>No activities in the last 30 days.</p>}
+                emptyState={<p className={styles.empty}>No activities yet.</p>}
                 columns={[
                   { id: 'day', label: 'Date', value: (a) => a.day, render: (a) => fmtDay(a.day) },
                   { id: 'sport', label: 'Sport', value: (a) => (a.sport === 'other' ? 'Other' : SPORT_LABEL[a.sport]) },
@@ -341,7 +348,9 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
               <tr>
                 <th scope="col">From</th>
                 <th scope="col">Threshold</th>
-                <th scope="col">Value</th>
+                <th scope="col" className={styles.num}>
+                  Value
+                </th>
                 <th scope="col">Source</th>
               </tr>
             </thead>
@@ -350,7 +359,9 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
                 <tr key={`${t.kind}:${t.effectiveFromDay}`} data-testid="threshold-row">
                   <td data-numeric>{fmtDay(t.effectiveFromDay)}</td>
                   <td>{KIND_LABEL[t.kind as (typeof EDITABLE_KINDS)[number]]}</td>
-                  <td data-numeric>{formatThreshold(t.kind, t.value)}</td>
+                  <td data-numeric className={styles.num}>
+                    {formatThreshold(t.kind, t.value)}
+                  </td>
                   <td>{SOURCE_LABEL[t.source]}</td>
                 </tr>
               ))}

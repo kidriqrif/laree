@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useViewer } from '../../../app/viewer.ts'
@@ -8,7 +8,7 @@ import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
 import type { LareeData } from '../../../data/store.ts'
 import { setNow } from '../../../domain/time.ts'
-import { BadgeMoment } from '../badge-moment/index.ts'
+import { sessionName } from '../../shared/activity/format.ts'
 import { LOG_MATCH_DRAFT } from '../today/logMatch.ts'
 import { LogSheet } from './LogSheet.tsx'
 import { buildSyncedActivity, loadLine, matchOptions } from './logModel.ts'
@@ -77,7 +77,8 @@ describe('log sheet', () => {
     mount()
     const dialog = screen.getByRole('dialog', { name: 'Log a session' })
     const today = matchOptions(data(), ME, currentDay()).find((o) => o.workout.day === currentDay() && !o.logged)!
-    expect(within(dialog).getAllByText(new RegExp(`Today · .* · ${today.workout.title}`)).length).toBeGreaterThan(0)
+    const name = sessionName(today.workout.title, today.workout.sport)
+    expect(within(dialog).getAllByText(new RegExp(`Today · .* · ${name}`)).length).toBeGreaterThan(0)
     const estimate = within(dialog).getByTestId('load-estimate').textContent ?? ''
     expect(estimate).toMatch(/^Load \d+, from .+, (high|medium|low) confidence$/)
     fireEvent.click(within(dialog).getByRole('button', { name: /Which session/ }))
@@ -102,7 +103,7 @@ describe('log sheet', () => {
     useLaree.getState().setDraft(LOG_MATCH_DRAFT, { athleteId: ME, workoutId: target.id, chosenOn: currentDay() })
     const { unmount } = mount()
     const dialog = screen.getByRole('dialog')
-    expect(within(dialog).getAllByText(new RegExp(target.title)).length).toBeGreaterThan(0)
+    expect(within(dialog).getAllByText(new RegExp(sessionName(target.title, target.sport))).length).toBeGreaterThan(0)
     unmount()
     expect(data().drafts[LOG_MATCH_DRAFT]).toBeUndefined()
   })
@@ -147,7 +148,7 @@ describe('log sheet', () => {
     const error = await screen.findByTestId('import-error', undefined, { timeout: 5000 })
     expect(error.textContent).toContain('notes.txt')
     expect(JSON.stringify(data().activities)).toBe(before)
-    expect(within(screen.getByRole('dialog')).getAllByText(new RegExp(target.title)).length).toBeGreaterThan(0)
+    expect(within(screen.getByRole('dialog')).getAllByText(new RegExp(sessionName(target.title, target.sport))).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'Save' }).hasAttribute('disabled')).toBe(true)
   })
 
@@ -180,53 +181,5 @@ describe('log sheet', () => {
     expect(loadLine({ load: 61.6, method: 'pace', confidence: 'medium', intensity: 0.8 })).toBe(
       'Load 62, from pace, medium confidence',
     )
-  })
-})
-
-describe('badge moment', () => {
-  it('appears when a log earns a badge, then is dismissed once', () => {
-    // Take back one earned badge: the next log re-awards it through the real gamification rules.
-    const badge = data().badges.find((b) => b.athleteId === ME && b.key !== 'coach-kudos')
-    expect(badge).toBeTruthy()
-    useLaree.setState((s) => ({
-      data: {
-        ...s.data,
-        badges: s.data.badges.filter((b) => b.id !== badge!.id),
-        badgeSeen: { ...s.data.badgeSeen, [ME]: (s.data.badgeSeen[ME] ?? []).filter((id) => id !== badge!.id) },
-      },
-    }))
-    mount()
-    expect(screen.queryByTestId('badge-moment')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
-    const moment = screen.getByTestId('badge-moment')
-    expect(moment.getAttribute('data-badge')).toBe(badge!.key)
-    expect(within(moment).getByTestId('finish-tape')).toBeTruthy()
-    expect(within(moment).getByRole('button', { name: 'See your badges' })).toBeTruthy()
-    fireEvent.click(within(moment).getByRole('button', { name: 'Dismiss' }))
-    expect(screen.queryByTestId('badge-moment')).toBeNull()
-    expect(data().badgeSeen[ME]).toContain(badge!.id)
-  })
-
-  it('shows two badges one after the other and opens Progress', () => {
-    const mineBadges = data().badges.filter((b) => b.athleteId === ME)
-    expect(mineBadges.length).toBeGreaterThan(1)
-    act(() => {
-      useLaree.setState((s) => ({ data: { ...s.data, badgeSeen: { ...s.data.badgeSeen, [ME]: [] } } }))
-    })
-    render(
-      <MemoryRouter initialEntries={['/athlete/today']}>
-        <Routes>
-          <Route path="/athlete/today" element={<BadgeMoment />} />
-          <Route path="/athlete/progress" element={<h1>Progress</h1>} />
-        </Routes>
-      </MemoryRouter>,
-    )
-    const firstKey = screen.getByTestId('badge-moment').getAttribute('data-badge')
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
-    const second = screen.getByTestId('badge-moment').getAttribute('data-badge')
-    expect(second).not.toBeNull()
-    expect(firstKey).not.toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'See your badges' }))
-    expect(screen.getByText('Progress')).toBeTruthy()
   })
 })

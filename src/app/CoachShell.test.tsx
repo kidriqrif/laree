@@ -113,13 +113,18 @@ describe('Jump to destinations', () => {
 describe('useCoachReadOnly', () => {
   function stubMedia(matches: boolean) {
     const listeners = new Set<() => void>()
+    const queries: string[] = []
     const mql = {
       matches,
       addEventListener: (_: string, cb: () => void) => listeners.add(cb),
       removeEventListener: (_: string, cb: () => void) => listeners.delete(cb),
     }
-    vi.stubGlobal('matchMedia', () => mql)
+    vi.stubGlobal('matchMedia', (q: string) => {
+      queries.push(q)
+      return mql
+    })
     return {
+      queries,
       set(next: boolean) {
         mql.matches = next
         listeners.forEach((cb) => cb())
@@ -127,12 +132,18 @@ describe('useCoachReadOnly', () => {
     }
   }
 
-  it('is true under 1024 px and follows resizing', () => {
+  it('is true on a narrow touch screen and follows resizing', () => {
     const media = stubMedia(true)
     const { result } = renderHook(() => useCoachReadOnly())
     expect(result.current).toBe(true)
     act(() => media.set(false))
     expect(result.current).toBe(false)
+  })
+
+  it('asks for narrow and a coarse pointer together, so a zoomed desktop keeps editing', () => {
+    const media = stubMedia(false)
+    renderHook(() => useCoachReadOnly())
+    expect(new Set(media.queries)).toEqual(new Set(['(max-width: 1023px) and (pointer: coarse)']))
   })
 
   it('is false when the browser cannot answer', () => {

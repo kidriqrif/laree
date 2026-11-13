@@ -47,6 +47,17 @@
     fill-opacity: 0.1;
   }
 
+  /* Band names at the right edge of the Form panel, haloed so lines never hide them. */
+  .bandLabel {
+    fill: var(--chart-axis);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    paint-order: stroke;
+    stroke: var(--color-bg);
+    stroke-width: 3px;
+    stroke-linejoin: round;
+  }
+
   .zero {
     stroke: var(--chart-axis);
     stroke-width: var(--hairline, 1px);

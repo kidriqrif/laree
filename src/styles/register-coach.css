@@ -56,4 +56,17 @@
     block-size: var(--row-h);
     border-block-end: var(--hairline) solid var(--hairline-color);
   }
+
+  /* The coach desk keeps the compact switcher. Focus never lands under it or, below 1024 px, the sticky top bar. */
+  :root:has([data-register="coach"]) {
+    --switcher-h: 48px;
+    --switcher-target: 36px;
+    scroll-padding-block-start: calc(var(--switcher-h) + var(--space-12) + var(--space-4));
+  }
+
+  @media (min-width: 1024px) {
+    :root:has([data-register="coach"]) {
+      scroll-padding-block-start: calc(var(--switcher-h) + var(--space-4));
+    }
+  }
 }

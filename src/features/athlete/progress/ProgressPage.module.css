@@ -1,11 +1,10 @@
 @layer components {
+  /* The shell column sets the side gutter and width, as on Today and Week. */
   .page {
     display: grid;
     gap: var(--space-6);
-    padding: var(--space-4);
-    padding-block-end: var(--space-10);
-    max-inline-size: 40rem;
-    margin-inline: auto;
+    min-inline-size: 0;
+    padding-block: var(--space-4) var(--space-10);
   }
 
   .title,

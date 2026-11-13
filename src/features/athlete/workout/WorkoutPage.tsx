@@ -1,4 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router'
+import { usePageTitle } from '../../../app/pageTitle.ts'
 import { useViewer } from '../../../app/viewer.ts'
 import { fmtDistance, fmtDuration, fmtNumber } from '../../../charts/index.ts'
 import { currentDay } from '../../../data/selectors.ts'
@@ -8,7 +9,7 @@ import { workoutTotals } from '../../../domain/steps.ts'
 import type { PlainStep, Step } from '../../../domain/types.ts'
 import { Button, Card, EmptyState, SportMark, StatusChip } from '../../../ui/core/index.ts'
 import { showToast } from '../../../ui/overlay/index.ts'
-import { BAND_LABELS, fmtWeekdayDate, statusOf } from '../../shared/activity/format.ts'
+import { BAND_LABELS, fmtWeekdayDate, sessionName, statusOf } from '../../shared/activity/format.ts'
 import { LOG_MATCH_DRAFT, type LogMatchDraft } from '../today/logMatch.ts'
 import { ProfileChart } from './ProfileChart.tsx'
 import { KIND_LABEL, segmentsOf, stepSentence, targetText } from './targets.ts'
@@ -68,8 +69,10 @@ export default function WorkoutPage() {
   const navigate = useNavigate()
   const athleteId = useViewer((s) => s.athleteId)
   const data = useLaree((s) => s.data)
-  const workout = data.planned.find((w) => w.id === workoutId)
-  if (!workout || workout.athleteId !== athleteId) return <NotFoundCard />
+  const found = data.planned.find((w) => w.id === workoutId)
+  const workout = found?.athleteId === athleteId ? found : undefined
+  usePageTitle(workout?.title)
+  if (!workout) return <NotFoundCard />
 
   const today = currentDay()
   const th = thresholdsOn(athleteId, workout.day, data.thresholds)
@@ -94,7 +97,7 @@ export default function WorkoutPage() {
           {workout.keySession ? <span className={styles.key}>Key session</span> : null}
         </p>
         <h1 id="workout-title" className={styles.title}>
-          {workout.title}
+          {sessionName(workout.title, workout.sport)}
         </h1>
         <dl className={styles.facts}>
           <div>

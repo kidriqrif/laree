@@ -102,7 +102,8 @@
     content: "";
     position: absolute;
     inset: 8px;
-    border: 2px solid var(--color-text);
+    /* currentcolor: the rules follow the ink on the sun hover, in both themes. */
+    border: 2px solid currentcolor;
     border-radius: calc(var(--radius-card) - 4px);
     pointer-events: none;
   }
@@ -110,6 +111,11 @@
   .bib:hover {
     transform: translateY(-3px) rotate(-0.6deg);
     background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+
+  /* Track red on sun is too faint: the race number turns ink with the rest of the bib. */
+  .bib:hover .number {
     color: var(--color-on-accent);
   }
 
@@ -123,7 +129,7 @@
     inline-size: 12px;
     block-size: 12px;
     background: var(--color-bg);
-    border: 1.5px solid var(--color-text);
+    border: 1.5px solid currentcolor;
     border-radius: var(--radius-pill);
   }
 
@@ -163,7 +169,7 @@
     gap: var(--space-3);
     margin-inline: calc(-1 * var(--space-2));
     padding: var(--space-3) var(--space-2) var(--space-5);
-    border-block-start: 1.5px dashed var(--color-text);
+    border-block-start: 1.5px dashed currentcolor;
     font-size: var(--text-sm);
     font-weight: 700;
   }

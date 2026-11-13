@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { useViewer } from '../../../app/viewer.ts'
 import { currentDay, earnedAwards, selectFitnessSeries, selectProgress, selectWeek } from '../../../data/selectors.ts'
+import { ATHLETES } from '../../../data/seed/people.ts'
 import { useLaree } from '../../../data/store.ts'
 import { BADGE_KEYS } from '../../../domain/gamification.ts'
 import type { BadgeKey } from '../../../domain/gamification.ts'
@@ -13,11 +14,13 @@ import {
   BADGES,
   FITNESS_EXPLAINER,
   badgeFace,
+  badgeFits,
   badgeLine,
   countdownRace,
   countdownText,
   countdownWeeks,
   formSentence,
+  raceDayFitness,
   streakHeadline,
   streakSoFar,
   trendSentence,
@@ -66,6 +69,8 @@ export default function ProgressPage() {
         label: fmtDay(s.firstDay),
         value: s.doneDurationS / 3600,
         target: s.target ? s.target.hoursTarget : s.plannedDurationS > 0 ? s.plannedDurationS / 3600 : null,
+        // This week is not over: drawn as "so far" and left out of the target count.
+        partial: w === week,
       })
     }
     return out
@@ -75,7 +80,8 @@ export default function ProgressPage() {
   const recentTarget = recent.reduce((t, b) => t + (b.target ?? 0), 0)
 
   const earnedKeys = new Set<BadgeKey>(awards.map((a) => a.key))
-  const locked = BADGE_KEYS.filter((k) => !earnedKeys.has(k))
+  const sports = ATHLETES.find((a) => a.id === athleteId)?.sports
+  const locked = BADGE_KEYS.filter((k) => !earnedKeys.has(k) && (!sports || badgeFits(k, sports)))
   const activityIds = new Set(data.activities.filter((a) => a.athleteId === athleteId).map((a) => a.id))
   const streak = progress.streak
   const soFar = streakSoFar(streak)
@@ -126,9 +132,7 @@ export default function ProgressPage() {
               </ChartBoundary>
               {today < 42 ? <p className={styles.muted}>Fitness takes about six weeks to settle, so read this loosely for now.</p> : null}
               {hero && raceDayPoint ? (
-                <p className={styles.muted}>
-                  If the plan goes as written, Fitness reaches {fmtNumber(raceDayPoint.fitness)} by race day.
-                </p>
+                <p className={styles.muted}>{raceDayFitness(raceDayPoint.fitness, last.fitness)}</p>
               ) : null}
               {progress.form ? <p className={styles.muted}>{formSentence(progress.form.form)}</p> : null}
             </>

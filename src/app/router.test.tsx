@@ -3,6 +3,7 @@ import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useLaree } from '../data/store.ts'
+import { sessionName } from '../features/shared/activity/format.ts'
 import { landingFor } from './RoleSwitcher.tsx'
 import { routes } from './router.tsx'
 import { setLastCoachRoute, useViewer } from './viewer.ts'
@@ -26,7 +27,8 @@ function ids() {
   const { planned, activities } = useLaree.getState().data
   const workout = planned.find((p) => p.athleteId === 'amir' && p.steps.length > 0)!
   const activity = activities.find((a) => a.athleteId === 'amir')!
-  return { workout, activity }
+  // The headings drop a sport prefix the sport mark already shows.
+  return { workout, activity, workoutName: sessionName(workout.title, workout.sport), activityName: sessionName(activity.title, activity.sport) }
 }
 
 type Side = 'athlete' | 'coach' | 'standalone'
@@ -35,12 +37,13 @@ type Page = [path: string | (() => string), heading: string | RegExp | (() => st
 const PAGES: Page[] = [
   ['/reset', 'Reset demo data', 'standalone'],
   ['/athlete/today', 'Today', 'athlete'],
-  ['/athlete/week', /^This week, /, 'athlete'],
-  ['/athlete/week?w=-1', /^Last week, /, 'athlete'],
+  // The dates sit in their own span, and the test library pads element edges with a space.
+  ['/athlete/week', /^This week ?, /, 'athlete'],
+  ['/athlete/week?w=-1', /^Last week ?, /, 'athlete'],
   ['/athlete/progress', 'Progress', 'athlete'],
   ['/athlete/me', 'Me', 'athlete'],
-  [() => `/athlete/workout/${ids().workout.id}`, () => ids().workout.title, 'athlete'],
-  [() => `/athlete/activity/${ids().activity.id}`, () => ids().activity.title, 'athlete'],
+  [() => `/athlete/workout/${ids().workout.id}`, () => ids().workoutName, 'athlete'],
+  [() => `/athlete/activity/${ids().activity.id}`, () => ids().activityName, 'athlete'],
   ['/coach/overview', 'Overview', 'coach'],
   ['/coach/athlete/danial', 'Danial', 'coach'],
   ['/coach/calendar', 'Calendar', 'coach'],
@@ -119,7 +122,7 @@ describe('routes', () => {
 describe('athlete shell', () => {
   it('has five bar items with Log opening the sheet on Today', async () => {
     renderAt('/athlete/week')
-    await screen.findByRole('heading', { level: 1, name: /^This week, / })
+    await screen.findByRole('heading', { level: 1, name: /^This week ?, / })
     const bar = screen.getByRole('navigation', { name: 'Athlete' })
     expect(bar.querySelectorAll('a')).toHaveLength(5)
     expect(screen.getByRole('link', { name: 'Week' }).getAttribute('aria-current')).toBe('page')
@@ -128,7 +131,9 @@ describe('athlete shell', () => {
 
   it('keeps Week highlighted on a detail page and offers Back', async () => {
     renderAt(`/athlete/workout/${ids().workout.id}`)
-    await screen.findByRole('heading', { level: 1, name: ids().workout.title })
+    await screen.findByRole('heading', { level: 1, name: ids().workoutName })
+    // The tab names the workout, not just the section.
+    await waitFor(() => expect(document.title).toBe(`${ids().workout.title} · Laree`))
     expect(screen.getByRole('link', { name: 'Week' }).getAttribute('aria-current')).toBe('page')
     expect(screen.getByRole('button', { name: /Back/ })).toBeTruthy()
   })
@@ -148,7 +153,7 @@ describe('coach shell', () => {
 describe('prototype switcher', () => {
   it('shows who is viewing and updates the shell when the viewer changes', async () => {
     const router = renderAt('/athlete/week?w=-1')
-    await screen.findByRole('heading', { level: 1, name: /^Last week, / })
+    await screen.findByRole('heading', { level: 1, name: /^Last week ?, / })
     expect(screen.getByRole('radio', { name: 'Amir' }).getAttribute('aria-checked')).toBe('true')
 
     fireEvent.click(screen.getByRole('radio', { name: 'Danial' }))

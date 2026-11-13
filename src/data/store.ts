@@ -113,6 +113,8 @@ export interface LareeState extends Persisted {
    * back on. Screens say so instead of the usual confirmation.
    */
   aiWithdrawalUnsaved: boolean
+  /** Whose withdrawal that is ('coach' or an athlete id), so a screen warns only about its own owner. */
+  aiUnsavedOwners: string[]
   /** Not saved: the banner was dismissed for this visit. */
   bannerDismissed: boolean
   /** Not saved: saved text was found but could not be used. */
@@ -263,6 +265,9 @@ function flagRow(rec: FlagRecord, data: LareeData, existing: Flag | undefined): 
   return row
 }
 
+/** Owners whose consent was turned off but not saved anywhere yet. Kept out of persisted state. */
+const unsavedWithdrawals = new Set<string>()
+
 /** Consent withdrawn while the main save was failing stays withdrawn after a reload. */
 function withAiWithdrawals(data: LareeData): LareeData {
   const owners = readAiWithdrawn().filter((o): o is PersonId => o in data.settings && data.settings[o as PersonId].aiConsent)
@@ -403,6 +408,7 @@ export const useLaree = create<LareeState>()(
         anchor: runtimeStartEpochDay(),
         storageFailed: false,
         aiWithdrawalUnsaved: false,
+        aiUnsavedOwners: [],
         bannerDismissed: false,
         unreadable: isSavedDataUnreadable(),
         undoStack: [],
@@ -583,10 +589,21 @@ export const useLaree = create<LareeState>()(
           patch((d) => ({ settings: { ...d.settings, [owner]: { ...d.settings[owner], aiConsent: on } } }))
           // The save above is synchronous, so its outcome is known here. A withdrawal that did not
           // reach the main save is written as a small note of its own, which loading applies.
-          let unsaved = false
-          if (on || !isStorageFailed()) noteAiWithdrawn(owner, false)
-          else unsaved = !noteAiWithdrawn(owner, true)
-          if (get().aiWithdrawalUnsaved !== unsaved) set({ aiWithdrawalUnsaved: unsaved })
+          // Each owner is tracked on their own: the flag stays up until every withdrawal is saved.
+          if (!isStorageFailed()) {
+            // The main save holds every owner's current choice.
+            unsavedWithdrawals.clear()
+            noteAiWithdrawn(owner, false)
+          } else if (on) {
+            unsavedWithdrawals.delete(owner)
+            noteAiWithdrawn(owner, false)
+          } else if (noteAiWithdrawn(owner, true) === 'local') unsavedWithdrawals.delete(owner)
+          // A note kept only for this browser session still counts as unsaved: closing the browser drops it.
+          else unsavedWithdrawals.add(owner)
+          const owners = [...unsavedWithdrawals]
+          const prev = get().aiUnsavedOwners
+          if (owners.length !== prev.length || owners.some((o) => !prev.includes(o)))
+            set({ aiUnsavedOwners: owners, aiWithdrawalUnsaved: owners.length > 0 })
           return true
         },
         setSettings: (owner, change) =>
@@ -600,7 +617,8 @@ export const useLaree = create<LareeState>()(
         setPref: (key, value) => patch((d) => ({ prefs: { ...d.prefs, [key]: value } })),
         dismissStorageBanner: () => set({ bannerDismissed: true }),
         reset: () => {
-          set({ data: freshData(), anchor: runtimeStartEpochDay(), undoStack: [], unreadable: false, aiWithdrawalUnsaved: false })
+          unsavedWithdrawals.clear()
+          set({ data: freshData(), anchor: runtimeStartEpochDay(), undoStack: [], unreadable: false, aiWithdrawalUnsaved: false, aiUnsavedOwners: [] })
           // Reset clears every consent choice, the withdrawal note included (docs/spec/ai.md 4).
           // Only once the fresh data is saved: if that save failed, a reload brings the old copy
           // back, and the note must still be there to keep AI off.

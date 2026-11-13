@@ -3,7 +3,11 @@ import type { KeyboardEvent } from 'react';
 import { ChartFrame } from './ChartFrame.tsx';
 import styles from './Heatmap.module.css';
 
-/** Intensity step, 0 (lowest) to 4 (highest), drawn on the five-step heat ramp. */
+/**
+ * Step 0 to 4. On the heat scale it is intensity, lowest to highest, drawn on the zone ramp.
+ * On the status scale it names a compliance state: 0 on plan, 1 short or under, 2 over,
+ * 3 well over, 4 missed.
+ */
 export type HeatLevel = 0 | 1 | 2 | 3 | 4;
 
 export interface HeatCell {
@@ -12,7 +16,7 @@ export interface HeatCell {
   text: string;
   /** A short mark shown beside the value when it is outside the usual range, e.g. an arrow. */
   glyph?: string;
-  /** Spoken name for the cell; defaults to "<row>, <column>: <text>". */
+  /** Spoken name for the cell; defaults to "<row>, <column>: <text>". Name the band when there is a glyph. */
   label?: string;
 }
 
@@ -43,6 +47,8 @@ export interface HeatmapProps {
   measure?: string;
   /** Called when a cell is clicked or Enter or Space is pressed on it. */
   onCellActivate?: (rowKey: string, columnKey: string) => void;
+  /** "heat" (default) fills cells from the zone ramp; "status" uses the compliance status palette. */
+  scale?: 'heat' | 'status';
   className?: string;
 }
 
@@ -73,6 +79,7 @@ export function Heatmap({
   legend = DEFAULT_LEGEND,
   measure,
   onCellActivate,
+  scale = 'heat',
   className,
 }: HeatmapProps) {
   const nr = rows.length;
@@ -145,7 +152,7 @@ export function Heatmap({
         ]),
       }}
     >
-      <div className={styles.wrap}>
+      <div className={styles.wrap} data-scale={scale}>
         {nr === 0 || nc === 0 ? (
           <p className={styles.empty}>No data yet.</p>
         ) : (

@@ -175,6 +175,45 @@
     list-style: none;
   }
 
+  /* Results sheet: a heavy rule under uppercase display-face headers, hairlines between rows. */
+  .sheet {
+    inline-size: 100%;
+    border-collapse: collapse;
+  }
+
+  .sheet th,
+  .sheet td {
+    padding: var(--space-1) var(--space-2);
+    border-block-end: var(--hairline) solid var(--color-rule);
+    text-align: start;
+    vertical-align: middle;
+  }
+
+  .sheet thead th {
+    border-block-end: var(--rule-weight) solid var(--color-rule-strong);
+    color: var(--color-text-muted);
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-stretch: calc(var(--font-display-wdth) * 1%);
+    font-size: var(--text-xs);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .sheet .date {
+    inline-size: 1%;
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  .sheet .action {
+    inline-size: 1%;
+    text-align: end;
+    white-space: nowrap;
+  }
+
   .facts {
     display: grid;
     gap: var(--space-1);

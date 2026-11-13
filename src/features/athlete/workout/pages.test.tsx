@@ -5,6 +5,7 @@ import { useViewer } from '../../../app/viewer.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
 import { ActivityDetail } from '../../shared/activity/ActivityDetail.tsx'
+import { sessionName, sportName } from '../../shared/activity/format.ts'
 import ActivityPage from '../activity/ActivityPage.tsx'
 import { LOG_MATCH_DRAFT, readLogMatch } from '../today/logMatch.ts'
 import WorkoutPage from './WorkoutPage.tsx'
@@ -30,9 +31,17 @@ describe('WorkoutPage', () => {
   it('shows steps with targets and a profile chart for a structured session', () => {
     const w = useLaree.getState().data.planned.find((p) => p.athleteId === 'amir' && p.steps.length > 0)!
     renderAt(`/athlete/workout/${w.id}`)
-    expect(screen.getByRole('heading', { level: 1, name: w.title })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: sessionName(w.title, w.sport) })).toBeTruthy()
     expect(screen.getByRole('list', { name: 'Steps' })).toBeTruthy()
     expect(screen.getByText('Session profile')).toBeTruthy()
+  })
+  it('drops a sport prefix from the heading and names the tab after the session', () => {
+    const w = useLaree.getState().data.planned.find((p) => p.athleteId === 'amir')!
+    const title = `${sportName(w.sport)}: Test session`
+    useLaree.setState((s) => ({ data: { ...s.data, planned: s.data.planned.map((p) => (p.id === w.id ? { ...p, title } : p)) } }))
+    renderAt(`/athlete/workout/${w.id}`)
+    expect(screen.getByRole('heading', { level: 1, name: 'Test session' })).toBeTruthy()
+    expect(document.title).toBe(`${title} · Laree`)
   })
   it('pre-matches the session before opening the log sheet on Today', () => {
     const { data } = useLaree.getState()
@@ -64,7 +73,7 @@ describe('ActivityDetail', () => {
   it('renders for the athlete with a disabled Strava button', () => {
     const a = find()
     render(<ActivityDetail activityId={a.id} viewer="athlete" />, { wrapper: MemoryRouter })
-    expect(screen.getByRole('heading', { level: 1, name: a.title })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: sessionName(a.title, a.sport) })).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Share to Strava' }) as HTMLButtonElement).disabled).toBe(true)
     expect(screen.getByText(/Strava is outbound only/)).toBeTruthy()
     expect(screen.getByText(/Load \d/)).toBeTruthy()
@@ -72,6 +81,8 @@ describe('ActivityDetail', () => {
   it('renders for the coach, read-only, with the athlete name', () => {
     const a = find()
     render(<ActivityDetail activityId={a.id} viewer="coach" />, { wrapper: MemoryRouter })
+    // Coach screens keep the full title, sport prefix and all.
+    expect(screen.getByRole('heading', { level: 1, name: a.title })).toBeTruthy()
     expect(screen.getByText('Amir')).toBeTruthy()
     expect(screen.queryByRole('button', { name: /effort and notes/i })).toBeNull()
   })
@@ -83,9 +94,10 @@ describe('ActivityDetail', () => {
     render(<ActivityDetail activityId={other.id} viewer="athlete" />, { wrapper: MemoryRouter })
     expect(screen.getByRole('heading', { name: 'Activity not found' })).toBeTruthy()
   })
-  it('the athlete page reads the id from the route', () => {
+  it('the athlete page reads the id from the route and names the tab after the activity', () => {
     const a = find()
     renderAt(`/athlete/activity/${a.id}`)
-    expect(screen.getByRole('heading', { level: 1, name: a.title })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: sessionName(a.title, a.sport) })).toBeTruthy()
+    expect(document.title).toBe(`${a.title} · Laree`)
   })
 })

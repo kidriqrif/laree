@@ -3,9 +3,11 @@ import { MemoryRouter } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useViewer } from '../../../app/viewer.ts'
 import { currentDay, earnedAwards, selectFitnessSeries, selectProgress } from '../../../data/selectors.ts'
+import { ATHLETES } from '../../../data/seed/people.ts'
 import { useLaree } from '../../../data/store.ts'
+import { BADGE_KEYS } from '../../../domain/gamification.ts'
 import type { AthleteId } from '../../../domain/types.ts'
-import { countdownRace, countdownText, trendSentence } from './copy.ts'
+import { badgeFits, countdownRace, countdownText, raceDayFitness, trendSentence } from './copy.ts'
 import ProgressPage from './ProgressPage.tsx'
 
 beforeEach(() => {
@@ -46,6 +48,12 @@ describe('fitness trend', () => {
     expect(trendSentence(58.4, 44.2, 16)).toBe('Fitness 58, up 14 in 16 weeks.')
     expect(trendSentence(40, 45, 16)).toBe('Fitness 40, down 5 in 16 weeks.')
     expect(trendSentence(40, 40.2, 1)).toBe('Fitness 40, level over 1 week.')
+  })
+
+  it('words race-day Fitness as rising, holding or easing', () => {
+    expect(raceDayFitness(62.4, 55)).toBe('If the plan goes as written, Fitness rises to 62 by race day.')
+    expect(raceDayFitness(55.6, 55)).toBe('If the plan goes as written, Fitness holds near 56 by race day.')
+    expect(raceDayFitness(48, 55)).toBe('If the plan goes as written, Fitness eases to 48 by race day.')
   })
 
   it('shows the sentence from the series, explains Fitness and Form, and never names Fatigue', () => {
@@ -91,8 +99,23 @@ describe('badges', () => {
     const keys = new Set(earnedAwards(useLaree.getState().data, id, currentDay()).map((a) => a.key))
     const lockedList = screen.getByRole('list', { name: 'Badges not yet earned' })
     const lockedItems = within(lockedList).getAllByRole('listitem')
-    expect(lockedItems.length).toBe(11 - keys.size)
+    const sports = ATHLETES.find((a) => a.id === id)!.sports
+    expect(lockedItems.length).toBe(BADGE_KEYS.filter((k) => !keys.has(k) && badgeFits(k, sports)).length)
     for (const li of lockedItems) expect(li.textContent!.length).toBeGreaterThan(20)
+  })
+
+  it.each([
+    ['irfan', ['swim-5', 'run-50', 'first-brick']],
+    ['danial', ['bike-100', 'swim-5', 'first-brick']],
+  ] as const)('never offers %s a badge their sports cannot reach', (id, unreachable) => {
+    show(id)
+    for (const k of unreachable) expect(document.querySelector(`[data-locked="${k}"]`)).toBeNull()
+  })
+
+  it('a brick needs both bike and run', () => {
+    expect(badgeFits('first-brick', ['bike', 'run'])).toBe(true)
+    expect(badgeFits('first-brick', ['bike', 'strength'])).toBe(false)
+    expect(badgeFits('check-in-7', [])).toBe(true)
   })
 
   it('shows Amir new FTP face, the finish tape and no locked progress hints', () => {

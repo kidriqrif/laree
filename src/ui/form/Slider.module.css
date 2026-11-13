@@ -64,6 +64,17 @@
     border-radius: var(--radius-1);
   }
 
+  /*
+   * The coach thumb stays small to look at, but its pointer target grows to --target-min.
+   * Insets are measured from the padding box, so the 2px border comes off as well.
+   */
+  :global([data-register="coach"]) .thumb::before {
+    content: "";
+    position: absolute;
+    inset-inline: calc((var(--space-4) - var(--target-min)) / 2 - 2px);
+    inset-block: calc((var(--space-5) - var(--target-min)) / 2 - 2px);
+  }
+
   .thumb[data-dragging] {
     background: var(--color-action);
     cursor: grabbing;

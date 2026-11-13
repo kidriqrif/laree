@@ -1,6 +1,6 @@
 /** Check-ins page logic that is not drawing: grid metrics, inbox order and the undo helper. */
 import { fmtDay } from '../../../charts/index.ts'
-import type { HeatCell, HeatLevel } from '../../../charts/index.ts'
+import type { HeatCell, HeatLegendItem, HeatLevel } from '../../../charts/index.ts'
 import { ATHLETES } from '../../../data/seed/people.ts'
 import type { SeedCheckIn } from '../../../data/seed/index.ts'
 import { useLaree } from '../../../data/store.ts'
@@ -18,6 +18,8 @@ export interface MetricInfo {
   unit: string
   /** Lowest to highest legend labels. */
   legend: readonly [string, string, string, string, string]
+  /** Which end is the worry. That end is drawn hottest, so those cells draw the eye. */
+  concern: 'low' | 'high'
   value: (c: SeedCheckIn) => number | undefined
   decimals: number
 }
@@ -28,6 +30,7 @@ export const METRICS: readonly MetricInfo[] = [
     label: 'Sleep',
     unit: 'h',
     legend: ['Under 5 h', '5 to 6 h', '6 to 7 h', '7 to 8 h', '8 h or more'],
+    concern: 'low',
     value: (c) => c.sleepHours,
     decimals: 1,
   },
@@ -36,6 +39,7 @@ export const METRICS: readonly MetricInfo[] = [
     label: 'Soreness',
     unit: '',
     legend: ['1 none', '2', '3', '4', '5 very sore'],
+    concern: 'high',
     value: (c) => c.soreness,
     decimals: 0,
   },
@@ -44,6 +48,7 @@ export const METRICS: readonly MetricInfo[] = [
     label: 'Mood',
     unit: '',
     legend: ['1 low', '2', '3', '4', '5 high'],
+    concern: 'low',
     value: (c) => c.mood,
     decimals: 0,
   },
@@ -52,6 +57,7 @@ export const METRICS: readonly MetricInfo[] = [
     label: 'Resting heart rate',
     unit: 'bpm',
     legend: ['Well below usual', 'Below usual', 'Usual', 'Above usual', 'Well above usual'],
+    concern: 'high',
     value: (c) => c.restingHr,
     decimals: 0,
   },
@@ -60,6 +66,7 @@ export const METRICS: readonly MetricInfo[] = [
     label: 'HRV',
     unit: 'ms',
     legend: ['Well below usual', 'Below usual', 'Usual', 'Above usual', 'Well above usual'],
+    concern: 'low',
     value: (c) => c.hrvMs,
     decimals: 0,
   },
@@ -75,6 +82,17 @@ export const metricInfo = (id: GridMetric): MetricInfo => METRICS.find((m) => m.
 
 const bucket = (z: number): HeatLevel => (z < -1.5 ? 0 : z < -0.5 ? 1 : z <= 0.5 ? 2 : z <= 1.5 ? 3 : 4)
 
+/**
+ * Heat level for a step on the value scale (0 lowest value, 4 highest). When low is the worry,
+ * the scale flips so the worrying end is always the hottest colour.
+ */
+export const heatLevel = (info: MetricInfo, step: HeatLevel): HeatLevel =>
+  info.concern === 'low' ? ((4 - step) as HeatLevel) : step
+
+/** Legend in value order, each label on the colour its cells are drawn in. */
+export const legendFor = (info: MetricInfo): HeatLegendItem[] =>
+  info.legend.map((label, i) => ({ level: heatLevel(info, i as HeatLevel), label }))
+
 /** One heat cell for a check-in, or null when the athlete did not check in or left the value out. */
 export function cellFor(
   metric: GridMetric,
@@ -89,15 +107,16 @@ export function cellFor(
   const text = v.toFixed(info.decimals)
   const who = ATHLETES.find((a) => a.id === athleteId)?.name ?? athleteId
   const label = `${who}, ${fmtDay(checkIn.day)}: ${info.label} ${text}${info.unit ? ` ${info.unit}` : ''}`
+  const cell = (step: HeatLevel, glyph: string | false): HeatCell =>
+    glyph ? { level: heatLevel(info, step), text, glyph, label } : { level: heatLevel(info, step), text, label }
+  const rating = (Math.min(5, Math.max(1, Math.round(v))) - 1) as HeatLevel
   switch (metric) {
-    case 'sleep': {
-      const level: HeatLevel = v < 5 ? 0 : v < 6 ? 1 : v < 7 ? 2 : v < 8 ? 3 : 4
-      return v < 6 ? { level, text, glyph: '↓', label } : { level, text, label }
-    }
+    case 'sleep':
+      return cell(v < 5 ? 0 : v < 6 ? 1 : v < 7 ? 2 : v < 8 ? 3 : 4, v < 6 && '↓')
     case 'soreness':
-      return { level: (Math.min(5, Math.max(1, Math.round(v))) - 1) as HeatLevel, text, ...(v >= 4 ? { glyph: '↑' } : {}), label }
+      return cell(rating, v >= 4 && '↑')
     case 'mood':
-      return { level: (Math.min(5, Math.max(1, Math.round(v))) - 1) as HeatLevel, text, ...(v <= 2 ? { glyph: '↓' } : {}), label }
+      return cell(rating, v <= 2 && '↓')
     case 'rhr':
     case 'hrv': {
       const key = metric === 'rhr' ? 'restingHr' : 'hrvMs'
@@ -106,7 +125,7 @@ export function cellFor(
       const sd = b.sd && b.sd > 0 ? b.sd : metric === 'rhr' ? 1.5 : b.mean * 0.07
       const z = (v - b.mean) / sd
       const worse = metric === 'rhr' ? z > 1 : z < -1
-      return { level: bucket(z), text, ...(worse ? { glyph: metric === 'rhr' ? '↑' : '↓' } : {}), label }
+      return cell(bucket(z), worse && (metric === 'rhr' ? '↑' : '↓'))
     }
   }
 }

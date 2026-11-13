@@ -139,7 +139,11 @@
     font-weight: 600;
   }
 
+  /* A standalone link, so it gets the full coach target height, not just its line box. */
   .link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--target-min);
     color: var(--color-text);
     text-decoration: underline;
     text-underline-offset: 3px;

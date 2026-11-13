@@ -11,13 +11,16 @@ import type { LareeData } from '../../../data/store.ts'
 import { useLaree } from '../../../data/store.ts'
 import { PLAN_LAST_WEEK } from '../../../data/seed/index.ts'
 import { thresholdsOn } from '../../../data/seed/people.ts'
+import { BAND_LABELS, band, displayPct, roundHalfAway } from '../../../domain/metrics/compliance.ts'
 import { formBand } from '../../../domain/metrics/fitness.ts'
+import type { PolarisationResult } from '../../../domain/metrics/zones.ts'
 import type { ComplianceBand } from '../../../domain/types.ts'
 import { relativeWeek, weekOfDay, weekRange } from '../../../domain/time.ts'
 import { Curve, FORM_BAND_LABEL, Heatmap, PMC, Bars, ZoneBar, fmtDay, fmtNumber, fmtPace, fmtSigned } from '../../../charts/index.ts'
 import type { BarDatum, HeatCell, HeatLevel, HeatRow } from '../../../charts/index.ts'
 import { Card, Chip, Skeleton } from '../../../ui/core/index.ts'
 import { SegmentedControl } from '../../../ui/form/index.ts'
+import { RAMP_CAUTION, rampAboveCaution } from '../overview/roster.ts'
 import { digestOf, paceCurves, powerCurves, zoneSummary } from './digest.ts'
 import type { ActivityDigest } from './digest.ts'
 import styles from './AnalyticsPage.module.css'
@@ -31,7 +34,6 @@ export const RANGES = [
 export type RangeId = (typeof RANGES)[number]['id']
 const DEFAULT_RANGE: RangeId = '8w'
 const PREF_KEY = 'analyticsRange'
-const RAMP_CAUTION = 8
 const isRange = (v: unknown): v is RangeId => RANGES.some((r) => r.id === v)
 
 /** An error tile in place of one chart that failed to draw. */
@@ -52,17 +54,28 @@ class TileBoundary extends Component<{ name: string; children: ReactNode }, { fa
   }
 }
 
+/** Status-scale level per band (Heatmap scale "status"): 0 on plan, 1 short or under, 2 over, 3 well over, 4 missed. */
 const BAND_LEVEL: Record<ComplianceBand, HeatLevel> = {
   onPlan: 0,
   short: 1,
-  over: 1,
-  under: 2,
+  under: 1,
+  over: 2,
   wellOver: 3,
   missed: 4,
+  unplanned: 0,
+}
+/** Which band to show when a day has more than one session: the furthest from plan. */
+const BAND_SEVERITY: Record<ComplianceBand, number> = {
+  onPlan: 0,
   unplanned: 1,
+  over: 2,
+  under: 3,
+  wellOver: 4,
+  short: 5,
+  missed: 6,
 }
 const BAND_GLYPH: Record<ComplianceBand, string> = {
-  onPlan: '',
+  onPlan: '✓',
   short: '−',
   over: '+',
   under: '↓',
@@ -70,12 +83,33 @@ const BAND_GLYPH: Record<ComplianceBand, string> = {
   missed: '×',
   unplanned: '',
 }
+const COMPLIANCE_LEGEND = [
+  { level: 0, label: '✓ On plan' },
+  { level: 1, label: '− Short, ↓ Under' },
+  { level: 2, label: '+ Over' },
+  { level: 3, label: '↑ Well over' },
+  { level: 4, label: '× Missed' },
+] as const
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-function weekCell(pct: number | null): HeatCell | null {
+/** The Week row: the week's compliance put in the same bands as a session. */
+function weekCell(pct: number | null, weekLabel: string, soFar = false): HeatCell | null {
   if (pct === null) return null
-  const level: HeatLevel = pct >= 90 ? 0 : pct >= 80 ? 1 : pct >= 60 ? 2 : 3
-  return { level, text: String(Math.round(pct)), label: `Week compliance ${Math.round(pct)}%` }
+  const b = band(roundHalfAway(pct, 1))
+  const shown = displayPct(roundHalfAway(pct, 1))
+  return {
+    level: BAND_LEVEL[b],
+    text: String(shown),
+    glyph: BAND_GLYPH[b],
+    label: `Week of ${weekLabel}${soFar ? ', so far' : ''}: ${shown}%, ${BAND_LABELS[b].toLowerCase()}`,
+  }
+}
+
+/** The polarisation caption: a verdict only when there is an index to back it. */
+function polarisationNote(p: PolarisationResult): string {
+  if (p.status === 'insufficient') return 'Not enough zone data in this period'
+  if (p.index === null) return 'No score yet. It needs most time at easy effort, and more hard time than middle.'
+  return p.label
 }
 
 /** Digests of an athlete's detailed activities, worked out after first paint so the page opens at once. */
@@ -161,9 +195,10 @@ export default function AnalyticsPage() {
     label: fmtDay(weekRange(w.week).firstDay),
     value: Math.round(w.doneLoad),
     target: w.plannedLoad > 0 ? Math.round(w.plannedLoad) : null,
+    partial: w.week === week,
   }))
 
-  // Compliance by week: days across, weeks down the page, finished weeks only.
+  // Compliance by week: days across, weeks down the page, up to this week (marked "so far").
   const compWeeks = weeks.filter((w) => w.week <= week)
   const complianceRows: HeatRow[] = [
     ...WEEKDAYS.map((label, di) => ({
@@ -175,20 +210,28 @@ export default function AnalyticsPage() {
         const scored = items.filter((i) => i.evaluation?.band)
         if (scored.length === 0) return null
         const worst = scored.reduce((a, b) =>
-          BAND_LEVEL[b.evaluation?.band ?? 'onPlan'] > BAND_LEVEL[a.evaluation?.band ?? 'onPlan'] ? b : a,
+          BAND_SEVERITY[b.evaluation?.band ?? 'onPlan'] > BAND_SEVERITY[a.evaluation?.band ?? 'onPlan'] ? b : a,
         )
-        const band = worst.evaluation?.band ?? 'onPlan'
+        const dayBand = worst.evaluation?.band ?? 'onPlan'
         const pct = worst.evaluation?.compliance?.shownPct
+        const text = dayBand === 'missed' ? '0' : pct === undefined ? '' : String(pct)
+        const word = BAND_LABELS[dayBand].toLowerCase()
         return {
-          level: BAND_LEVEL[band],
-          text: band === 'missed' ? '0' : pct === undefined ? '' : String(pct),
-          glyph: BAND_GLYPH[band],
+          level: BAND_LEVEL[dayBand],
+          text,
+          glyph: BAND_GLYPH[dayBand],
+          label: `${label} ${fmtDay(day)}: ${dayBand === 'missed' || text === '' ? word : `${text}%, ${word}`}`,
         }
       }),
     })),
-    { key: 'week', label: 'Week', cells: compWeeks.map((w) => weekCell(w.compliance)) },
+    {
+      key: 'week',
+      label: 'Week',
+      cells: compWeeks.map((w) => weekCell(w.compliance, fmtDay(weekRange(w.week).firstDay), w.week === week)),
+    },
   ]
-  const finished = compWeeks.filter((w) => w.compliance !== null)
+  // The mean and its base count finished weeks only: this week is not over yet.
+  const finished = compWeeks.filter((w) => w.week < week && w.compliance !== null)
   const meanCompliance = finished.length
     ? finished.reduce((t, w) => t + (w.compliance ?? 0), 0) / finished.length
     : null
@@ -200,8 +243,9 @@ export default function AnalyticsPage() {
   const pace = digests ? paceCurves(digests, today) : null
 
   const ramp = nowPoint?.ramp ?? null
-  const rampHigh = ramp !== null && ramp >= RAMP_CAUTION
-  const band = nowPoint ? formBand(nowPoint.form) : null
+  const rampHigh = rampAboveCaution(ramp)
+  const formNow = nowPoint ? formBand(nowPoint.form) : null
+  const over = spec.weeks === 0 ? 'plan' : spec.label
   const warmingUp = today < 42
 
   return (
@@ -227,34 +271,41 @@ export default function AnalyticsPage() {
       <dl className={styles.stats} aria-label={`${name}, today`}>
         <div className={styles.stat}>
           <dt>Fitness</dt>
-          <dd data-numeric>{nowPoint ? fmtNumber(nowPoint.fitness) : '–'}</dd>
-          <p className={styles.base} data-numeric>
-            {nowPoint && earlier ? `${fmtSigned(nowPoint.fitness - earlier.fitness)} over ${spec.weeks === 0 ? 'plan' : spec.label}` : ''}
-          </p>
+          <dd className={styles.value} data-numeric>{nowPoint ? fmtNumber(nowPoint.fitness) : '–'}</dd>
+          <dd className={styles.base} data-numeric>
+            {nowPoint && earlier ? `${fmtSigned(nowPoint.fitness - earlier.fitness)} over ${over}` : ''}
+          </dd>
         </div>
         <div className={styles.stat}>
           <dt>Fatigue</dt>
-          <dd data-numeric>{nowPoint ? fmtNumber(nowPoint.fatigue) : '–'}</dd>
+          <dd className={styles.value} data-numeric>{nowPoint ? fmtNumber(nowPoint.fatigue) : '–'}</dd>
+          <dd className={styles.base} data-numeric>
+            {nowPoint && earlier ? `${fmtSigned(nowPoint.fatigue - earlier.fatigue)} over ${over}` : ''}
+          </dd>
         </div>
         <div className={styles.stat}>
           <dt>Form</dt>
-          <dd data-numeric>{nowPoint ? fmtSigned(nowPoint.form) : '–'}</dd>
-          {band ? <p className={styles.base}>{FORM_BAND_LABEL[band]}</p> : null}
+          <dd className={styles.value} data-numeric>{nowPoint ? fmtSigned(nowPoint.form) : '–'}</dd>
+          {formNow ? <dd className={styles.base}>{FORM_BAND_LABEL[formNow]}</dd> : null}
         </div>
         <div className={styles.stat} data-caution={rampHigh ? 'true' : undefined}>
           <dt>Ramp</dt>
-          <dd data-numeric>{ramp !== null ? `${fmtSigned(ramp, 1)} a week` : '–'}</dd>
-          {rampHigh ? <Chip glyph="!">Above {RAMP_CAUTION} a week</Chip> : <p className={styles.base}>Caution at {RAMP_CAUTION}</p>}
+          <dd className={styles.value} data-numeric>{ramp !== null ? `${fmtSigned(ramp, 1)} a week` : '–'}</dd>
+          <dd className={styles.base}>
+            {rampHigh ? <Chip glyph="!">Above {RAMP_CAUTION} a week</Chip> : `Caution above ${RAMP_CAUTION}`}
+          </dd>
         </div>
         <div className={styles.stat}>
           <dt>Compliance</dt>
-          <dd data-numeric>{meanCompliance === null ? '–' : `${fmtNumber(meanCompliance)}%`}</dd>
-          <p className={styles.base}>{finished.length} {finished.length === 1 ? 'week' : 'weeks'}</p>
+          <dd className={styles.value} data-numeric>{meanCompliance === null ? '–' : `${fmtNumber(meanCompliance)}%`}</dd>
+          <dd className={styles.base}>{finished.length} {finished.length === 1 ? 'week' : 'weeks'}</dd>
         </div>
         <div className={styles.stat}>
           <dt>Polarisation</dt>
-          <dd data-numeric>{zones ? (zones.polarisation.index === null ? '–' : fmtNumber(zones.polarisation.index, 2)) : '…'}</dd>
-          <p className={styles.base}>{zones ? zones.polarisation.label : 'Working out'}</p>
+          <dd className={styles.value} data-numeric>
+            {zones ? (zones.polarisation.index === null ? '–' : fmtNumber(zones.polarisation.index, 2)) : '…'}
+          </dd>
+          <dd className={styles.base}>{zones ? polarisationNote(zones.polarisation) : 'Working out'}</dd>
         </div>
       </dl>
 
@@ -295,13 +346,8 @@ export default function AnalyticsPage() {
                 measure="Compliance"
                 columns={compWeeks.map((w) => ({ key: `w${w.week}`, label: fmtDay(weekRange(w.week).firstDay) }))}
                 rows={complianceRows}
-                legend={[
-                  { level: 0, label: 'On plan' },
-                  { level: 1, label: 'Short or over' },
-                  { level: 2, label: 'Under' },
-                  { level: 3, label: 'Well over' },
-                  { level: 4, label: 'Missed' },
-                ]}
+                scale="status"
+                legend={COMPLIANCE_LEGEND}
                 onCellActivate={(_row, col) => {
                   const w = Number(col.slice(1))
                   navigate(`/coach/calendar/${athleteId}?w=${relativeWeek(w)}`)
@@ -322,7 +368,7 @@ export default function AnalyticsPage() {
                   <p className={styles.line} data-numeric>
                     Easy {zones.shares.easy}% · Middle {zones.shares.middle}% · Hard {zones.shares.hard}%
                     {' · '}
-                    {zones.polarisation.label}
+                    {polarisationNote(zones.polarisation)}
                     {zones.polarisation.index === null ? '' : ` (${fmtNumber(zones.polarisation.index, 2)})`}
                   </p>
                 </>

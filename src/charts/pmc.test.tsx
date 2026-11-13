@@ -49,6 +49,16 @@ describe('PMC', () => {
     expect(text).toContain('Steady');
   });
 
+  it('tints and names the Form bands in their own panel, below Fitness and Fatigue', () => {
+    const { container } = render(<PMC points={pmcPoints(100)} today={196} width={480} />);
+    const bands = Array.from(container.querySelectorAll('rect[data-band]'));
+    expect(bands.length).toBeGreaterThan(0);
+    // Default height 240: plot is 196 tall, the top panel 109, then a 14 gap, so Form starts at 123.
+    expect(bands.map((r) => Number(r.getAttribute('y'))).every((y) => y >= 123)).toBe(true);
+    const words = Array.from(container.querySelectorAll('svg text')).map((t) => t.textContent);
+    expect(words).toEqual(expect.arrayContaining(['Building', 'Steady', 'Fresh']));
+  });
+
   it('keyboard stepping moves the readout', () => {
     render(<PMC points={pmcPoints(10)} today={109} width={400} />);
     const readout = screen.getByTestId('pmc-readout');
@@ -91,6 +101,13 @@ describe('Heatmap', () => {
     expect((cells[5] as HTMLElement).tabIndex).toBe(0);
     expect((cells[0] as HTMLElement).tabIndex).toBe(-1);
     expect(screen.getByRole('list', { name: 'Legend' })).toBeTruthy();
+  });
+
+  it('takes the status scale for compliance grids', () => {
+    const { container, rerender } = render(<Heatmap title="Sleep" columns={cols(2)} rows={rows(1, 2)} />);
+    expect(container.querySelector('[data-scale="heat"]')).not.toBeNull();
+    rerender(<Heatmap title="Plan" columns={cols(2)} rows={rows(1, 2)} scale="status" />);
+    expect(container.querySelector('[data-scale="status"]')).not.toBeNull();
   });
 });
 

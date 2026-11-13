@@ -26,6 +26,9 @@ import type { AthleteId, ComplianceBand, DayOffset, PhaseKind, PlannedWorkout, R
 /** Ramp above this, in Fitness points a week, gets the caution glyph (IA C1). */
 export const RAMP_CAUTION = 8
 
+/** The one Ramp caution test, shared by Overview and Analytics: strictly above RAMP_CAUTION. */
+export const rampAboveCaution = (ramp: number | null): boolean => ramp !== null && ramp > RAMP_CAUTION
+
 /** Weekly Fitness points drawn in the trend sparkline. */
 export const TREND_WEEKS = 8
 

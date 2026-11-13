@@ -1,9 +1,28 @@
 import type { BadgeAward, BadgeKey, StreakResult } from '../../../domain/gamification.ts'
 import { formBand } from '../../../domain/metrics/fitness.ts'
 import type { FormBand } from '../../../domain/metrics/fitness.ts'
-import type { DayOffset, Race } from '../../../domain/types.ts'
+import type { DayOffset, Race, Sport } from '../../../domain/types.ts'
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+/** The sports a badge needs. A badge an athlete's sports cannot reach is never offered as a goal. */
+const BADGE_SPORTS: Partial<Record<BadgeKey, readonly Sport[]>> = {
+  'swim-5': ['swim'],
+  'run-50': ['run'],
+  'bike-100': ['bike'],
+  'first-brick': ['bike', 'run'],
+}
+
+export const badgeFits = (key: BadgeKey, sports: readonly Sport[]): boolean =>
+  (BADGE_SPORTS[key] ?? []).every((s) => sports.includes(s))
+
+/** Race-day Fitness against Fitness today: rises to, holds near, or eases to. */
+export function raceDayFitness(atRace: number, now: number): string {
+  const a = Math.round(atRace)
+  const d = a - Math.round(now)
+  const move = d > 1 ? 'rises to' : d < -1 ? 'eases to' : 'holds near'
+  return `If the plan goes as written, Fitness ${move} ${a} by race day.`
+}
 
 /** The race to count down to: the next A race, else the next race of any priority. */
 export function countdownRace(races: readonly Race[], today: DayOffset): Race | undefined {

@@ -51,7 +51,7 @@ export function canTurnOff(owner: PersonId, viewer: ViewerLike): boolean {
 
 /** Shown instead of the usual confirmation when turning AI off could not be saved at all. */
 export const WITHDRAWAL_UNSAVED =
-  'AI is off for now, but this device could not save that choice. After a reload it may be on again, so check this setting then.'
+  'AI is off for now, but this device could not save that choice for good. After a reload or a browser restart it may be on again, so check this setting then.'
 
 /** What Me says under the toggle, for each state (docs/ia 7.6). */
 export function athleteStatusLine(state: AiState): string {

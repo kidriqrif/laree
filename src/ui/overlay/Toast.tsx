@@ -5,7 +5,7 @@ import {
   UNSTABLE_ToastQueue as ToastQueue,
   UNSTABLE_ToastRegion as AriaToastRegion,
 } from 'react-aria-components/Toast'
-import { IconClose } from '../icons/index.ts'
+import { IconClose } from '../icons/icons-core.tsx'
 import { Button } from '../core/Button.tsx'
 import { IconButton } from '../core/IconButton.tsx'
 import type { RegisterName } from './useRegister.ts'

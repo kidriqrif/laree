@@ -41,7 +41,10 @@ export const Slider = forwardRef<HTMLDivElement, SliderProps>(function Slider(
               <div className={styles.rail}>
                 <div className={styles.fill} style={{ inlineSize: `${state.getThumbPercent(0) * 100}%` }} />
               </div>
-              <SliderThumb className={styles.thumb} aria-valuetext={`${state.getThumbValueLabel(0)}${unit}`} />
+              <SliderThumb
+                className={styles.thumb}
+                isInvalid={error ? true : undefined}
+                aria-valuetext={`${state.getThumbValueLabel(0)}${unit}`} />
             </>
           )}
         </SliderTrack>

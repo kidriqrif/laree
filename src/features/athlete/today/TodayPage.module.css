@@ -50,6 +50,11 @@
     min-inline-size: 0;
   }
 
+  /* The badge live region stays in the page; while it is empty it takes no row, so no gap. */
+  .badgeSlot:empty {
+    position: absolute;
+  }
+
   .hero {
     display: grid;
     gap: var(--space-4);
@@ -347,21 +352,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* The whole tile is the link's target; the focus ring follows the tile. */
+  /* The whole tile is the link's target. The link keeps the standard focus ring from base.css. */
   .lapLink::after {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: var(--radius-card);
-  }
-
-  .lapLink:focus-visible {
-    outline: none;
-  }
-
-  .lapLink:focus-visible::after {
-    outline: var(--focus-ring-width) solid var(--color-focus);
-    outline-offset: var(--focus-ring-offset);
   }
 
   .lap {
@@ -403,10 +399,6 @@
   @media (forced-colors: active) {
     .key {
       border: 1px solid CanvasText;
-    }
-
-    .lapLink:focus-visible::after {
-      outline-color: Highlight;
     }
   }
 }
