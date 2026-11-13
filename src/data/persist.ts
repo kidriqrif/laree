@@ -142,6 +142,12 @@ export function readAiWithdrawn(): string[] {
   return [...new Set([...readNote(area()), ...readNote(sessionArea())])]
 }
 
+/** Withdrawals noted only in sessionStorage. Closing the browser drops them, so they still count as unsaved. */
+export function readAiWithdrawnSessionOnly(): string[] {
+  const local = new Set(readNote(area()))
+  return readNote(sessionArea()).filter((o) => !local.has(o))
+}
+
 /**
  * Record or clear one person's withdrawal. A withdrawal goes to localStorage; only when that
  * fails does it go to sessionStorage, which has its own quota. Clearing removes it from both.

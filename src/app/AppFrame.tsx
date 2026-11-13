@@ -1,7 +1,7 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role, react/set-state-in-effect -- status region; the toast reports the viewer syncing to the router location */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useMatches } from 'react-router'
-import { docTitle } from './pageTitle.ts'
+import { writeRouteTitle } from './pageTitle.ts'
 import { personName } from './people.ts'
 import { RoleSwitcher } from './RoleSwitcher.tsx'
 import { StorageBanner } from './StorageBanner.tsx'
@@ -37,7 +37,7 @@ export function AppFrame() {
 
   // A layout effect, so a page's usePageTitle (a passive effect) can name itself after this.
   useLayoutEffect(() => {
-    document.title = docTitle(title)
+    writeRouteTitle(title)
   }, [title])
 
   // A new page (not a search-only change) is announced by its title; focus stays where the page puts it.

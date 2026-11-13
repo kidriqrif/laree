@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { Curve, Heatmap, PMC } from './index.ts';
 import type { HeatRow } from './index.ts';
 
@@ -108,6 +108,11 @@ describe('Heatmap', () => {
     expect(container.querySelector('[data-scale="heat"]')).not.toBeNull();
     rerender(<Heatmap title="Plan" columns={cols(2)} rows={rows(1, 2)} scale="status" />);
     expect(container.querySelector('[data-scale="status"]')).not.toBeNull();
+    // Without a legend prop, the status scale names states, not Lowest to Highest.
+    const legend = within(screen.getByRole('list', { name: 'Legend' }));
+    expect(legend.getByText('On plan')).toBeTruthy();
+    expect(legend.getByText('Missed')).toBeTruthy();
+    expect(legend.queryByText('Lowest')).toBeNull();
   });
 });
 

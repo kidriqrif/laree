@@ -41,7 +41,7 @@ export interface HeatmapProps {
   title: string;
   columns: readonly HeatColumn[];
   rows: readonly HeatRow[];
-  /** Legend entries; defaults to Lowest to Highest. */
+  /** Legend entries; defaults to Lowest to Highest, or to the five compliance states on the status scale. */
   legend?: readonly HeatLegendItem[];
   /** Name of what the cells measure, for summaries, e.g. "Sleep". */
   measure?: string;
@@ -60,6 +60,15 @@ const DEFAULT_LEGEND: readonly HeatLegendItem[] = [
   { level: 4, label: 'Highest' },
 ];
 
+/* The status scale names states, not amounts, so its default legend must too. */
+const STATUS_LEGEND: readonly HeatLegendItem[] = [
+  { level: 0, label: 'On plan' },
+  { level: 1, label: 'Short or under' },
+  { level: 2, label: 'Over' },
+  { level: 3, label: 'Well over' },
+  { level: 4, label: 'Missed' },
+];
+
 function focusCell(r: number, c: number, root: HTMLElement) {
   root.querySelector<HTMLElement>(`[data-r="${r}"][data-c="${c}"]`)?.focus();
 }
@@ -76,12 +85,13 @@ export function Heatmap({
   title,
   columns,
   rows,
-  legend = DEFAULT_LEGEND,
+  legend,
   measure,
   onCellActivate,
   scale = 'heat',
   className,
 }: HeatmapProps) {
+  const legendItems = legend ?? (scale === 'status' ? STATUS_LEGEND : DEFAULT_LEGEND);
   const nr = rows.length;
   const nc = columns.length;
   const [pos, setPos] = useState<[number, number]>([0, 0]);
@@ -235,7 +245,7 @@ export function Heatmap({
           </div>
         )}
         <ul className={styles.legend} aria-label="Legend">
-          {legend.map((l) => (
+          {legendItems.map((l) => (
             <li key={l.level}>
               <span className={styles.chip} data-level={l.level} aria-hidden="true" />
               {l.label}

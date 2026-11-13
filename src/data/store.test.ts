@@ -244,7 +244,23 @@ describe('AI withdrawal that could not be saved', () => {
     // The session note ends with the browser, so the warning stays for that owner.
     expect(useLaree.getState().aiUnsavedOwners).toEqual(['amir'])
     expect(sessionStorage.getItem('laree:ai-withdrawn')).toContain('amir')
+    // A fresh load starts with no warning; loading must bring it back from the session note.
+    useLaree.setState({ aiUnsavedOwners: [], aiWithdrawalUnsaved: false })
     await useLaree.persist.rehydrate()
     expect(consent('amir')).toBe(false)
+    expect(useLaree.getState().aiUnsavedOwners).toEqual(['amir'])
+    expect(useLaree.getState().aiWithdrawalUnsaved).toBe(true)
+  })
+
+  it('does not warn after a reload when the withdrawal note lasts in localStorage', async () => {
+    asAthlete()
+    useLaree.getState().setAiConsent('amir', true)
+    const saved = localStorage.getItem(STORE_KEY)!
+    // The main save still says on, but a lasting note says off.
+    vi.stubGlobal('localStorage', stubStore({ [STORE_KEY]: saved, 'laree:ai-withdrawn': JSON.stringify(['amir']) }, false))
+    useLaree.setState({ aiUnsavedOwners: [], aiWithdrawalUnsaved: false })
+    await useLaree.persist.rehydrate()
+    expect(consent('amir')).toBe(false)
+    expect(useLaree.getState().aiWithdrawalUnsaved).toBe(false)
   })
 })

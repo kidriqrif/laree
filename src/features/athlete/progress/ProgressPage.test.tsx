@@ -7,7 +7,7 @@ import { ATHLETES } from '../../../data/seed/people.ts'
 import { useLaree } from '../../../data/store.ts'
 import { BADGE_KEYS } from '../../../domain/gamification.ts'
 import type { AthleteId } from '../../../domain/types.ts'
-import { badgeFits, countdownRace, countdownText, raceDayFitness, trendSentence } from './copy.ts'
+import { BADGES, badgeFits, countdownRace, countdownText, raceDayFitness, trendSentence } from './copy.ts'
 import ProgressPage from './ProgressPage.tsx'
 
 beforeEach(() => {
@@ -109,7 +109,12 @@ describe('badges', () => {
     ['danial', ['bike-100', 'swim-5', 'first-brick']],
   ] as const)('never offers %s a badge their sports cannot reach', (id, unreachable) => {
     show(id)
-    for (const k of unreachable) expect(document.querySelector(`[data-locked="${k}"]`)).toBeNull()
+    // Read the names the athlete sees on the "Still to earn" list, not a data attribute.
+    const lockedList = screen.getByRole('list', { name: 'Badges not yet earned' })
+    const shown = within(lockedList)
+      .getAllByRole('listitem')
+      .map((li) => li.querySelector('strong')?.textContent)
+    for (const k of unreachable) expect(shown).not.toContain(BADGES[k].name)
   })
 
   it('a brick needs both bike and run', () => {

@@ -42,6 +42,7 @@ import {
   noteAiWithdrawn,
   onStorageStatus,
   readAiWithdrawn,
+  readAiWithdrawnSessionOnly,
   STORE_KEY,
 } from './persist.ts'
 import { generateSeed } from './seed/index.ts'
@@ -268,13 +269,16 @@ function flagRow(rec: FlagRecord, data: LareeData, existing: Flag | undefined): 
 /** Owners whose consent was turned off but not saved anywhere yet. Kept out of persisted state. */
 const unsavedWithdrawals = new Set<string>()
 
-/** Consent withdrawn while the main save was failing stays withdrawn after a reload. */
-function withAiWithdrawals(data: LareeData): LareeData {
+/**
+ * Consent withdrawn while the main save was failing stays withdrawn after a reload.
+ * Also says which owners the notes had to turn off: the main save still holds their old choice.
+ */
+function withAiWithdrawals(data: LareeData): { data: LareeData; withdrawn: PersonId[] } {
   const owners = readAiWithdrawn().filter((o): o is PersonId => o in data.settings && data.settings[o as PersonId].aiConsent)
-  if (owners.length === 0) return data
+  if (owners.length === 0) return { data, withdrawn: [] }
   const settings = { ...data.settings }
   for (const o of owners) settings[o] = { ...settings[o], aiConsent: false }
-  return { ...data, settings }
+  return { data: { ...data, settings }, withdrawn: owners }
 }
 
 /** Flags in list shape follow their lifecycle records, including records the rules just opened. */
@@ -645,7 +649,14 @@ export const useLaree = create<LareeState>()(
         // Day offsets count from the Monday 16 weeks before this week. A saved copy from an
         // earlier week would sit on the wrong dates, so a new week starts from a fresh seed.
         if (p.anchor !== current.anchor) return current
-        return { ...current, data: withAiWithdrawals({ ...current.data, ...p.data }) }
+        const { data, withdrawn } = withAiWithdrawals({ ...current.data, ...p.data })
+        // A withdrawal the main save missed and only the session note holds is still unsaved after a
+        // reload (docs/spec/ai.md 4.1). A local note lasts, so it counts as saved.
+        const sessionOnly = readAiWithdrawnSessionOnly()
+        const unsaved = withdrawn.filter((o) => sessionOnly.includes(o))
+        if (unsaved.length === 0) return { ...current, data }
+        for (const o of unsaved) unsavedWithdrawals.add(o)
+        return { ...current, data, aiUnsavedOwners: [...unsavedWithdrawals], aiWithdrawalUnsaved: true }
       },
     },
   ),

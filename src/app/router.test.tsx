@@ -137,6 +137,14 @@ describe('athlete shell', () => {
     expect(screen.getByRole('link', { name: 'Week' }).getAttribute('aria-current')).toBe('page')
     expect(screen.getByRole('button', { name: /Back/ })).toBeTruthy()
   })
+
+  it('drops the old workout name from the tab when the next workout is not found', async () => {
+    const router = renderAt(`/athlete/workout/${ids().workout.id}`)
+    await waitFor(() => expect(document.title).toBe(`${ids().workout.title} · Laree`))
+    // Same route, so the route title does not change; the page must put it back itself.
+    await router.navigate('/athlete/workout/no-such-workout')
+    await waitFor(() => expect(document.title).toBe('Workout · Laree'))
+  })
 })
 
 describe('coach shell', () => {
