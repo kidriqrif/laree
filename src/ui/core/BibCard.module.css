@@ -63,6 +63,9 @@
     font-size: var(--text-4xl);
     font-variant-numeric: tabular-nums;
     line-height: 1;
+    /* A word figure ("Kudos") at a large browser text size breaks rather than leaving the bib. */
+    max-inline-size: 100%;
+    overflow-wrap: anywhere;
   }
 
   .caption {

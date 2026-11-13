@@ -268,7 +268,9 @@
     /* App chrome: the prototype switcher bar and the athlete bottom bar. The coach register keeps a compact switcher. */
     --switcher-h: 48px;
     --switcher-target: 44px;
-    --bar-h: 64px;
+    /* 64 px at the default text size. The rem part is room for two lines of tab label, so the bar
+       grows with the browser text size instead of clipping a label that wraps. */
+    --bar-h: calc(40px + 1.5rem);
     /* The athlete column: pages, the bottom bar and athlete sheets all stay inside it. */
     --column-max: 560px;
   }
@@ -342,20 +344,6 @@
     --text-3xl: calc(var(--text-base) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio));
     --text-4xl: calc(var(--text-base) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio));
     --text-data: calc(var(--text-base) * 0.9);
-  }
-
-  /* The athlete display steps stop growing at a share of the viewport. At a large browser text size a
-     single display word ("Preferences", "Progress", "Kudos" on a bib) would otherwise be wider than a phone and push the
-     page sideways. At the default size every cap sits above its step down to a 320 px screen, so
-     nothing changes there. */
-  [data-register="athlete"] {
-    --text-xl: min(calc(var(--text-base) * var(--type-ratio) * var(--type-ratio)), 9.5vw);
-    --text-2xl: min(calc(var(--text-base) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio)), 11vw);
-    --text-3xl: min(calc(var(--text-base) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio)), 13vw);
-    --text-4xl: min(
-      calc(var(--text-base) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio) * var(--type-ratio)),
-      18vw
-    );
   }
 
   [data-register="coach"] {

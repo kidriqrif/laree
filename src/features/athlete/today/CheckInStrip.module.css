@@ -29,8 +29,10 @@
     color: var(--color-text-muted);
   }
 
+  /* Side by side at the default size; at a large text size on a small phone the two buttons stack. */
   .actions {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-2);
   }
 }

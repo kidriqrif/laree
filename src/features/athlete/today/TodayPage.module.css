@@ -113,8 +113,11 @@
 
   .figureLine {
     display: inline-flex;
+    /* At a large text size on a small phone the unit drops under the figure. */
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: baseline;
-    gap: var(--space-2);
+    gap: 0 var(--space-2);
   }
 
   .unit {
@@ -268,8 +271,11 @@
     list-style: none;
   }
 
+  /* One line at the default size. At a large text size the parts wrap (a missed row's chip, its
+     text and "Log it" stack) rather than making the row wider than the screen. */
   .row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-3);
     min-block-size: 56px;
@@ -291,7 +297,7 @@
 
   .rowMain {
     display: grid;
-    flex: 1;
+    flex: 1 1 5rem;
     gap: 2px;
     min-inline-size: 0;
   }

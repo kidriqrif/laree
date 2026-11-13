@@ -11,10 +11,10 @@ The milestone gate is green: typecheck, lint (no errors), 1297 tests, build, man
 | Automated audit | [automated.md](parts/automated.md) | 2 | 0 | 2 | 1 |
 | Athlete screens | [athlete.md](parts/athlete.md) | 18 | 0 | 4 | 0 |
 | Coach screens | [coach.md](parts/coach.md) | 23 | 2 | 2 | 0 |
-| Keyboard, zoom, motion, contrast | [accessibility.md](parts/accessibility.md) | 20 | 0 | 2 | 0 |
+| Keyboard, zoom, motion, contrast | [accessibility.md](parts/accessibility.md) | 21 | 0 | 2 | 0 |
 | PWA and rename safety | [pwa.md](parts/pwa.md) | 0 | 0 | 2 | 0 |
 | Data and AI consent (code review) | Below | 4 | 0 | 0 | 0 |
-| **Total** | | **67** | **2** | **12** | **1** |
+| **Total** | | **68** | **2** | **12** | **1** |
 
 Every high-severity finding is fixed. Counts are per table row; a row can carry two IDs that named the same problem.
 
@@ -62,6 +62,6 @@ These came from code review of the AI consent work and were fixed in this milest
 
 ## Not verified this round
 
-- 200% zoom, reduced motion and colour blindness were first passed on their rules alone. They have since been checked in the browser (T11.4b), which found and fixed ten zoom problems (Z1 to Z10 in [accessibility.md](parts/accessibility.md)).
+- 200% zoom, reduced motion and colour blindness were first passed on their rules alone. They have since been checked in the browser (T11.4b), which found and fixed eleven zoom problems (Z1 to Z11 in [accessibility.md](parts/accessibility.md)).
 - Offline reload and app install were not re-tested. Offline reload has since passed in the M12 check ([live-check.md](live-check.md)). Install needs a phone and the merged live site.
 - Rejected: DET-1, the detector's stripe advisory on Analytics. The stripes are the "over plan" hatch, which carries meaning without colour.

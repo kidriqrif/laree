@@ -7,7 +7,7 @@ A reviewer agent audited both apps for accessibility against WCAG 2.2 AA and the
 | Check | How | Result |
 |---|---|---|
 | Keyboard only, both flows | Reviewer walk-through; unit tests for the role switcher, calendar move path, phase slider and single-key shortcuts | Pass after A2, A3, A4 |
-| 200% zoom | Type and spacing moved to rem (A6); the read-only switch now needs a small touch screen (A1). Rendered in the browser at 200% text size in T11.4b (below). | Pass after Z1 to Z10 |
+| 200% zoom | Type and spacing moved to rem (A6); the read-only switch now needs a small touch screen (A1). Rendered in the browser at 200% text size in T11.4b (below). | Pass after Z1 to Z11 |
 | Reduced motion | The `prefers-reduced-motion` rules turn off the lap fill, sheet slides and badge motion. Emulated in the browser in T11.4b (below). | Pass |
 | Colour blindness | Every status has a glyph or pattern as well as a colour (F3, F4). Simulated in the browser in T11.4b (below). | Pass |
 | Contrast | Token pairs computed by the reviewer; rendered text checked by `impeccable detect` on four screens | Pass |
@@ -38,13 +38,14 @@ Run in the built-in browser on a production build of `agent-staging`, 13 Novembe
 ### 200% zoom
 
 **How.**
-- **Athlete.** Every page, the Log and Check-in sheets, and the workout and activity pages, for Amir, Danial and Irfan. Each at 390 and 360 px wide, with the browser text size at 100% and at 200%.
+- **Athlete.** Every page, the Log and Check-in sheets, and the workout and activity pages, for Amir, Danial and Irfan. Each at 390, 360 and 320 px wide, with the browser text size at 100% and at 200%.
 - **Coach.** Every section at 1440 × 900, at 100% and 200% text size. Every section again at 768 × 432 at 100%, which is what a 1536 × 864 laptop shows at 200% page zoom.
 
-On each screen a script looked for three things:
+On each screen a script looked for four things:
 - anything past the right edge that no scrolling box contains;
 - any box that scrolls sideways;
-- text spilling out of its box.
+- text spilling out of its box;
+- on the athlete side, a word in a heading, big figure, label or title broken across two lines.
 
 **Result.** After the fixes below, no screen scrolls sideways at either size, and nothing spills.
 
@@ -56,12 +57,13 @@ Three wide grids scroll sideways inside their own box: the coach data tables, th
 | Z2 | Medium | Log sheet: a long session name in "Which session?" spilled over the field's border at 200%. | **Fixed.** The field grows to fit its text. |
 | Z3 | Medium | Button labels never wrapped. "Send to device (simulated)" made the Workout page 19 px too wide at 360 px and 200%. | **Fixed.** A label wraps and the button grows when it would be wider than its space. |
 | Z4 | Medium | Chips never wrapped. "On plan, 96% of planned" ran off the Activity page at 360 px and 200%. | **Fixed.** Same as Z3. A one-line chip is still a pill. |
-| Z5 | Low | Display words at 200%: "Kudos" was wider than its badge bib, and the date pushed "Today" off the line. | **Fixed.** The largest display size is capped lower. The date wraps under the heading and keeps to the end. |
+| Z5 | Low | Display words at 200%: "Kudos" was wider than its badge bib, and the date pushed "Today" off the line. | **Fixed.** Display sizes follow the text size with no cap (a cap in screen widths would stop text reaching 200%). When the page or sheet is narrow for its text size, the display face switches from its expanded width to a condensed one, and narrower again at about twice the text size on a phone, so words keep their full size and fit. A word still wider than the screen breaks, as a last resort. The date wraps under the heading and keeps to the end. |
 | Z6 | Low | The "viewing as" switcher cut off the athlete's name before its prefix. | **Fixed.** The prefix shortens first; the name always shows. |
-| Z7 | Low | Tab bar labels grew until five no longer fit across a phone. | **Fixed.** Labels grow with the text size up to the width of the bar, never below 12 px. |
+| Z7 | Low | Tab bar labels grew until five no longer fit across a phone. | **Fixed.** Labels grow with the text size with no cap. A column is never narrower than its label, so a long label ("Progress") takes room from the short ones instead of breaking mid-word, and the icon pill narrows first. The bar grows with the text size, with room for two lines of label. |
 | Z8 | Medium | Coach rail at 200%: the Jump to field was squashed, the 208 px rail wrapped its rows, and the athlete initials outgrew their 24 px box. | **Fixed.** The rail widens with the text size, rows keep their height and the rail scrolls, and the initial boxes grow. |
 | Z9 | Medium | Check-ins flag inbox: the fixed columns squeezed the flag title to nothing at 200%. The same happened at the default size in windows of about 1024 to 1300 px. | **Fixed.** The row layout follows the width of the list rather than the screen. A narrow list puts the title on its own line, and the parts wrap if needed. |
 | Z10 | Low | Season: the race letters outgrew their 20 px circles at 200%. | **Fixed.** The circle grows with the letter. |
+| Z11 | Medium | Today at 200%: a missed-session row (chip, text and "Log it") and the check-in strip's two buttons stayed on one line. With a missed session the page was 39 px too wide at 360 px; at 320 px the check-in buttons alone made it 2 px too wide. | **Fixed.** Both wrap: the row's parts stack and the two buttons go one above the other, only when they do not fit. |
 
 ### Reduced motion
 
