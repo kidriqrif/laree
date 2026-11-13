@@ -124,10 +124,12 @@
   .shelf {
     display: grid;
     gap: var(--space-5);
-    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    /* A bib needs about 16rem; narrower tracks pushed the second column off a phone screen. */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
   }
 
   .badge {
+    min-inline-size: 0;
     display: grid;
     gap: var(--space-1);
     align-content: start;

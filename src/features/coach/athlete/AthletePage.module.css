@@ -3,6 +3,8 @@
     display: grid;
     gap: var(--space-4);
     padding: var(--space-4);
+    /* One shrinkable track: without it the widest child sets the page width on a phone. */
+    grid-template-columns: minmax(0, 1fr);
     font-size: var(--text-sm);
   }
 
@@ -53,6 +55,7 @@
     display: grid;
     gap: var(--space-4);
     min-inline-size: 0;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .count {

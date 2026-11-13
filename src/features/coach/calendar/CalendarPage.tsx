@@ -436,94 +436,97 @@ export default function CalendarPage() {
         </div>
       )}
 
-      <table className={styles.totals} aria-label="Planned and done totals">
-        <thead>
-          <tr>
-            <th scope="col">
-              <span className="sr-only">Measure</span>
-            </th>
-            {summary.days.map((d) => (
-              <th key={d.day} scope="col" data-today={d.day === today || undefined}>
-                {WEEKDAYS[((d.day % 7) + 7) % 7]?.slice(0, 3)}
+      {/* On a phone the eight columns scroll here instead of widening the page. */}
+      <div className={styles.totalsScroll}>
+        <table className={styles.totals} aria-label="Planned and done totals">
+          <thead>
+            <tr>
+              <th scope="col">
+                <span className="sr-only">Measure</span>
               </th>
-            ))}
-            <th scope="col">Week</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th scope="row">Planned time</th>
-            {totals.map((t, i) => (
-              <td key={i} data-numeric>
-                {fmtDuration(t.plannedS)}
+              {summary.days.map((d) => (
+                <th key={d.day} scope="col" data-today={d.day === today || undefined}>
+                  {WEEKDAYS[((d.day % 7) + 7) % 7]?.slice(0, 3)}
+                </th>
+              ))}
+              <th scope="col">Week</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Planned time</th>
+              {totals.map((t, i) => (
+                <td key={i} data-numeric>
+                  {fmtDuration(t.plannedS)}
+                </td>
+              ))}
+              <td data-numeric data-testid="week-planned-time">
+                {fmtDuration(summary.plannedDurationS)}
               </td>
-            ))}
-            <td data-numeric data-testid="week-planned-time">
-              {fmtDuration(summary.plannedDurationS)}
-            </td>
-          </tr>
-          <tr>
-            <th scope="row">Done time</th>
-            {totals.map((t, i) => (
-              <td key={i} data-numeric>
-                {fmtDuration(t.doneS)}
+            </tr>
+            <tr>
+              <th scope="row">Done time</th>
+              {totals.map((t, i) => (
+                <td key={i} data-numeric>
+                  {fmtDuration(t.doneS)}
+                </td>
+              ))}
+              <td data-numeric data-testid="week-done-time">
+                {fmtDuration(summary.doneDurationS)}
               </td>
-            ))}
-            <td data-numeric data-testid="week-done-time">
-              {fmtDuration(summary.doneDurationS)}
-            </td>
-          </tr>
-          <tr>
-            <th scope="row">Planned distance</th>
-            {totals.map((t, i) => (
-              <td key={i} data-numeric>
-                {km(t.plannedM)}
+            </tr>
+            <tr>
+              <th scope="row">Planned distance</th>
+              {totals.map((t, i) => (
+                <td key={i} data-numeric>
+                  {km(t.plannedM)}
+                </td>
+              ))}
+              <td data-numeric>{km(weekPlannedM)}</td>
+            </tr>
+            <tr>
+              <th scope="row">Done distance</th>
+              {totals.map((t, i) => (
+                <td key={i} data-numeric>
+                  {km(t.doneM)}
+                </td>
+              ))}
+              <td data-numeric>{km(weekDoneM)}</td>
+            </tr>
+            <tr>
+              <th scope="row">Planned load</th>
+              {totals.map((t, i) => (
+                <td key={i} data-numeric>
+                  {Math.round(t.plannedLoad)}
+                </td>
+              ))}
+              <td data-numeric data-testid="week-planned-load">
+                {Math.round(summary.plannedLoad)}
               </td>
-            ))}
-            <td data-numeric>{km(weekPlannedM)}</td>
-          </tr>
-          <tr>
-            <th scope="row">Done distance</th>
-            {totals.map((t, i) => (
-              <td key={i} data-numeric>
-                {km(t.doneM)}
+            </tr>
+            <tr>
+              <th scope="row">Done load</th>
+              {totals.map((t, i) => (
+                <td key={i} data-numeric>
+                  {Math.round(t.doneLoad)}
+                </td>
+              ))}
+              <td data-numeric data-testid="week-done-load">
+                {Math.round(summary.doneLoad)}
               </td>
-            ))}
-            <td data-numeric>{km(weekDoneM)}</td>
-          </tr>
-          <tr>
-            <th scope="row">Planned load</th>
-            {totals.map((t, i) => (
-              <td key={i} data-numeric>
-                {Math.round(t.plannedLoad)}
+            </tr>
+            <tr>
+              <th scope="row">Compliance</th>
+              <td colSpan={7} className={styles.muted}>
+                {summary.target
+                  ? `Target ${Math.round(summary.target.loadTarget)} load, ${summary.target.hoursTarget} h`
+                  : 'No target set'}
               </td>
-            ))}
-            <td data-numeric data-testid="week-planned-load">
-              {Math.round(summary.plannedLoad)}
-            </td>
-          </tr>
-          <tr>
-            <th scope="row">Done load</th>
-            {totals.map((t, i) => (
-              <td key={i} data-numeric>
-                {Math.round(t.doneLoad)}
-              </td>
-            ))}
-            <td data-numeric data-testid="week-done-load">
-              {Math.round(summary.doneLoad)}
-            </td>
-          </tr>
-          <tr>
-            <th scope="row">Compliance</th>
-            <td colSpan={7} className={styles.muted}>
-              {summary.target
-                ? `Target ${Math.round(summary.target.loadTarget)} load, ${summary.target.hoursTarget} h`
-                : 'No target set'}
-            </td>
-            <td data-numeric>{summary.compliance === null ? 'None due' : `${displayPct(summary.compliance)}%`}</td>
-          </tr>
-        </tbody>
-      </table>
+              <td data-numeric>{summary.compliance === null ? 'None due' : `${displayPct(summary.compliance)}%`}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       {editing ? (
         <Suspense fallback={null}>

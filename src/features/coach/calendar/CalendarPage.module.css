@@ -3,6 +3,8 @@
     display: grid;
     gap: var(--space-4);
     min-inline-size: 0;
+    /* One shrinkable track: without it the widest child sets the page width on a phone. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .header {
@@ -111,6 +113,11 @@
   .chipMeta {
     color: var(--color-text-muted);
     font-size: var(--text-xs);
+  }
+
+  .totalsScroll {
+    min-inline-size: 0;
+    overflow-x: auto;
   }
 
   .totals {

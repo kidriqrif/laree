@@ -177,6 +177,8 @@ function SeasonBody() {
     label: fmtDay(weekRange(r.week).firstDay),
     value: r.actual ?? 0,
     target: r.load,
+    // This week and later weeks are not over: drawn as "so far" and left out of the target count.
+    partial: r.week >= nowWeek,
   }))
 
   // The store's undo stack only holds plan changes, so Season keeps its own for phases and races.

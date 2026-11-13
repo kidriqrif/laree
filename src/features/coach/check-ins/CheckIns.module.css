@@ -35,6 +35,8 @@
     display: grid;
     gap: var(--space-3);
     min-inline-size: 0;
+    /* One shrinkable track: without it the widest child sets the page width on a phone. */
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .paneHead {

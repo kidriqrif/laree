@@ -511,13 +511,13 @@ Components must look right in both registers. The athlete register uses 17 px ba
 
 Reviews in G11a only read and write notes. Fixes happen in G11b, one at a time, because they touch many files.
 
-- [ ] **T11.1 Automated audit.** Run `npx impeccable detect` on `src` and on the preview URL, `impeccable audit`, and the bundle budget check. Acceptance: zero high-severity findings are left open; findings are written to `docs/qa/parts/automated.md`. Owns: that file.
-- [ ] **T11.2 Athlete screenshot QA.** At 390 by 844, with a spot check at 768. Check every athlete route and sheet for Amir, Danial and Irfan against `DESIGN.md`. Owns: `docs/qa/parts/athlete.md`.
-- [ ] **T11.3 Coach screenshot QA.** At 1440 by 900, with a spot check at 768. Run the dashboard-design sign-off on Overview, Athlete summary and Analytics. Owns: `docs/qa/parts/coach.md`.
-- [ ] **T11.4 Keyboard, zoom, motion, contrast.** Keyboard only through both flows; 200% zoom; reduced motion; colour-blind simulation on the status chips and the lap. Also run web-design-guidelines and design-review. Owns: `docs/qa/parts/accessibility.md`.
-- [ ] **T11.5 PWA and rename safety.** Install check, reload with the network off, `dist` served under another base path, shortcuts open the right sheet. Owns: `docs/qa/parts/pwa.md`.
-- [ ] **T11.6 Fix pass.** Work through every open finding by severity. Acceptance: each finding in `docs/qa/parts/*.md` is marked fixed, deferred with a reason, or rejected with a reason; the milestone gate is green. Owns: any source file a fix needs. Depends on: T11.1 to T11.5.
-- [ ] **T11.7 QA report.** Merge the parts into `docs/qa/report.md` with a pass table per route and viewport. Re-run the screenshot checks for fixed items. Owns: `docs/qa/report.md`. Depends on: T11.6.
+- [x] **T11.1 Automated audit.** Run `npx impeccable detect` on `src` and on the preview URL, `impeccable audit`, and the bundle budget check. Acceptance: zero high-severity findings are left open; findings are written to `docs/qa/parts/automated.md`. Owns: that file.
+- [x] **T11.2 Athlete screenshot QA.** At 390 by 844, with a spot check at 768. Check every athlete route and sheet for Amir, Danial and Irfan against `DESIGN.md`. Owns: `docs/qa/parts/athlete.md`.
+- [x] **T11.3 Coach screenshot QA.** At 1440 by 900, with a spot check at 768. Run the dashboard-design sign-off on Overview, Athlete summary and Analytics. Owns: `docs/qa/parts/coach.md`.
+- [x] **T11.4 Keyboard, zoom, motion, contrast.** Keyboard only through both flows; 200% zoom; reduced motion; colour-blind simulation on the status chips and the lap. Also run web-design-guidelines and design-review. Owns: `docs/qa/parts/accessibility.md`.
+- [x] **T11.5 PWA and rename safety.** Install check, reload with the network off, `dist` served under another base path, shortcuts open the right sheet. Owns: `docs/qa/parts/pwa.md`.
+- [x] **T11.6 Fix pass.** Work through every open finding by severity. Acceptance: each finding in `docs/qa/parts/*.md` is marked fixed, deferred with a reason, or rejected with a reason; the milestone gate is green. Owns: any source file a fix needs. Depends on: T11.1 to T11.5.
+- [x] **T11.7 QA report.** Merge the parts into `docs/qa/report.md` with a pass table per route and viewport. Re-run the screenshot checks for fixed items. Owns: `docs/qa/report.md`. Depends on: T11.6.
 
 **M11 ends with the milestone gate and a signed-off QA report.**
 
