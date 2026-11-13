@@ -1,0 +1,37 @@
+@layer components {
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+  }
+
+  .source {
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .usual {
+    margin: var(--space-1) 0 0;
+    font-size: var(--text-sm);
+    color: var(--color-text);
+  }
+
+  .footer {
+    display: flex;
+    gap: var(--space-3);
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .closed {
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+}

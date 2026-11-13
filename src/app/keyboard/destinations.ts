@@ -1,10 +1,16 @@
+import type { Race, WorkoutTemplate } from '../../domain/types.ts'
 import { ATHLETES, type AthleteId } from '../people.ts'
+
+export type DestinationGroup = 'Athletes' | 'Sections' | 'Library' | 'Races'
+
+/** The order Jump to lists its groups in. */
+export const DESTINATION_GROUPS: readonly DestinationGroup[] = ['Athletes', 'Sections', 'Library', 'Races']
 
 export interface Destination {
   id: string
   label: string
   /** Group heading in Jump to. */
-  group: 'Athletes' | 'Sections'
+  group: DestinationGroup
   to: string
   /** Extra words that also match. */
   keywords?: string
@@ -44,7 +50,13 @@ export const GLOBAL_KEYS: readonly GlobalKey[] = [
   })),
 ]
 
-export function buildDestinations(athleteId: AthleteId): Destination[] {
+/** What Jump to finds besides screens and athletes: library workouts and races. */
+export interface DestinationItems {
+  templates?: readonly Pick<WorkoutTemplate, 'id' | 'name' | 'sport' | 'description'>[]
+  races?: readonly Pick<Race, 'id' | 'athleteId' | 'name' | 'priority' | 'sport'>[]
+}
+
+export function buildDestinations(athleteId: AthleteId, items: DestinationItems = {}): Destination[] {
   const athletes: Destination[] = ATHLETES.map((a) => ({
     id: `athlete-${a.id}`,
     label: a.name,
@@ -81,7 +93,24 @@ export function buildDestinations(athleteId: AthleteId): Destination[] {
     },
     { id: 'settings', label: 'Settings', to: '/coach/settings' },
   ].map((s) => ({ ...s, group: 'Sections' as const }))
-  return [...athletes, ...sections]
+  const library: Destination[] = (items.templates ?? []).map((t) => ({
+    id: `workout-${t.id}`,
+    label: t.name,
+    group: 'Library',
+    to: `/coach/library/${t.id}`,
+    keywords: `${t.sport} workout ${t.description}`,
+  }))
+  const races: Destination[] = (items.races ?? []).map((r) => {
+    const who = ATHLETES.find((a) => a.id === r.athleteId)?.name ?? r.athleteId
+    return {
+      id: `race-${r.id}`,
+      label: `${r.name} (${who}, ${r.priority} race)`,
+      group: 'Races' as const,
+      to: `/coach/season/${r.athleteId}`,
+      keywords: `race ${r.sport} ${who}`,
+    }
+  })
+  return [...athletes, ...sections, ...library, ...races]
 }
 
 export function filterDestinations(all: readonly Destination[], query: string): Destination[] {

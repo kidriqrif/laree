@@ -1,7 +1,14 @@
 /* oxlint-disable jsx-a11y/no-redundant-roles -- role="list" keeps list semantics in Safari when list-style is none */
 import type { ReactNode } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
-import { MeIcon, PlusIcon, ProgressIcon, TodayIcon, WeekIcon } from '../ui/icons/index.ts'
+import {
+  IconMe as MeIcon,
+  IconPlus as PlusIcon,
+  IconProgress as ProgressIcon,
+  IconToday as TodayIcon,
+  IconWeek as WeekIcon,
+} from '../ui/icons/icons-core.tsx'
+import { Toasts } from './Toasts.tsx'
 import styles from './AthleteShell.module.css'
 
 const DETAIL = /^\/athlete\/(workout|activity)\//
@@ -56,6 +63,7 @@ export function AthleteShell() {
           </li>
         </ul>
       </nav>
+      <Toasts register="athlete" />
     </div>
   )
 }

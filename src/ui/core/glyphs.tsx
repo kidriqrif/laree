@@ -23,7 +23,7 @@ interface FrameProps extends Omit<SVGProps<SVGSVGElement>, 'children'> {
   children: ReactNode
 }
 
-function Frame({ size = 16, children, ...rest }: FrameProps) {
+export function Frame({ size = 16, children, ...rest }: FrameProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

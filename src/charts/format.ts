@@ -42,10 +42,11 @@ export function fmtMinutes(minutes: number | null | undefined): string {
   return `${h}:${String(m - h * 60).padStart(2, '0')}`;
 }
 
-/** Seconds as h:mm (rounded to the minute), or "45 s" under a minute. */
+/** Seconds as h:mm (rounded to the minute), or "45 s" under a minute. Nothing at all is "0:00", like any other total. */
 export function fmtDuration(seconds: number | null | undefined): string {
   if (seconds == null || !Number.isFinite(seconds)) return DASH;
-  if (seconds < 60) return `${roundHalfAway(Math.max(0, seconds))} s`;
+  const s = roundHalfAway(Math.max(0, seconds));
+  if (s > 0 && s < 60) return `${s} s`;
   return fmtMinutes(roundHalfAway(seconds / 60));
 }
 

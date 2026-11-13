@@ -1,0 +1,211 @@
+@layer components {
+  .page {
+    display: grid;
+    gap: var(--space-4);
+    min-inline-size: 0;
+    /* One shrinkable track: without it the widest child sets the page width on a phone. */
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .titleBlock {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+  }
+
+  .sub {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .weekNav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .board {
+    min-inline-size: 0;
+  }
+
+  /* Seven equal days from 1024 px; the board scrolls sideways inside itself below that. */
+  .board .grid {
+    grid-template-columns: repeat(7, minmax(9rem, 1fr));
+    overflow-x: auto;
+  }
+
+  .chip {
+    display: grid;
+    gap: var(--space-1);
+    min-inline-size: 0;
+  }
+
+  .chipHead {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-inline-size: 0;
+  }
+
+  .titleButton {
+    min-inline-size: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-weight: 700;
+    text-align: start;
+    cursor: pointer;
+    outline: none;
+  }
+
+  .titleButton[data-hovered] {
+    text-decoration: underline;
+  }
+
+  .titleButton[data-focus-visible] {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .key {
+    flex: none;
+    padding-inline: var(--space-1);
+    border: var(--hairline) solid var(--color-rule-strong);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .status {
+    display: inline-flex;
+    flex: none;
+  }
+
+  /* In the read-only list the mark ends the title row; on the board it sits in the card foot. */
+  .chipHead .status {
+    margin-inline-start: auto;
+  }
+
+  .chipMeta {
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+
+  .totalsScroll {
+    min-inline-size: 0;
+    overflow-x: auto;
+  }
+
+  .totals {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+  }
+
+  .totals th,
+  .totals td {
+    padding: var(--space-1) var(--space-2);
+    border-block-end: var(--hairline) solid var(--color-rule);
+    text-align: end;
+  }
+
+  .totals th[scope="row"],
+  .totals thead th:first-child {
+    text-align: start;
+    font-weight: 600;
+  }
+
+  .totals thead th {
+    border-block-end: var(--rule-weight) solid var(--color-rule-strong);
+    font-weight: 700;
+  }
+
+  .totals thead th[data-today] {
+    box-shadow: inset 0 -3px 0 var(--color-accent);
+  }
+
+  .totals td:last-child,
+  .totals thead th:last-child {
+    border-inline-start: var(--hairline) solid var(--color-rule-strong);
+    font-weight: 700;
+  }
+
+  .muted {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    text-align: start;
+  }
+
+  .stack,
+  .stackList {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .stackDay {
+    display: grid;
+    gap: var(--space-1);
+    padding-block-start: var(--space-2);
+    border-block-start: var(--rule-weight) solid var(--color-rule-strong);
+  }
+
+  .stackHeading {
+    margin: 0;
+    font-size: var(--text-sm);
+    font-weight: 700;
+  }
+
+  .form {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .formMeta {
+    margin: var(--space-3) 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .details {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: var(--space-1) var(--space-3);
+    margin: 0;
+  }
+
+  .details dt {
+    color: var(--color-text-muted);
+  }
+
+  .details dd {
+    margin: 0;
+  }
+}

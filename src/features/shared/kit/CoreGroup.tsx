@@ -8,6 +8,7 @@ import {
   CountBadge,
   EmptyState,
   IconButton,
+  PlainButton,
   SPORT_LABEL,
   SportChip,
   SportGlyph,
@@ -73,6 +74,24 @@ export function CoreGroup() {
           <Button variant="primary" isPending>
             Saving
           </Button>
+        </State>
+      </Specimen>
+
+      <Specimen
+        name="PlainButton"
+        covers={['PlainButton']}
+        from={FROM}
+        note="A native button with the same look and no react-aria code, for screens that must load fast, such as Today. No loading state. Hover and pressed come from the browser."
+      >
+        {(['primary', 'secondary', 'quiet'] as const).map((v) => (
+          <State key={v} label={`${v} / default`}>
+            <PlainButton variant={v}>Log it</PlainButton>
+          </State>
+        ))}
+        <State label="Disabled">
+          <PlainButton variant="primary" isDisabled>
+            Log it
+          </PlainButton>
         </State>
       </Specimen>
 

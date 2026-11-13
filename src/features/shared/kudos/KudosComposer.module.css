@@ -1,0 +1,27 @@
+@layer components {
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    inline-size: 20rem;
+    max-inline-size: 100%;
+  }
+
+  .heading {
+    margin: 0;
+    font-size: var(--text-base);
+    font-weight: 700;
+  }
+
+  .linked {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+}

@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { Dialog } from 'react-aria-components/Dialog'
 import { Heading } from 'react-aria-components/Heading'
 import { Modal, ModalOverlay } from 'react-aria-components/Modal'
-import { IconClose } from '../icons/index.ts'
+import { IconClose } from '../icons/icons-core.tsx'
 import { IconButton } from '../core/IconButton.tsx'
 import { useRegister } from './useRegister.ts'
 import type { RegisterName } from './useRegister.ts'
@@ -17,6 +17,8 @@ export interface PanelProps {
   /** Pinned under the scrolling body, for Save and Cancel. */
   footer?: ReactNode
   className?: string
+  /** A dialog only: "wide" fits a table, up to 72rem, instead of the usual 480px. */
+  size?: 'wide'
   /** Defaults to the register of the shell the overlay opened from. */
   register?: RegisterName
   'data-testid'?: string
@@ -39,6 +41,7 @@ export function Panel({
   children,
   footer,
   className,
+  size,
   register,
   'data-testid': testId,
 }: InternalProps) {
@@ -52,7 +55,8 @@ export function Panel({
       data-kind={kind}
       data-register={reg}
     >
-      <Modal className={styles.modal} data-kind={kind}>
+      {/* The width lives on the Modal, the box the overlay centres; a width on the Dialog inside would spill out of it. */}
+      <Modal className={styles.modal} data-kind={kind} data-size={size}>
         <Dialog
           role={role}
           className={[styles.dialog, className].filter(Boolean).join(' ')}

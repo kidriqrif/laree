@@ -117,6 +117,8 @@ Banned: Inter, Geist, Space Grotesk, DM Sans, Manrope, Poppins, Bricolage Grotes
 
 Set display with `font-variation-settings: "wdth" N` and `font-stretch: N%`. Use `font-synthesis: none`.
 
+The type steps are in rem and have no cap, so they follow the browser text size all the way. When the athlete page column or a sheet is narrow for its text size, athlete display drops to wdth 75 (under 19rem of column), then wdth 60 (under 12rem), through size container queries on the column and the sheet. At the default size only a 320 px phone gets wdth 75.
+
 | Step | Athlete (17 px, x1.25) | Coach (14 px, x1.125) |
 |---|---|---|
 | xs | 11 px (floor; 10.9 computed) | 11.1 px |
@@ -170,7 +172,7 @@ Values are register-aware: athlete / coach where they differ. Radii: control 10 
 
 **Tabs.** Athlete: pill tabs, 44 px, selected = `--color-text` fill with `--color-bg` label. Coach: underline tabs, 28 px, 2 px ink underline, bold label. Arrow keys move, Home/End jump.
 
-**Bottom bar (athlete).** 64 px plus safe-area inset, `--color-surface`, 1 px top rule. Five slots: Today, Week, **Log**, Progress, Me. Log is a 56 px track-fill disc raised 14 px above the bar with a 4 px `--color-bg` ring and an ink plus glyph; label below. Items 44 px minimum, glyph 24 px, label 12 px. Selected item: ink glyph in a sun pill.
+**Bottom bar (athlete).** 64 px at the default text size (40 px plus 1.5rem, so it grows with the text size), plus safe-area inset, `--color-surface`, 1 px top rule. Five slots: Today, Week, **Log**, Progress, Me. Log is a 56 px track-fill disc raised 14 px above the bar with a 4 px `--color-bg` ring and an ink plus glyph; label below. Items 44 px minimum, glyph 24 px, label 12 px. Selected item: ink glyph in a sun pill.
 
 **Left rail (coach).** 56 px collapsed, 208 px expanded, `--color-surface`, 1 px right rule. Items 28 px, glyph 20 px, label 14 px; selected has a 2 px track bar on the left edge and bold label. Keyboard hints in mono at the right edge.
 

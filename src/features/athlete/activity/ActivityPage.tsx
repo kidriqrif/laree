@@ -1,6 +1,8 @@
-import { StubPage } from '../../../app/StubPage.tsx'
+import { useParams } from 'react-router'
+import { ActivityDetail } from '../../shared/activity/ActivityDetail.tsx'
 
-/** Stub from T4.1. The feature task replaces this file and keeps the default export. */
+/** A8. The shared activity view, for the athlete. */
 export default function ActivityPage() {
-  return <StubPage id="A8" name="Activity" />
+  const { activityId = '' } = useParams()
+  return <ActivityDetail activityId={activityId} viewer="athlete" />
 }

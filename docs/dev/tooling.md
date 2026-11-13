@@ -254,9 +254,20 @@ Each milestone ends with checks, then a commit, then a push. The checks run thro
 | PWA (M11) | Install, then reload with the network off | App opens and shows demo data |
 | Rename safety (M12) | Serve `dist` under another base path | Deep links work |
 
+### Keeping the athlete's first screen small
+
+The budget covers everything the Today route loads before it can draw: the entry script and every chunk Today imports statically. Sheets, dialogs and the toast region load later and do not count. Four rules keep it inside 160 KB:
+
+- **Modules have no side effects.** `package.json` lists the only files that do (`sideEffects`: stylesheets, `src/app/main.tsx` and `src/styles/fonts.ts`). This lets the build drop every unused export of an index file. A new module that must run just by being imported has to be added to that list, or the build removes it.
+- **No react-aria code on Today.** `Button` brings about 14 KB of press handling. Anything Today imports statically uses `PlainButton`, a native button with the same look.
+- **Overlays load when they open.** Sheets, drawers and dialogs use `React.lazy`. Each shell loads the one toast region after first paint; pages call `showToast` and never mount a region.
+- **Standalone pages are separate chunks.** The role picker, brand board and UI kit, with the logo geometry, never load for an athlete who opens Today.
+
+To see what Today loads, build with `npx vite build --sourcemap` and read the chunk list. At M9 the total was about 156.5 KB.
+
 ## Working agreements
 
-- **Push after every completed milestone.** This is the owner's standing instruction.
+- **Every change goes through a pull request.** Nothing is committed to `main` directly. Each task is pushed to the `agent-staging` branch and opened as a pull request into `main`. CodeRabbit reviews it, review points are fixed on the same branch, and the owner merges. GitHub Pages deploys from `main`, so the live site changes only after a merge.
 - **Commit identity** for this repo only: `kidriqrif <208976798+kidriqrif@users.noreply.github.com>`.
 - **Never commit secrets.** `.env` and `.env.*` are ignored, apart from `.env.example`. The prototype needs no secrets at all.
 - **Neutral metric names.** The UI says Load, Fitness, Fatigue, Form, Ramp, Weighted power and Intensity. See `docs/spec/metrics.md`.

@@ -1,0 +1,221 @@
+@layer components {
+  .page {
+    display: grid;
+    gap: var(--space-4);
+    max-inline-size: var(--column-max);
+    margin-inline: auto;
+    padding-block: var(--space-4);
+    touch-action: pan-y;
+  }
+
+  .head {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .headText {
+    display: grid;
+    gap: var(--space-1);
+    text-align: center;
+    min-inline-size: 0;
+  }
+
+  .title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  /* The dates sit on their own smaller line, so the label keeps one line between the arrows at 390. */
+  .range {
+    display: block;
+    margin-block-start: var(--space-1);
+    font-size: var(--text-md);
+  }
+
+  .phase {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .back {
+    justify-self: center;
+  }
+
+  .lap {
+    display: grid;
+    justify-items: center;
+  }
+
+  .tile {
+    padding: var(--space-4);
+    border: var(--hairline) solid var(--color-rule-strong);
+    border-radius: var(--radius-card);
+    color: var(--color-text-muted);
+    text-align: center;
+  }
+
+  .days {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .day {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border: var(--hairline) solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .day[data-today='true'] {
+    border-color: var(--color-text);
+  }
+
+  .dayHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin: 0;
+    font-size: var(--text-md);
+  }
+
+  .dayMeta {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: normal;
+  }
+
+  .marks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-inline-start: auto;
+  }
+
+  .items {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    min-block-size: var(--target-min);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-control);
+    background: var(--color-bg);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .item:focus-visible {
+    outline: var(--focus-ring-width) solid var(--color-focus);
+    outline-offset: var(--focus-ring-offset);
+  }
+
+  .itemTitle {
+    flex: 1 1 8rem;
+    min-inline-size: 0;
+    font-weight: 600;
+  }
+
+  .itemMeta {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-family: var(--font-number);
+  }
+
+  .rest {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .totals {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: var(--hairline) solid var(--color-rule);
+    border-radius: var(--radius-card);
+  }
+
+  .totalsHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin: 0;
+    font-size: var(--text-lg);
+  }
+
+  .figures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    margin: 0;
+  }
+
+  .figures dt {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .figures dd {
+    margin: 0;
+    font-family: var(--font-number);
+    font-size: var(--text-xl);
+  }
+
+  .figures small {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .sports {
+    display: grid;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-sm);
+  }
+
+  .sports li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .notes {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding-inline-start: var(--space-4);
+  }
+
+  .sr {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

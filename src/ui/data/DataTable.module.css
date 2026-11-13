@@ -165,6 +165,15 @@
     font-size: var(--text-data);
   }
 
+  /* Results-sheet headers: uppercase labels in the display face at wdth 75 (DESIGN section 4). */
+  :global([data-register="coach"]) .column {
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-stretch: calc(var(--font-display-wdth) * 1%);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .row {
       transition: background-color var(--dur-fast) var(--ease-standard);

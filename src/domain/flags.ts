@@ -479,30 +479,66 @@ function ordinal(n: number): string {
   return `${n}${suffix}`;
 }
 
-/** One-line summary of the values seen, as shown on the flag card. */
-export function summariseValues(ruleId: FlagRuleId, v: FlagValues): string {
+/**
+ * One-line summary of the values seen, as shown on the flag card.
+ * `on` names the day the values were measured, when that is not today, so "today" and "last night" never go stale.
+ */
+export function summariseValues(ruleId: FlagRuleId, v: FlagValues, on?: string): string {
+  const at = on ? ` on ${on}` : '';
   switch (ruleId) {
     case 'hrv-low':
-      return `7-day average ${n0(v.avg7)} ms (${n0(v.readings)} readings) · usual ${n0(v.mean)} ms ± ${n0(v.sd)} · line ${n0(v.line)} ms`;
+      return `7-day average ${n0(v.avg7)} ms${on ? ` to ${on}` : ''} (${n0(v.readings)} readings) · usual ${n0(v.mean)} ms ± ${n0(v.sd)} · line ${n0(v.line)} ms`;
     case 'rhr-high':
-      return `${n0(v.today)} bpm this morning, ${n0(v.yesterday)} bpm yesterday · baseline ${n0(v.mean)} bpm · +${n0(v.diffToday)} and +${n0(v.diffYesterday)}`;
+      return on
+        ? `${n0(v.today)} bpm on ${on}, ${n0(v.yesterday)} bpm the day before · baseline ${n0(v.mean)} bpm · +${n0(v.diffToday)} and +${n0(v.diffYesterday)}`
+        : `${n0(v.today)} bpm this morning, ${n0(v.yesterday)} bpm yesterday · baseline ${n0(v.mean)} bpm · +${n0(v.diffToday)} and +${n0(v.diffYesterday)}`;
     case 'sleep-short':
-      return `${n1(v.last)} h last night, ${n1(v.before)} h the night before · 7-day average ${n1(v.avg7)} h`;
+      return on
+        ? `${n1(v.last)} h the night to ${on}, ${n1(v.before)} h the night before · 7-day average ${n1(v.avg7)} h`
+        : `${n1(v.last)} h last night, ${n1(v.before)} h the night before · 7-day average ${n1(v.avg7)} h`;
     case 'soreness-high':
       return (
-        `Soreness ${n0(v.today)} today, ${n0(v.yesterday)} yesterday` +
+        (on ? `Soreness ${n0(v.today)} on ${on}, ${n0(v.yesterday)} the day before` : `Soreness ${n0(v.today)} today, ${n0(v.yesterday)} yesterday`) +
         (v.load3 === undefined ? '' : ` · last 3 days' load ${n0(v.load3)}`)
       );
     case 'mood-low-under-load':
-      return `Mood ${n0(v.mood)} today · Form ${near(Number(v.form), -25)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)}) · Ramp ${plus1(v.ramp)}`;
+      return `Mood ${n0(v.mood)}${on ? at : ' today'} · Form ${near(Number(v.form), -25)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)}) · Ramp ${plus1(v.ramp)}`;
     case 'ramp-high':
-      return `Ramp +${near(Number(v.ramp), 8)} · Fitness ${n1(v.fitness)} now, ${n1(v.fitnessWeekAgo)} a week ago`;
+      return on
+        ? `Ramp +${near(Number(v.ramp), 8)} in the week to ${on} · Fitness ${n1(v.fitness)}, ${n1(v.fitnessWeekAgo)} a week before`
+        : `Ramp +${near(Number(v.ramp), 8)} · Fitness ${n1(v.fitness)} now, ${n1(v.fitnessWeekAgo)} a week ago`;
     case 'form-deep':
-      return `Form ${near(Number(v.form), -30)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)}) · ${ordinal(Number(v.daysBelow))} day below ${MINUS}30`;
+      return `Form ${near(Number(v.form), -30)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)})${at} · ${ordinal(Number(v.daysBelow))} day below ${MINUS}30`;
     case 'key-missed':
       return `Missed: ${String(v.missed)} · ${n0(v.done)} of ${n0(v.planned)} key sessions done`;
   }
 }
+
+/**
+ * A flag's values line as seen on `today`: the latest values (or those at opening), dated when they
+ * were measured on an earlier day. `dayLabel` formats a day, such as "9 Nov".
+ */
+export function flagValuesLine(
+  f: FlagRecord,
+  which: 'latest' | 'open',
+  today: number,
+  dayLabel: (day: number) => string,
+): string {
+  const checked = which === 'open' ? f.openedDay : f.lastTrueDay;
+  // Ramp reads Fitness up to the day before the check, so its values are dated by that day.
+  const measured = f.ruleId === 'ramp-high' ? checked - 1 : checked;
+  const values = which === 'open' ? f.valuesAtOpen : f.valuesLatest;
+  return summariseValues(f.ruleId, values, measured < today ? dayLabel(measured) : undefined);
+}
+
+/**
+ * The first part of a flag's latest values line, for compact rows such as the Check-ins inbox.
+ * Every dated line keeps its date in this part, so a short row never passes old values off as new.
+ */
+export function flagValuesShort(f: FlagRecord, today: number, dayLabel: (day: number) => string): string {
+  return flagValuesLine(f, 'latest', today, dayLabel).split(' · ')[0] ?? '';
+}
+
 
 // ---------------------------------------------------------------- lifecycle
 
@@ -639,6 +675,62 @@ export function resolveFlag(state: FlagsState, id: string, day: number, note?: s
   });
   const stillTrue = target.clearDays === 0;
   return stillTrue ? { ...next, quiet: { ...next.quiet, [target.ruleId]: true } } : next;
+}
+
+/** The fields a coach action changes. Everything else on a record belongs to the rules. */
+export type FlagLifecycle = Pick<FlagRecord, 'status' | 'acknowledgedDay' | 'resolvedDay' | 'resolution' | 'notes'>;
+
+export function lifecycleOf(f: FlagRecord): FlagLifecycle {
+  return {
+    status: f.status,
+    notes: f.notes,
+    ...(f.acknowledgedDay === undefined ? {} : { acknowledgedDay: f.acknowledgedDay }),
+    ...(f.resolvedDay === undefined ? {} : { resolvedDay: f.resolvedDay }),
+    ...(f.resolution === undefined ? {} : { resolution: f.resolution }),
+  };
+}
+
+export function sameLifecycle(a: FlagLifecycle, b: FlagLifecycle): boolean {
+  return (
+    a.status === b.status &&
+    a.acknowledgedDay === b.acknowledgedDay &&
+    a.resolvedDay === b.resolvedDay &&
+    a.resolution === b.resolution &&
+    a.notes.length === b.notes.length &&
+    a.notes.every((n, i) => n.day === b.notes[i]?.day && n.text === b.notes[i]?.text)
+  );
+}
+
+/**
+ * Undo one coach action on one flag. `after` is how the action left the flag and `before` is how
+ * it was. Only that flag's lifecycle fields go back, so other flags and the values the rules have
+ * measured since are untouched. `unquiet` removes the quiet mark the action put on the rule.
+ *
+ * Returns null, and changes nothing, when the undo is stale: the flag is gone, it has changed
+ * since the action (another action, a note, or the rules closing it), or the rule has opened a
+ * newer flag that an undone resolve would sit beside.
+ */
+export function undoFlagAction(
+  state: FlagsState,
+  id: string,
+  before: FlagLifecycle,
+  after: FlagLifecycle,
+  unquiet: boolean,
+): FlagsState | null {
+  const target = state.flags.find((f) => f.id === id);
+  if (!target || !sameLifecycle(lifecycleOf(target), after)) return null;
+  // A newer flag of the same rule, active or already closed, owns the rule's state now (the quiet
+  // mark too), so an undone resolve would sit beside it and take its mark away.
+  const twin = state.flags.some(
+    (f) => f.id !== id && f.ruleId === target.ruleId && (isActive(f) || f.openedDay > target.openedDay),
+  );
+  if (before.status !== 'resolved' && after.status === 'resolved' && twin) return null;
+  const { acknowledgedDay: _a, resolvedDay: _r, resolution: _n, ...rest } = target;
+  const restored: FlagRecord = { ...rest, ...before };
+  const next = update(state, id, () => restored);
+  if (!unquiet) return next;
+  const { [target.ruleId]: _q, ...quiet } = next.quiet;
+  return { ...next, quiet };
 }
 
 /** Add a coach-only note of up to 280 characters, in any state. Blank notes are ignored. */

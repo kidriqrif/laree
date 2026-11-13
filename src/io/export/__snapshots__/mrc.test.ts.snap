@@ -1,0 +1,72 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`writeMrc > matches the snapshot for a interval workout 1`] = `
+"[COURSE HEADER]
+VERSION = 2
+UNITS = ENGLISH
+DESCRIPTION = Over-unders for Amir, FTP 255 W
+FILE NAME = laree-amir-2026-11-14-over-unders.mrc
+MINUTES PERCENT
+[END COURSE HEADER]
+[COURSE DATA]
+0.00	50.00
+10.00	65.00
+10.00	110.00
+13.00	110.00
+13.00	50.00
+15.00	50.00
+15.00	110.00
+18.00	110.00
+18.00	65.00
+23.00	45.00
+[END COURSE DATA]
+"
+`;
+
+exports[`writeMrc > matches the snapshot for a repeat block workout 1`] = `
+"[COURSE HEADER]
+VERSION = 2
+UNITS = ENGLISH
+DESCRIPTION = Threshold 4 x 8 for Amir, FTP 255 W
+FILE NAME = laree-amir-2026-11-10-threshold-4x8.mrc
+MINUTES PERCENT
+[END COURSE HEADER]
+[COURSE DATA]
+0.00	50.00
+15.00	75.00
+15.00	97.50
+23.00	97.50
+23.00	55.00
+26.00	55.00
+26.00	97.50
+34.00	97.50
+34.00	55.00
+37.00	55.00
+37.00	97.50
+45.00	97.50
+45.00	55.00
+48.00	55.00
+48.00	97.50
+56.00	97.50
+56.00	55.00
+59.00	55.00
+59.00	65.00
+69.00	45.00
+[END COURSE DATA]
+"
+`;
+
+exports[`writeMrc > matches the snapshot for a steady workout 1`] = `
+"[COURSE HEADER]
+VERSION = 2
+UNITS = ENGLISH
+DESCRIPTION = Steady endurance for Amir, FTP 255 W
+FILE NAME = laree-amir-2026-11-12-steady-endurance.mrc
+MINUTES PERCENT
+[END COURSE HEADER]
+[COURSE DATA]
+0.00	70.00
+60.00	70.00
+[END COURSE DATA]
+"
+`;

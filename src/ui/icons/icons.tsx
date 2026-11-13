@@ -10,11 +10,7 @@ import {
   calendarPaths,
   checkInsPaths,
   checkPaths,
-  chevronDownPaths,
-  chevronLeftPaths,
-  chevronRightPaths,
   chevronUpPaths,
-  closePaths,
   copyPaths,
   downloadPaths,
   dragHandlePaths,
@@ -35,54 +31,37 @@ import {
   logPaths,
   medalPaths,
   menuPaths,
-  mePaths,
   minusPaths,
   moodPaths,
   moonPaths,
   morePaths,
   overviewPaths,
-  plusPaths,
   powerPaths,
-  progressPaths,
-  racePaths,
   resetPaths,
   runPaths,
   searchPaths,
   seasonPaths,
   settingsPaths,
-  sleepPaths,
   sorenessPaths,
   sortPaths,
   streakPaths,
   strengthPaths,
   sunPaths,
   swimPaths,
-  todayPaths,
   trashPaths,
   undoPaths,
   uploadPaths,
   warningPaths,
   watchPaths,
-  weekPaths,
 } from './paths.ts'
+
+export * from './icons-core.tsx'
 
 /* Thin wrappers, one per icon, so a screen only ships the geometry it draws. */
 
 /* Athlete navigation */
-export function IconToday(props: IconProps) {
-  return <Icon paths={todayPaths} {...props} />
-}
-export function IconWeek(props: IconProps) {
-  return <Icon paths={weekPaths} {...props} />
-}
 export function IconLog(props: IconProps) {
   return <Icon paths={logPaths} {...props} />
-}
-export function IconProgress(props: IconProps) {
-  return <Icon paths={progressPaths} {...props} />
-}
-export function IconMe(props: IconProps) {
-  return <Icon paths={mePaths} {...props} />
 }
 
 /* Coach navigation */
@@ -144,26 +123,11 @@ export function IconBrick(props: IconProps) {
 }
 
 /* Actions */
-export function IconClose(props: IconProps) {
-  return <Icon paths={closePaths} {...props} />
-}
-export function IconChevronDown(props: IconProps) {
-  return <Icon paths={chevronDownPaths} {...props} />
-}
 export function IconChevronUp(props: IconProps) {
   return <Icon paths={chevronUpPaths} {...props} />
 }
-export function IconChevronLeft(props: IconProps) {
-  return <Icon paths={chevronLeftPaths} {...props} />
-}
-export function IconChevronRight(props: IconProps) {
-  return <Icon paths={chevronRightPaths} {...props} />
-}
 export function IconCheck(props: IconProps) {
   return <Icon paths={checkPaths} {...props} />
-}
-export function IconPlus(props: IconProps) {
-  return <Icon paths={plusPaths} {...props} />
 }
 export function IconMinus(props: IconProps) {
   return <Icon paths={minusPaths} {...props} />
@@ -226,9 +190,6 @@ export function IconHeart(props: IconProps) {
 export function IconPower(props: IconProps) {
   return <Icon paths={powerPaths} {...props} />
 }
-export function IconSleep(props: IconProps) {
-  return <Icon paths={sleepPaths} {...props} />
-}
 export function IconMood(props: IconProps) {
   return <Icon paths={moodPaths} {...props} />
 }
@@ -245,9 +206,6 @@ export function IconMedal(props: IconProps) {
 }
 export function IconStreak(props: IconProps) {
   return <Icon paths={streakPaths} {...props} />
-}
-export function IconRace(props: IconProps) {
-  return <Icon paths={racePaths} {...props} />
 }
 
 /* Devices, files and tools */

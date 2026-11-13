@@ -14,7 +14,7 @@ AI writes three things, all optional. The numbers they mention are on screen any
 | Check-in summary | Coach | Check-ins, one per athlete | `claude-haiku-5-5` | Daily at 10:00, and on Refresh |
 | Suggest next week | Coach | Calendar toolbar, opening drawer C5 | `claude-sonnet-5-5` | Only when Coach asks |
 
-AI never opens, changes or resolves a flag: flags come only from the rule table in `docs/spec/checkins-flags.md`. It never changes the plan unless Coach accepts each change. It never gives medical advice. It never sees GPS tracks, raw data streams, original files, free-text notes or anyone's name, and each call covers one athlete. When AI is not active for an athlete, its panels are absent, not disabled, and the toggles in Me and Settings explain what turning it on would add.
+AI never opens, changes or resolves a flag: flags come only from the rule table in `docs/spec/checkins-flags.md`. It never changes the plan unless Coach accepts each change. It never gives medical advice. It never sees GPS tracks, raw data streams, original files, free-text notes or profile details (names, email addresses, dates of birth), and each call covers one athlete. When AI is not active for an athlete, its panels are absent, not disabled, and the toggles in Me and Settings explain what turning it on would add.
 
 ## 2. Consent
 
@@ -56,11 +56,19 @@ AI reads summaries Laree already shows, and nothing more. One facts builder, `sr
 | Open flags: rule id, rule text, values, state | Never | Yes | Yes |
 | Library templates: id, title, sport, phase tag, duration, Load | No | No | Up to 40 that suit the phase |
 
-The recap never receives flags, because flags are coach-only. No feature ever receives GPS tracks or other coordinates, second-by-second streams, the original .FIT, .GPX or .TCX files, athletes' free-text notes (check-in notes, activity notes, kudos messages), names, email addresses, dates of birth, body weight (power-to-weight goes as W/kg, as the app shows it), real calendar dates (facts use weekdays and relative weeks) or anything about another athlete. A test checks every facts object against this list. Outputs are written without names; the panel heading supplies the name.
+The recap never receives flags, because flags are coach-only. No feature ever receives GPS tracks or other coordinates, second-by-second streams, the original .FIT, .GPX or .TCX files, athletes' free-text notes (check-in notes, activity notes, kudos messages), profile details (names, email addresses, dates of birth), body weight (power-to-weight goes as W/kg, as the app shows it), real calendar dates (facts use weekdays and relative weeks) or anything about another athlete. Library steps are not sent, because a step can hold a free-text note: an accepted "add" names its template and copies the steps on the device. Ids are the app's own keys; in the prototype they are built from the three demo first names, and the MVP uses opaque ids. Titles are the exception to watch: session, library and race titles go in as written, so a name typed into a title would be read, and the consent text says so. A test checks every facts object against this list. Outputs are written without names; the panel heading supplies the name.
 
 ## 4. Retention
 
-The prototype stores no AI output: templates fill in when a panel renders. Consent choices stay in `laree:v1` until Reset.
+The prototype stores no AI output: templates fill in when a panel renders. Consent choices stay in `laree:v1` until Reset. If AI is turned off while that save is failing, the choice is kept in a small note of its own (`laree:ai-withdrawn`) and applied on load; agreeing again or Reset clears it.
+
+### 4.1 When turning AI off cannot be saved
+
+Turning AI off always takes effect on screen at once. Making it stick across a reload goes through three layers, tried in order: the main save in `laree:v1`; if that fails, the small note in the browser's local storage; if that fails too, the same note in session storage, which has its own space. Everything stays on the device. No cookies are used, because a cookie is sent to the server. On load, both notes are read and merged, and anyone named in them is switched off.
+
+The store tracks each person's unsaved withdrawal separately (the athlete, each athlete the coach switches off, and the coach). The warning stays up while any one of them is unsaved. A person leaves that list only when a save that holds their choice works (the main save, or their own note in local storage), or when they turn AI on again. A note kept only in session storage still counts as unsaved, because closing the browser drops it. A later save for someone else does not clear it. In the coach dialog, while the warning is up, the main button reads "Try saving again" and retries the save for the withdrawal. The warning also sits under that person's own AI switch (Coach Settings, or the athlete's Me page) for as long as their withdrawal is unsaved, so it is still there after a reload restores it from the session note.
+
+Still not covered: if the browser still reads the earlier saved copy but refuses the note in both stores, the next reload or browser restart can bring consent back on. The warning says exactly that, so the person knows to check the setting. If storage is blocked outright, the earlier copy cannot be read either, so AI starts off. Tests load the store as a fresh page to check both cases. The MVP keeps consent on the server, which removes this gap.
 
 | MVP item | Kept for |
 |---|---|
@@ -92,7 +100,7 @@ It shows on past weeks in Week (`#/athlete/week?w=-1` and earlier) and on the co
 
 ### 6.2 Check-in summary (coach-facing)
 
-The summary gives Coach one athlete's last 14 days of check-ins in at most four lines, in the results-sheet register: terse, with a unit on every number. It states values against the athlete's own baseline, quotes open flags by their rule text, and notes missed check-ins and missed key sessions. It never calls a value good or bad unless a flag rule has, and never guesses at causes. It shows in Check-ins (`#/coach/check-ins`). A check-in that arrives after 10:00 marks it out of date, and Refresh rewrites it.
+The summary gives Coach one athlete's last 14 days of check-ins in at most four lines, in the results-sheet register: terse, with a unit on every number. It states values against the athlete's own baseline, quotes open flags by their rule text on one line (the flags open on the day being read, not ones raised later), and notes missed check-ins and missed key sessions. It never calls a value good or bad unless a flag rule has, and never guesses at causes. It shows in Check-ins (`#/coach/check-ins`). A check-in that arrives after 10:00 marks it out of date, and Refresh rewrites it.
 
 ### 6.3 Suggest next week (coach-facing)
 

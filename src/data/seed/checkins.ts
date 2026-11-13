@@ -87,6 +87,9 @@ export function buildCheckIns(athleteId: AthleteId, today: DayOffset): SeedCheck
     const story = HISTORY_STORIES[athleteId][day];
     const present = rule.present(day) || sickWindow || story !== undefined || (!rule.absent(day) && presentRoll < 0.88);
     if (!present) continue;
+    // The demo's missing check-in: Danial has not checked in yet this morning. Monday keeps it,
+    // because his open soreness flag opens that day from two high mornings in a row.
+    if (athleteId === 'danial' && day === today && today > weekFirstDay(17)) continue;
 
     let sleepHours = Math.round(sleepRoll * 10) / 10;
     let soreness = sorenessRoll < 0.25 ? 1 : sorenessRoll < 0.8 ? 2 : 3;

@@ -1,0 +1,184 @@
+@layer components {
+  /* The shell column sets the side gutter and width, as on Today and Week. */
+  .page {
+    display: grid;
+    gap: var(--space-6);
+    min-inline-size: 0;
+    padding-block: var(--space-4) var(--space-10);
+  }
+
+  .title,
+  .heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+  }
+
+  .title {
+    font-size: var(--text-3xl);
+  }
+
+  .heading {
+    font-size: var(--text-xl);
+  }
+
+  .section {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .sub {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-md);
+  }
+
+  .race,
+  .locked {
+    display: grid;
+    gap: var(--space-2);
+  }
+
+  .countdown {
+    margin: 0;
+    font-family: var(--font-display);
+    font-variation-settings: "wdth" var(--font-display-wdth);
+    font-weight: var(--font-display-weight);
+    font-style: var(--font-display-style);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+  }
+
+  .sentence {
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-lg);
+    font-weight: 700;
+  }
+
+  .muted {
+    margin: 0 0 var(--space-2);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .races,
+  .locked ul,
+  .shelf {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .races {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .locked li {
+    display: grid;
+    gap: var(--space-1);
+    padding-block: var(--space-2);
+    border-block-start: var(--hairline) solid var(--color-rule);
+  }
+
+  .spark {
+    margin-block: var(--space-2);
+    color: var(--color-text);
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--target-min);
+    color: var(--color-link);
+    font-weight: 700;
+  }
+
+  .weeks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin: var(--space-2) 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .wk {
+    inline-size: 14px;
+    block-size: 14px;
+    box-sizing: border-box;
+    border: 2px solid var(--color-text);
+    border-radius: var(--radius-1);
+  }
+
+  .wk[data-status="counted"] {
+    background: var(--color-text);
+  }
+
+  .wk[data-status="excused"],
+  .wk[data-status="noPlan"] {
+    border-style: dashed;
+  }
+
+  .shelf {
+    display: grid;
+    gap: var(--space-5);
+    /* A bib needs about 16rem; narrower tracks pushed the second column off a phone screen. */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  }
+
+  .badge {
+    min-inline-size: 0;
+    display: grid;
+    gap: var(--space-1);
+    align-content: start;
+  }
+
+  .line {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+
+  .tapeWrap {
+    position: relative;
+  }
+
+  /* The finish tape crosses the bib, parted in the middle. Static, so reduced motion needs nothing. */
+  .tape {
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 38%;
+    block-size: 14px;
+    pointer-events: none;
+  }
+
+  .tapeL,
+  .tapeR {
+    position: absolute;
+    inset-block: 0;
+    inline-size: 42%;
+    background: var(--palette-sun);
+    border-block: 2px solid var(--palette-ink);
+  }
+
+  .tapeL {
+    inset-inline-start: -4px;
+    transform: rotate(-6deg);
+    transform-origin: left center;
+  }
+
+  .tapeR {
+    inset-inline-end: -4px;
+    transform: rotate(6deg);
+    transform-origin: right center;
+  }
+
+  .errorTile {
+    margin: var(--space-2) 0;
+    padding: var(--space-3);
+    border: var(--rule-weight) dashed var(--color-text);
+    border-radius: var(--radius-card);
+    font-size: var(--text-sm);
+  }
+}

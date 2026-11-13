@@ -1,0 +1,52 @@
+@layer components {
+  .body {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .list {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: var(--space-3);
+    padding-block: var(--space-2);
+    border-block-end: 1px solid var(--color-rule);
+  }
+
+  .name {
+    display: block;
+    font-weight: 600;
+  }
+
+  .reason {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .note {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .existing {
+    margin: 0;
+    padding-inline-start: var(--space-4);
+    font-size: var(--text-sm);
+  }
+
+  .footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+}

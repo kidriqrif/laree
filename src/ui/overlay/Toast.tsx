@@ -5,9 +5,10 @@ import {
   UNSTABLE_ToastQueue as ToastQueue,
   UNSTABLE_ToastRegion as AriaToastRegion,
 } from 'react-aria-components/Toast'
-import { IconClose } from '../icons/index.ts'
+import { IconClose } from '../icons/icons-core.tsx'
 import { Button } from '../core/Button.tsx'
 import { IconButton } from '../core/IconButton.tsx'
+import type { RegisterName } from './useRegister.ts'
 import styles from './Toast.module.css'
 
 export interface ToastContentData {
@@ -40,11 +41,21 @@ export function showUndoToast(message: string, onUndo: () => void, timeout?: num
   return showToast(message, { actionLabel: 'Undo', onAction: onUndo, timeout })
 }
 
-export function ToastRegion({ className }: { className?: string }) {
+export interface ToastRegionProps {
+  className?: string
+  /**
+   * The register of the shell that mounts it. The region is drawn in a portal on the body, outside
+   * the shell, so it carries the register itself: tokens and position follow it.
+   */
+  register?: RegisterName
+}
+
+export function ToastRegion({ className, register }: ToastRegionProps) {
   return (
     <AriaToastRegion
       queue={toastQueue}
       aria-label="Notifications"
+      data-register={register}
       className={[styles.region, className].filter(Boolean).join(' ')}
     >
       {({ toast }) => (

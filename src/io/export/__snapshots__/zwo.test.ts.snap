@@ -1,0 +1,57 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`writeZwo > matches the snapshot for a interval workout 1`] = `
+"<?xml version="1.0" encoding="UTF-8"?>
+<workout_file>
+    <author>Coach</author>
+    <name>Over-unders</name>
+    <description>Planned in Laree for Amir at FTP 255 W. Zwift scales targets to the FTP set in Zwift.</description>
+    <sportType>bike</sportType>
+    <tags/>
+    <workout>
+        <Warmup Duration="600" PowerLow="0.5" PowerHigh="0.65"/>
+        <SteadyState Duration="180" Power="1.1"/>
+        <SteadyState Duration="120" Power="0.5"/>
+        <SteadyState Duration="180" Power="1.1"/>
+        <Cooldown Duration="300" PowerLow="0.65" PowerHigh="0.45"/>
+    </workout>
+</workout_file>
+"
+`;
+
+exports[`writeZwo > matches the snapshot for a repeat block workout 1`] = `
+"<?xml version="1.0" encoding="UTF-8"?>
+<workout_file>
+    <author>Coach</author>
+    <name>Threshold 4 × 8</name>
+    <description>Even pacing. If interval 4 drops below 242 W, stop there. Planned in Laree for Amir at FTP 255 W. Zwift scales targets to the FTP set in Zwift.</description>
+    <sportType>bike</sportType>
+    <tags>
+        <tag name="build"/>
+        <tag name="threshold"/>
+    </tags>
+    <workout>
+        <Warmup Duration="900" PowerLow="0.5" PowerHigh="0.75"/>
+        <IntervalsT Repeat="4" OnDuration="480" OffDuration="180" OnPower="0.975" OffPower="0.55">
+            <textevent timeoffset="0" message="Seated. Cadence 90 or more."/>
+        </IntervalsT>
+        <Cooldown Duration="600" PowerLow="0.65" PowerHigh="0.45"/>
+    </workout>
+</workout_file>
+"
+`;
+
+exports[`writeZwo > matches the snapshot for a steady workout 1`] = `
+"<?xml version="1.0" encoding="UTF-8"?>
+<workout_file>
+    <author>Coach</author>
+    <name>Steady endurance</name>
+    <description>Planned in Laree for Amir at FTP 255 W. Zwift scales targets to the FTP set in Zwift.</description>
+    <sportType>bike</sportType>
+    <tags/>
+    <workout>
+        <SteadyState Duration="3600" Power="0.7"/>
+    </workout>
+</workout_file>
+"
+`;

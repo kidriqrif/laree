@@ -46,8 +46,6 @@ import {
 } from './people.ts';
 import { buildPlanned, phasesFor } from './schedule.ts';
 import { TEMPLATES } from './templates.ts';
-import { streamOf } from './streams.ts';
-import type { ActivityStream } from './streams.ts';
 
 export type { ActivityStream } from './streams.ts';
 export type { SeedCheckIn } from './checkins.ts';
@@ -314,29 +312,4 @@ function buildKudos(activities: readonly Activity[], today: DayOffset): Kudos[] 
     });
   }
   return out.filter((k) => k.day <= today);
-}
-
-// ---------------------------------------------------------------- streams
-
-let cached: { today: DayOffset; seed: Seed } | undefined;
-
-/** The seed for the real today, built once and reused by streamFor. */
-function sharedSeed(): Seed {
-  const today = clockToday();
-  if (!cached || cached.today !== today) cached = { today, seed: generateSeed({ today }) };
-  return cached.seed;
-}
-
-/**
- * Detailed per-second streams for a seeded activity, made on demand and always the same for
- * the same activity. Returns null for an activity that is not in the seed.
- */
-export function streamFor(activityId: string, source?: Seed): ActivityStream | null {
-  const seed = source ?? sharedSeed();
-  const activity = seed.activities.find((a) => a.id === activityId);
-  if (!activity) return null;
-  const matched = activity.matchedWorkoutId
-    ? seed.planned.find((w) => w.id === activity.matchedWorkoutId)
-    : undefined;
-  return streamOf(activity, matched);
 }

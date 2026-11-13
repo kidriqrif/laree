@@ -279,7 +279,7 @@ Each card below gives the rule text the flag card shows, the values it shows, th
 #### ramp-high: Fast ramp
 
 - **Rule text:** "Fitness up more than 8 in 7 days"
-- **Values shown:** Ramp; Fitness now and 7 days earlier; the last 7 days' load. Example: "Ramp +9.2 · Fitness 58.4 now, 49.2 a week ago".
+- **Values shown:** Ramp; Fitness on the day before the check and 7 days earlier; the last 7 days' load. The rule reads Fitness up to yesterday, so the line is always dated by that day. Example: "Ramp +9 in the week to 12 Nov · Fitness 58.4, 49.2 a week before".
 - **Explanation:** "{name}'s Fitness rose by {ramp} in the last 7 days. A rise of more than 8 a week means load is climbing fast. Held for several weeks, it raises the chance of illness and injury."
 - **Suggested action:** "If the jump was planned, such as a camp week, acknowledge it. If not, trim next week's volume and keep the key sessions."
 - **Athlete note:** "Your training has built up quickly this week. That's fine for a short while, and Coach is keeping an eye on it."

@@ -1,10 +1,21 @@
 /// <reference types="vitest/config" />
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const THEME = '#FBF6EE'
+
+// Garmin's FIT licence forbids removing its notices, and the minifier drops the SDK's line comments.
+// So every built chunk that holds SDK code gets the notice back, after minifying.
+const garminNotice = (() => {
+  const header = readFileSync(new URL('./node_modules/@garmin/fitsdk/src/decoder.js', import.meta.url), 'utf8')
+  const lines = header.split('\n').map((l) => l.trim()).filter((l) => /^\/\/ (Copyright|Licensed|may not|Transfer)/.test(l))
+  return `/*! Garmin FIT JavaScript SDK. ${lines.map((l) => l.slice(3)).join(' ')} */`
+})()
+const fitNotice = (chunk: { modules: Record<string, unknown> }) =>
+  Object.keys(chunk.modules).some((id) => id.includes('@garmin/fitsdk')) ? garminNotice : ''
 const shortcutIcon = [{ src: 'pwa-192.png', sizes: '192x192', type: 'image/png' }]
 
 // base './' keeps the build path-agnostic: the repo may be renamed later.
@@ -43,12 +54,15 @@ export default defineConfig({
       },
     }),
   ],
-  build: { target: 'es2022' },
+  build: { target: 'es2022', rolldownOptions: { output: { postBanner: fitNotice } } },
+  worker: { rolldownOptions: { output: { postBanner: fitNotice } } },
   test: {
     environment: 'happy-dom',
     setupFiles: ['./src/test/setup.ts'],
-    // Above the 5 s async wait in the setup file, so a slow query fails with its own message.
-    testTimeout: 20_000,
+    // Above the 25 s async wait in the setup file, so a slow query fails with its own message.
+    testTimeout: 60_000,
+    // Page tests load whole lazy routes. With a worker per core they starve each other and time out.
+    maxWorkers: '50%',
     include: ['src/**/*.test.{ts,tsx}', 'brand/**/*.test.ts', 'scripts/**/*.test.ts'],
     alias: {
       'virtual:pwa-register/react': fileURLToPath(new URL('./src/app/pwa/registerStub.ts', import.meta.url)),

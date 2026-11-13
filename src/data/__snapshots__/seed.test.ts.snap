@@ -14,7 +14,7 @@ exports[`determinism > matches the stored snapshot 1`] = `
     {
       "activities": 104,
       "badges": 6,
-      "checkIns": 106,
+      "checkIns": 105,
       "flags": 9,
       "id": "danial",
       "planned": 201,
@@ -28,7 +28,7 @@ exports[`determinism > matches the stored snapshot 1`] = `
       "planned": 172,
     },
   ],
-  "digest": 1738640109,
+  "digest": 1678876391,
   "templates": 18,
 }
 `;

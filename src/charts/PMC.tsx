@@ -44,6 +44,11 @@ const BANDS: readonly [number, number, FormBand][] = [
   [25.5, Infinity, 'detraining'],
 ];
 
+/** Pixels between the Fitness and Fatigue panel and the Form panel. */
+const PANEL_GAP = 14;
+/** A band this short in pixels gets no label. */
+const BAND_LABEL_MIN_H = 12;
+
 interface XY {
   x: number;
   y: number;
@@ -55,7 +60,10 @@ function pathOf(pts: readonly XY[]): string {
     .join('');
 }
 
-/** Fitness, Fatigue and Form over days, with Form bands, races and today. */
+/**
+ * Fitness, Fatigue and Form over days, with races and today. Form has its own lower panel with
+ * its bands tinted and named at the right edge.
+ */
 export function PMC({
   points,
   today,
@@ -100,18 +108,29 @@ export function PMC({
   const idx = n === 0 ? -1 : Math.min(picked ?? defaultIdx, n - 1);
   const sel = idx >= 0 ? pts[idx] : undefined;
 
-  const all = pts.flatMap((p) => [p.fitness, p.fatigue, p.form, 0]);
-  const yMin = Math.min(minOf(all, 0), 0);
-  const yMax = Math.max(maxOf(all, 10), 10);
-  const pad = (yMax - yMin) * 0.06;
-  const y = linear([yMin - pad, yMax + pad], [ih, 0]);
+  // Two panels on one time axis: Fitness and Fatigue on top, Form below on its own scale, so
+  // the Form band tints sit behind Form only and never behind the other two lines.
+  const topH = Math.round((ih - PANEL_GAP) * 0.6);
+  const formTop = topH + PANEL_GAP;
+  const loads = pts.flatMap((p) => [p.fitness, p.fatigue]);
+  const loadMin = Math.min(minOf(loads, 0), 0);
+  const loadMax = Math.max(maxOf(loads, 10), 10);
+  const yLoad = linear([loadMin, loadMax + (loadMax - loadMin) * 0.06], [topH, 0]);
+  const forms = pts.map((p) => p.form);
+  const formMin = Math.min(minOf(forms, 0), -10);
+  const formMax = Math.max(maxOf(forms, 0), 10);
+  const formPad = (formMax - formMin) * 0.08;
+  const yForm = linear([formMin - formPad, formMax + formPad], [ih, formTop]);
   const x = linear([firstDay, lastDay], [0, iw]);
   const xp = (d: number) => (n <= 1 ? iw / 2 : at(x, d));
 
-  const yTicks = niceTicks(yMin, yMax, 4).map((v) => ({
-    pos: at(y, v),
-    label: v < 0 ? fmtSigned(v) : fmtNumber(v),
-  }));
+  const yTicks = [
+    ...niceTicks(loadMin, loadMax, 3).map((v) => ({ pos: at(yLoad, v), label: fmtNumber(v) })),
+    ...niceTicks(formMin, formMax, 3).map((v) => ({
+      pos: at(yForm, v),
+      label: v < 0 ? fmtSigned(v) : fmtNumber(v),
+    })),
+  ];
   const xTicks =
     n === 0
       ? []
@@ -122,6 +141,7 @@ export function PMC({
             .map((d) => ({ pos: xp(d), label: fmtDay(d) }));
 
   const draw = (key: 'fitness' | 'fatigue' | 'form') => {
+    const y = key === 'form' ? yForm : yLoad;
     const done = pts.filter((p) => !p.projected).map((p) => ({ x: xp(p.day), y: at(y, p[key]) }));
     const planned = pts.filter((p) => p.projected).map((p) => ({ x: xp(p.day), y: at(y, p[key]) }));
     // Join the planned stretch to the last completed point so the line is unbroken.
@@ -136,19 +156,19 @@ export function PMC({
   const fitness = draw('fitness');
   const fatigue = draw('fatigue');
   const form = draw('form');
-  const zeroY = at(y, 0);
+  const zeroY = at(yForm, 0);
   const formArea =
     n > 1
-      ? `${pathOf(pts.map((p) => ({ x: xp(p.day), y: at(y, p.form) })))}L${xp(lastDay).toFixed(1)},${zeroY.toFixed(1)}L${xp(firstDay).toFixed(1)},${zeroY.toFixed(1)}Z`
+      ? `${pathOf(pts.map((p) => ({ x: xp(p.day), y: at(yForm, p.form) })))}L${xp(lastDay).toFixed(1)},${zeroY.toFixed(1)}L${xp(firstDay).toFixed(1)},${zeroY.toFixed(1)}Z`
       : '';
 
-  const domLo = y.domain()[0] ?? 0;
-  const domHi = y.domain()[1] ?? 1;
+  const domLo = yForm.domain()[0] ?? 0;
+  const domHi = yForm.domain()[1] ?? 1;
   const bandRects = BANDS.map(([lo, hi, band]) => {
     const a = Math.max(lo, domLo);
     const b = Math.min(hi, domHi);
     if (!(b > a)) return null;
-    return { band, top: at(y, b), height: Math.max(0, at(y, a) - at(y, b)) };
+    return { band, top: at(yForm, b), height: Math.max(0, at(yForm, a) - at(yForm, b)) };
   }).filter((r): r is { band: FormBand; top: number; height: number } => r !== null);
 
   const inRange = (d: number) => n > 0 && d >= firstDay && d <= lastDay;
@@ -288,12 +308,26 @@ export function PMC({
                   {s.single && <circle className={styles.dot} cx={s.single.x} cy={s.single.y} r={4} />}
                 </g>
               ))}
+              {bandRects
+                .filter((r) => r.height >= BAND_LABEL_MIN_H)
+                .map((r) => (
+                  <text
+                    key={r.band}
+                    className={styles.bandLabel}
+                    x={iw - 4}
+                    y={r.top + r.height / 2}
+                    dy="0.32em"
+                    textAnchor="end"
+                  >
+                    {FORM_BAND_LABEL[r.band]}
+                  </text>
+                ))}
               {sel && (
                 <g className={styles.cursor}>
                   <line x1={cx} x2={cx} y1={0} y2={ih} />
-                  <circle className={styles.fitness} cx={cx} cy={at(y, sel.fitness)} r={4} />
-                  <circle className={styles.fatigue} cx={cx} cy={at(y, sel.fatigue)} r={4} />
-                  <circle className={styles.form} cx={cx} cy={at(y, sel.form)} r={4} />
+                  <circle className={styles.fitness} cx={cx} cy={at(yLoad, sel.fitness)} r={4} />
+                  <circle className={styles.fatigue} cx={cx} cy={at(yLoad, sel.fatigue)} r={4} />
+                  <circle className={styles.form} cx={cx} cy={at(yForm, sel.form)} r={4} />
                 </g>
               )}
             </g>

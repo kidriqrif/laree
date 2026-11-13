@@ -53,6 +53,20 @@
     block-size: var(--row-h);
   }
 
+  /* A button control (a select) wraps a long choice at a large text size: it grows to fit instead of
+     letting the text spill over its border. At the default size it keeps the usual height. */
+  button.control {
+    block-size: auto;
+    min-block-size: var(--space-12);
+    padding-block: var(--space-2);
+  }
+
+  :global([data-register="coach"]) button.control {
+    block-size: auto;
+    min-block-size: var(--row-h);
+    padding-block: 2px;
+  }
+
   .control[data-hovered] {
     border-color: var(--color-rule-strong);
   }
@@ -85,7 +99,8 @@
     font: inherit;
   }
 
-  .input::placeholder {
+  .input::placeholder,
+  .control::placeholder {
     color: var(--color-text-muted);
   }
 

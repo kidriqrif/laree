@@ -61,6 +61,11 @@
     background: var(--color-surface);
   }
 
+  /* Rows keep their own height: in a short window the rail scrolls instead of squashing them. */
+  .rail > * {
+    flex-shrink: 0;
+  }
+
   .rail[data-open="true"] {
     display: flex;
     /* Below the top bar's button so Sections can close it again. */
@@ -120,19 +125,22 @@
   .glyph {
     display: grid;
     place-items: center;
-    inline-size: 20px;
-    block-size: 20px;
+    min-inline-size: 24px;
+    min-block-size: 24px;
     flex: none;
   }
 
+  /* 24 px, the icon size, and larger when the browser text size makes the letter outgrow it. */
   .initial {
     display: grid;
     place-items: center;
-    inline-size: 20px;
-    block-size: 20px;
+    flex: none;
+    inline-size: max(24px, calc(1.2em + 6px));
+    block-size: max(24px, calc(1.2em + 6px));
     border: var(--hairline) solid var(--color-text);
     font-size: var(--text-xs);
     font-weight: 700;
+    line-height: 1;
   }
 
   .itemLabel {
@@ -143,6 +151,75 @@
     font-family: var(--font-mono);
     font-size: var(--text-xs);
     color: var(--color-text-muted);
+  }
+
+  /* Jump to field and Keyboard link: the same row shape as a rail item. */
+  .jump,
+  .footerButton {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    inline-size: 100%;
+    min-block-size: 44px;
+    padding-inline: var(--space-3);
+    color: var(--color-text);
+    font-size: var(--text-md);
+    text-align: start;
+  }
+
+  .jump {
+    border: var(--hairline) solid var(--color-rule-strong);
+    background: var(--color-surface-sunken);
+  }
+
+  .footerButton:hover {
+    background: var(--color-surface-sunken);
+  }
+
+  .footer {
+    margin-block-start: auto;
+    padding-block-start: var(--space-2);
+    border-block-start: var(--hairline) solid var(--color-rule);
+  }
+
+  /* Beside an athlete: a flag when a flag is open, a hollow dot when there is no check-in today. */
+  .marks {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .flag {
+    display: inline-flex;
+    color: var(--color-danger);
+  }
+
+  .dot {
+    inline-size: 8px;
+    block-size: 8px;
+    border: 2px solid var(--color-text-muted);
+    border-radius: var(--radius-pill);
+  }
+
+  .count {
+    min-inline-size: 20px;
+    padding-inline: var(--space-1);
+    background: var(--color-danger);
+    color: var(--color-surface);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .srOnly {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .content {
@@ -164,16 +241,23 @@
     padding: var(--space-4);
   }
 
-  /* ---- 1024 px and wider: the rail is always visible, editing is on ---- */
+  /* The note shows only where useCoachReadOnly is true: under 1024 px with a touch pointer. */
+  @media (min-width: 1024px), not all and (pointer: coarse) {
+    .readOnly {
+      display: none;
+    }
+  }
+
+  /* ---- 1024 px and wider: the rail is always visible ---- */
   @media (min-width: 1024px) {
     .shell {
-      grid-template-columns: 208px minmax(0, 1fr);
+      /* 208 px at the default text size; wider when the browser text size is larger. */
+      grid-template-columns: max(208px, 11rem) minmax(0, 1fr);
       grid-template-rows: 1fr;
       grid-template-areas: "rail content";
     }
 
-    .topBar,
-    .readOnly {
+    .topBar {
       display: none;
     }
 
@@ -195,8 +279,15 @@
       padding: var(--space-2) var(--space-4) var(--space-3);
     }
 
-    .item {
+    .item,
+    .jump,
+    .footerButton {
       min-block-size: var(--target-min);
+    }
+
+    .jump {
+      inline-size: auto;
+      margin-inline: var(--space-3);
     }
   }
 

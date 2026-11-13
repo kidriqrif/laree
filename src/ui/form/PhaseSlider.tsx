@@ -91,6 +91,7 @@ export const PhaseSlider = forwardRef<HTMLDivElement, PhaseSliderProps>(function
                   key={phases[i]?.id ?? i}
                   index={i}
                   className={cx(styles.thumb, styles.phaseThumb)}
+                  isInvalid={error ? true : undefined}
                   aria-label={`End of ${phases[i]?.label ?? `phase ${i + 1}`}`}
                   aria-valuetext={`${phases[i]?.label ?? 'Phase'} ends after week ${state.values[i] ?? 0} of ${total}`}
                 />

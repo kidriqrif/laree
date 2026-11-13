@@ -3,7 +3,11 @@ import type { KeyboardEvent } from 'react';
 import { ChartFrame } from './ChartFrame.tsx';
 import styles from './Heatmap.module.css';
 
-/** Intensity step, 0 (lowest) to 4 (highest), drawn on the five-step heat ramp. */
+/**
+ * Step 0 to 4. On the heat scale it is intensity, lowest to highest, drawn on the zone ramp.
+ * On the status scale it names a compliance state: 0 on plan, 1 short or under, 2 over,
+ * 3 well over, 4 missed.
+ */
 export type HeatLevel = 0 | 1 | 2 | 3 | 4;
 
 export interface HeatCell {
@@ -12,7 +16,7 @@ export interface HeatCell {
   text: string;
   /** A short mark shown beside the value when it is outside the usual range, e.g. an arrow. */
   glyph?: string;
-  /** Spoken name for the cell; defaults to "<row>, <column>: <text>". */
+  /** Spoken name for the cell; defaults to "<row>, <column>: <text>". Name the band when there is a glyph. */
   label?: string;
 }
 
@@ -37,12 +41,14 @@ export interface HeatmapProps {
   title: string;
   columns: readonly HeatColumn[];
   rows: readonly HeatRow[];
-  /** Legend entries; defaults to Lowest to Highest. */
+  /** Legend entries; defaults to Lowest to Highest, or to the five compliance states on the status scale. */
   legend?: readonly HeatLegendItem[];
   /** Name of what the cells measure, for summaries, e.g. "Sleep". */
   measure?: string;
   /** Called when a cell is clicked or Enter or Space is pressed on it. */
   onCellActivate?: (rowKey: string, columnKey: string) => void;
+  /** "heat" (default) fills cells from the zone ramp; "status" uses the compliance status palette. */
+  scale?: 'heat' | 'status';
   className?: string;
 }
 
@@ -52,6 +58,15 @@ const DEFAULT_LEGEND: readonly HeatLegendItem[] = [
   { level: 2, label: 'Middle' },
   { level: 3, label: 'High' },
   { level: 4, label: 'Highest' },
+];
+
+/* The status scale names states, not amounts, so its default legend must too. */
+const STATUS_LEGEND: readonly HeatLegendItem[] = [
+  { level: 0, label: 'On plan' },
+  { level: 1, label: 'Short or under' },
+  { level: 2, label: 'Over' },
+  { level: 3, label: 'Well over' },
+  { level: 4, label: 'Missed' },
 ];
 
 function focusCell(r: number, c: number, root: HTMLElement) {
@@ -70,11 +85,13 @@ export function Heatmap({
   title,
   columns,
   rows,
-  legend = DEFAULT_LEGEND,
+  legend,
   measure,
   onCellActivate,
+  scale = 'heat',
   className,
 }: HeatmapProps) {
+  const legendItems = legend ?? (scale === 'status' ? STATUS_LEGEND : DEFAULT_LEGEND);
   const nr = rows.length;
   const nc = columns.length;
   const [pos, setPos] = useState<[number, number]>([0, 0]);
@@ -145,7 +162,7 @@ export function Heatmap({
         ]),
       }}
     >
-      <div className={styles.wrap}>
+      <div className={styles.wrap} data-scale={scale}>
         {nr === 0 || nc === 0 ? (
           <p className={styles.empty}>No data yet.</p>
         ) : (
@@ -228,7 +245,7 @@ export function Heatmap({
           </div>
         )}
         <ul className={styles.legend} aria-label="Legend">
-          {legend.map((l) => (
+          {legendItems.map((l) => (
             <li key={l.level}>
               <span className={styles.chip} data-level={l.level} aria-hidden="true" />
               {l.label}

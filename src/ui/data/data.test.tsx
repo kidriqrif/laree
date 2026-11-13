@@ -144,6 +144,20 @@ describe('DragGrid keyboard move', () => {
     expect(within(mon).queryByText('Easy run')).toBeNull()
   })
 
+  it('takes a heading level and puts foot marks in the card beside Move', () => {
+    const cols: DragGridColumn[] = [
+      { key: 'mon', label: 'Monday', items: [{ id: 's1', label: 'Easy run', foot: <span>Key</span> }] },
+      { key: 'tue', label: 'Tuesday', items: [] },
+    ]
+    const { rerender } = render(<DragGrid columns={cols} onMove={() => {}} />)
+    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(2)
+    rerender(<DragGrid columns={cols} onMove={() => {}} headingLevel={2} />)
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(['Monday', 'Tuesday'])
+    const row = screen.getByRole('row', { name: /Easy run/ })
+    expect(within(row).getByText('Key')).toBeTruthy()
+    expect(within(row).getByRole('button', { name: 'Move Easy run' })).toBeTruthy()
+  })
+
   it('cancels with Escape', () => {
     render(<Grid />)
     const live = screen.getByRole('status')

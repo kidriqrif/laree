@@ -129,7 +129,7 @@ export default function KitPage() {
         <DataGroup />
         <ChartsGroup />
       </div>
-      <ToastRegion />
+      <ToastRegion register={register} />
     </div>
   )
 }

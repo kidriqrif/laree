@@ -1,10 +1,11 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role, react/set-state-in-effect -- status region; the toast reports the viewer syncing to the router location */
-import { useEffect, useState } from 'react'
-import { Link, Outlet, useLocation, useMatches } from 'react-router'
-import { Logo } from '../ui/brand/Logo.tsx'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Outlet, useLocation, useMatches, useNavigationType } from 'react-router'
+import { writeRouteTitle } from './pageTitle.ts'
 import { personName } from './people.ts'
 import { RoleSwitcher } from './RoleSwitcher.tsx'
 import { StorageBanner } from './StorageBanner.tsx'
+import { ThemeSync } from './ThemeSync.tsx'
 import { UpdateToast } from './pwa/UpdateToast.tsx'
 import { setLastCoachRoute, useViewer } from './viewer.ts'
 import styles from './AppFrame.module.css'
@@ -31,10 +32,30 @@ export function AppFrame() {
   const { pathname, search } = useLocation()
   const title = useRouteTitle()
   const [toast, setToast] = useState('')
+  const [arrived, setArrived] = useState('')
+  const lastPath = useRef(pathname)
+  const scrolledPath = useRef(pathname)
+  const navigationType = useNavigationType()
 
-  useEffect(() => {
-    document.title = title ? `${title} · Laree` : 'Laree'
+  // A layout effect, so a page's usePageTitle (a passive effect) can name itself after this.
+  useLayoutEffect(() => {
+    writeRouteTitle(title)
   }, [title])
+
+  // A new page opens at the top, not at the last page's scroll position. Back and Forward keep the
+  // browser's own restore, and a change to the search only (a sheet opening) leaves the page where it is.
+  useLayoutEffect(() => {
+    if (pathname === scrolledPath.current) return
+    scrolledPath.current = pathname
+    if (navigationType !== 'POP') window.scrollTo(0, 0)
+  }, [pathname, navigationType])
+
+  // A new page (not a search-only change) is announced by its title; focus stays where the page puts it.
+  useEffect(() => {
+    if (pathname === lastPath.current) return
+    lastPath.current = pathname
+    setArrived(document.title)
+  }, [pathname])
 
   // Role follows route (IA section 9.5): the address decides, the switcher catches up, a toast says so.
   useEffect(() => {
@@ -59,6 +80,7 @@ export function AppFrame() {
 
   return (
     <div className={styles.frame}>
+      <ThemeSync />
       <button
         type="button"
         className={styles.skip}
@@ -75,25 +97,9 @@ export function AppFrame() {
       <div role="status" className={styles.toastRegion}>
         {toast ? <p className={styles.toast}>{toast}</p> : null}
       </div>
-    </div>
-  )
-}
-
-/** Standalone frame (IA 4.6): the Laree mark linking to the role picker, then the content. */
-export function StandaloneFrame() {
-  const { pathname } = useLocation()
-  return (
-    <div className={styles.standalone}>
-      {pathname === '/' ? null : (
-        <header className={styles.standaloneHeader}>
-          <Link to="/" aria-label="Laree, role picker">
-            <Logo size={28} />
-          </Link>
-        </header>
-      )}
-      <main id="main" tabIndex={-1} className={styles.standaloneMain}>
-        <Outlet />
-      </main>
+      <p aria-live="polite" className="sr-only">
+        {arrived}
+      </p>
     </div>
   )
 }

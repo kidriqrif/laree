@@ -12,47 +12,21 @@
  * Season, Race and Streak, kept abstract enough to read as icons, not pictures.
  */
 
-/** One drawn element: a stroked path, a stroked circle or a filled dot, or a stroked rectangle. */
-export type IconNode =
-  | { readonly d: string }
-  | { readonly cx: number; readonly cy: number; readonly r: number; readonly dot?: true }
-  | { readonly x: number; readonly y: number; readonly w: number; readonly h: number; readonly rx?: number }
+import { CALENDAR_BOX, CALENDAR_RULE, CALENDAR_TABS, todayPaths, weekPaths, progressPaths, mePaths, plusPaths, chevronDownPaths, chevronLeftPaths, chevronRightPaths, closePaths, sleepPaths, racePaths } from './paths-core.ts'
+import type { IconGeometry, IconNode } from './paths-core.ts'
 
-export type IconGeometry = readonly IconNode[]
+/* The icons on Today's path live in paths-core.ts, so Today does not ship the whole set. */
+export type { IconGeometry, IconNode } from './paths-core.ts'
+export { todayPaths, weekPaths, progressPaths, mePaths, plusPaths, chevronDownPaths, chevronLeftPaths, chevronRightPaths, closePaths, sleepPaths, racePaths } from './paths-core.ts'
 
 /* Shared parts, so related icons stay identical where they overlap. */
-const CALENDAR_BOX: IconNode = { x: 4, y: 5, w: 16, h: 16, rx: 2 }
-const CALENDAR_TABS: IconNode = { d: 'M8 3v3M16 3v3' }
-const CALENDAR_RULE: IconNode = { d: 'M4 9h16' }
 const TRAY: IconNode = { d: 'M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4' }
 const OPEN_BOX: IconNode = { d: 'M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4' }
 
 /* ── Athlete navigation ─────────────────────────────────────────────── */
 
-/** The bend sits on the baseline: a half-risen sun over the straight and a second lane. */
-export const todayPaths: IconGeometry = [
-  { d: 'M3 16h18' },
-  { d: 'M7 16a5 5 0 0 1 10 0' },
-  { d: 'M12 4v3' },
-  { d: 'M3.52 7.52l2.12 2.12' },
-  { d: 'M20.48 7.52l-2.12 2.12' },
-  { d: 'M7 20h10' },
-]
-
-/** A calendar page with one lane running across it: this week. */
-export const weekPaths: IconGeometry = [CALENDAR_BOX, CALENDAR_TABS, CALENDAR_RULE, { d: 'M8 15h8' }]
-
 /** A tally of five: logging, lap by lap. */
 export const logPaths: IconGeometry = [{ d: 'M6 5v14M10 5v14M14 5v14M18 5v14' }, { d: 'M3 16 21 8' }]
-
-/** Two lanes through the bend, the outer one rising. */
-export const progressPaths: IconGeometry = [
-  { d: 'M3 20h5a9 9 0 0 0 9-9V4' },
-  { d: 'M13 8l4-4 4 4' },
-  { d: 'M3 16h5a5 5 0 0 0 4.33-2.5' },
-]
-
-export const mePaths: IconGeometry = [{ cx: 12, cy: 8, r: 4 }, { d: 'M5 21v-1a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v1' }]
 
 /* ── Coach navigation ───────────────────────────────────────────────── */
 
@@ -160,13 +134,8 @@ export const brickPaths: IconGeometry = [{ x: 3, y: 5, w: 18, h: 14, rx: 2 }, { 
 
 /* ── Actions ────────────────────────────────────────────────────────── */
 
-export const closePaths: IconGeometry = [{ d: 'M6 6l12 12M18 6 6 18' }]
-export const chevronDownPaths: IconGeometry = [{ d: 'M6 9l6 6 6-6' }]
 export const chevronUpPaths: IconGeometry = [{ d: 'M6 15l6-6 6 6' }]
-export const chevronLeftPaths: IconGeometry = [{ d: 'M15 6l-6 6 6 6' }]
-export const chevronRightPaths: IconGeometry = [{ d: 'M9 6l6 6-6 6' }]
 export const checkPaths: IconGeometry = [{ d: 'M4 12l5 5L20 6' }]
-export const plusPaths: IconGeometry = [{ d: 'M12 5v14M5 12h14' }]
 export const minusPaths: IconGeometry = [{ d: 'M5 12h14' }]
 export const searchPaths: IconGeometry = [{ cx: 11, cy: 11, r: 7 }, { d: 'M16 16l5 5' }]
 export const uploadPaths: IconGeometry = [{ d: 'M12 15V4M7 9l5-5 5 5' }, TRAY]
@@ -226,7 +195,6 @@ export const lockPaths: IconGeometry = [
 
 export const heartPaths: IconGeometry = [{ d: 'M12 20 4.28 11.74A4.75 4.75 0 1 1 12 6.38a4.75 4.75 0 1 1 7.72 5.36z' }]
 export const powerPaths: IconGeometry = [{ d: 'M13 3 5 13h7l-1 8 8-10h-7z' }]
-export const sleepPaths: IconGeometry = [{ d: 'M3 12h7l-7 8h7' }, { d: 'M14 4h6l-6 6h6' }]
 export const moodPaths: IconGeometry = [
   { cx: 12, cy: 12, r: 9 },
   { cx: 9, cy: 10, r: 1.25, dot: true },
@@ -252,9 +220,6 @@ export const streakPaths: IconGeometry = [
   { d: 'M12 3c1.5 3 7 6 7 11a7 7 0 0 1-14 0c0-3 1.5-5.2 3-6.5.3 1.3 1 2.2 2 2.5C10 7.5 10.8 5 12 3z' },
   { d: 'M9 14a3 3 0 0 0 6 0c0-1.4-.7-2.6-1.8-3.6' },
 ]
-
-/** Three lanes, staggered starts, one finish post. */
-export const racePaths: IconGeometry = [{ d: 'M20 3v18' }, { d: 'M20 3l-5 2.5 5 2.5' }, { d: 'M3 11h13M6 15h10M9 19h7' }]
 
 /* ── Devices, files and tools ───────────────────────────────────────── */
 

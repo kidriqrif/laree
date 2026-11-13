@@ -8,16 +8,19 @@ import {
   emptyFlagsState,
   evaluateRules,
   explainFlag,
+  flagValuesLine,
+  flagValuesShort,
   replayFlags,
   resolveFlag,
   stepFlags,
   summariseValues,
 } from './flags.ts';
-import type { AthleteData, FlagCheckIn, FlagEvaluation, FlagPlanned, FlagRuleId, FlagsState } from './flags.ts';
+import type { AthleteData, FlagCheckIn, FlagEvaluation, FlagPlanned, FlagRecord, FlagRuleId, FlagsState } from './flags.ts';
 import type { FitnessPoint } from './metrics/fitness.ts';
 
 // Day 98 is a Monday (98 = 14 x 7).
 const D = 100;
+const label = (d: number) => `day ${d}`;
 
 const ci = (day: number, o: Partial<FlagCheckIn> = {}): FlagCheckIn => ({
   day,
@@ -546,6 +549,61 @@ describe('explanations', () => {
       'Form −32 (Fitness 70, Fatigue 102) · 2nd day below −30',
     );
     expect(summariseValues('soreness-high', { today: 4, yesterday: 5 })).toBe('Soreness 4 today, 5 yesterday');
+  });
+
+  it('dates values measured on an earlier day instead of saying today', () => {
+    expect(summariseValues('soreness-high', { today: 5, yesterday: 4 }, '9 Nov')).toBe('Soreness 5 on 9 Nov, 4 the day before');
+    expect(summariseValues('rhr-high', samples['rhr-high'] ?? {}, '9 Nov')).toBe(
+      '56 bpm on 9 Nov, 55 bpm the day before · baseline 48 bpm · +8 and +7',
+    );
+    expect(summariseValues('mood-low-under-load', samples['mood-low-under-load'] ?? {}, '9 Nov')).toMatch(/^Mood 2 on 9 Nov · /);
+    expect(summariseValues('sleep-short', { last: 5.4, before: 5.6, avg7: 6.2 }, '9 Nov')).toBe(
+      '5.4 h the night to 9 Nov, 5.6 h the night before · 7-day average 6.2 h',
+    );
+    for (const id of RULE_IDS) {
+      const text = summariseValues(id, samples[id] ?? {}, '9 Nov');
+      expect(text).not.toMatch(/\b(today|yesterday|this morning|last night|now)\b/);
+    }
+  });
+
+  it('words a flag from today: dated when the values are older, plain when they are from today', () => {
+    const rec = {
+      ruleId: 'soreness-high',
+      openedDay: 90,
+      lastTrueDay: 92,
+      valuesAtOpen: { today: 4, yesterday: 4 },
+      valuesLatest: { today: 5, yesterday: 4 },
+    } as unknown as FlagRecord;
+    expect(flagValuesLine(rec, 'latest', 92, label)).toBe('Soreness 5 today, 4 yesterday');
+    expect(flagValuesLine(rec, 'latest', 96, label)).toBe('Soreness 5 on day 92, 4 the day before');
+    expect(flagValuesLine(rec, 'open', 92, label)).toBe('Soreness 4 on day 90, 4 the day before');
+  });
+
+  it('dates ramp values by the day before the check, the day its Fitness is read', () => {
+    expect(summariseValues('ramp-high', samples['ramp-high'] ?? {}, '9 Nov')).toBe(
+      'Ramp +9 in the week to 9 Nov · Fitness 58.4, 49.2 a week before',
+    );
+    const rec = {
+      ruleId: 'ramp-high',
+      openedDay: 90,
+      lastTrueDay: 92,
+      valuesAtOpen: { ramp: 8.5, fitness: 57, fitnessWeekAgo: 48.5 },
+      valuesLatest: samples['ramp-high'],
+    } as unknown as FlagRecord;
+    // Checked today, but Fitness is read up to yesterday: never "now".
+    expect(flagValuesLine(rec, 'latest', 92, label)).toBe('Ramp +9 in the week to day 91 · Fitness 58.4, 49.2 a week before');
+    expect(flagValuesLine(rec, 'open', 92, label)).toBe('Ramp +9 in the week to day 89 · Fitness 57.0, 48.5 a week before');
+  });
+
+  it('keeps the date in the compact values line of every dated rule', () => {
+    for (const id of RULE_IDS) {
+      // Missed key sessions count the current week and never say "today", so they carry no date.
+      if (id === 'key-missed') continue;
+      const rec = { ruleId: id, openedDay: 90, lastTrueDay: 90, valuesAtOpen: samples[id], valuesLatest: samples[id] } as unknown as FlagRecord;
+      const short = flagValuesShort(rec, 96, label);
+      expect(`${id}: ${short}`).toContain(id === 'ramp-high' ? 'day 89' : 'day 90');
+      expect(`${id}: ${short}`).not.toContain(' · ');
+    }
   });
 
   it('shows more decimals when rounding would hide the threshold', () => {

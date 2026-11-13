@@ -41,6 +41,23 @@
     background: var(--color-surface);
     color: var(--color-text);
     min-block-size: 0;
+    /* Every kind has a set width, so the box can be a size container (see the queries below). */
+    container-type: inline-size;
+  }
+
+  /* An athlete sheet that is narrow for its text size gets the condensed display face, the same as
+     the page column (AthleteShell.module.css). The sheet has no side padding of its own, so each
+     width is the column's plus the column's 32 px of padding. */
+  @container (max-width: calc(19rem + 32px)) {
+    .overlay[data-register="athlete"] .modal > * {
+      --font-display-wdth: 75;
+    }
+  }
+
+  @container (max-width: calc(12rem + 32px)) {
+    .overlay[data-register="athlete"] .modal > * {
+      --font-display-wdth: 60;
+    }
   }
 
   .modal[data-kind="sheet"] {
@@ -51,6 +68,11 @@
     border-start-end-radius: var(--radius-card);
     box-shadow: var(--shadow-sheet);
     padding-block-end: env(safe-area-inset-bottom);
+  }
+
+  /* An athlete sheet stays inside the athlete column. */
+  .overlay[data-register="athlete"] .modal[data-kind="sheet"] {
+    max-inline-size: var(--column-max);
   }
 
   .modal[data-kind="sheet"][data-entering] {
@@ -81,6 +103,10 @@
     max-block-size: 90dvh;
     border-radius: var(--radius-card);
     border: var(--hairline) solid var(--color-rule-strong);
+  }
+
+  .modal[data-kind="dialog"][data-size="wide"] {
+    inline-size: min(72rem, 100%);
   }
 
   .dialog {

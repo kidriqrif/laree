@@ -395,7 +395,7 @@ Appears below the switcher when the browser will not keep data.
   4. The main chart (pace or power with heart rate) and a time-in-zones bar.
   5. Laps.
   6. Effort and notes, which the athlete can edit.
-  7. The source ("From file (.FIT)", "Quick log" or "Device (simulated)"), the matched session, and a route trace for imported files that carry GPS. The trace is a plain line with no map tiles.
+  7. The source ("Imported file", "Quick log" or "Device (simulated)"), the matched session, and a route trace for imported files that carry GPS. The trace is a plain line with no map tiles.
 - **Primary action.** "Add effort and notes" when they are missing. Otherwise none.
 - **Secondary actions.** Change the matched session. "Share to Strava", disabled with the same explanation as Me. Delete the activity, with an Undo toast.
 - **States.**

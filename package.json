@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "sideEffects": [
+    "**/*.css",
+    "./src/app/main.tsx",
+    "./src/styles/fonts.ts"
+  ],
   "license": "UNLICENSED",
   "description": "Laree: training planner for triathlon, running and cycling (prototype).",
   "engines": {
@@ -17,7 +22,7 @@
     "test": "vitest run --passWithNoTests",
     "check:manifest": "node scripts/check-manifest.ts",
     "check:base": "node scripts/check-base-path.ts",
-    "check":"npm run typecheck && npm run lint && npm run test",
+    "check": "npm run typecheck && npm run lint && npm run test",
     "brand": "node scripts/brand/build-logo.ts && node scripts/brand/rasterize.ts"
   },
   "dependencies": {
