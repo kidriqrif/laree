@@ -7,7 +7,7 @@
 | Precache | Service worker inspected in the browser during M11 | Pass: 230 entries |
 | Log shortcut | Opened `#/athlete/today?sheet=log`, the shortcut's target | Pass: the "Log a session" sheet opens |
 | Update flow | After each new build the old worker keeps serving until the update toast is accepted. Seen during QA as stale styles until the caches were cleared. | Works as designed: the app never reloads under the user |
-| Offline reload | Not emulated this round. The precache covers every route's files. | Not re-tested |
+| Offline reload | Not emulated in M11. Re-tested in M12 with the server stopped; see [live-check.md](../live-check.md). | Pass in M12 |
 | Install | The built-in browser cannot install apps. | Not tested; check on a phone during M12 |
 
 ## Findings

@@ -186,10 +186,6 @@
     gap: var(--space-3);
   }
 
-  .fillDialog {
-    inline-size: min(72rem, 96vw);
-  }
-
   .fillIntro {
     margin: 0 0 var(--space-3);
     font-size: var(--text-sm);

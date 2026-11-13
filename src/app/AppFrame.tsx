@@ -1,6 +1,6 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role, react/set-state-in-effect -- status region; the toast reports the viewer syncing to the router location */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Outlet, useLocation, useMatches } from 'react-router'
+import { Outlet, useLocation, useMatches, useNavigationType } from 'react-router'
 import { writeRouteTitle } from './pageTitle.ts'
 import { personName } from './people.ts'
 import { RoleSwitcher } from './RoleSwitcher.tsx'
@@ -34,11 +34,21 @@ export function AppFrame() {
   const [toast, setToast] = useState('')
   const [arrived, setArrived] = useState('')
   const lastPath = useRef(pathname)
+  const scrolledPath = useRef(pathname)
+  const navigationType = useNavigationType()
 
   // A layout effect, so a page's usePageTitle (a passive effect) can name itself after this.
   useLayoutEffect(() => {
     writeRouteTitle(title)
   }, [title])
+
+  // A new page opens at the top, not at the last page's scroll position. Back and Forward keep the
+  // browser's own restore, and a change to the search only (a sheet opening) leaves the page where it is.
+  useLayoutEffect(() => {
+    if (pathname === scrolledPath.current) return
+    scrolledPath.current = pathname
+    if (navigationType !== 'POP') window.scrollTo(0, 0)
+  }, [pathname, navigationType])
 
   // A new page (not a search-only change) is announced by its title; focus stays where the page puts it.
   useEffect(() => {

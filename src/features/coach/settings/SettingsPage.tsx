@@ -176,8 +176,8 @@ export default function SettingsPage() {
               isSelected={coachOn}
               onChange={toggleCoachAi}
               isDisabled={readOnly}
-              aria-label="Coach AI for the team"
-              label={coachOn ? 'Coach AI is on for the team' : 'Coach AI is off for the team'}
+              label="Coach AI for the team"
+              hint={coachOn ? 'On. AI runs for each athlete who has turned it on too.' : 'Off for every athlete.'}
             />
             <div className={styles.tableWrap}>
               <table className={styles.table}>

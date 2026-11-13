@@ -70,7 +70,12 @@ describe('Coach settings page', () => {
     await heading()
     const table = await consentTable()
     expect(table).toBeTruthy()
-    fireEvent.click(screen.getByRole('switch', { name: 'Coach AI for the team' }))
+    // The visible label is the switch's name; the state sits in the hint, not in the label.
+    const coachSwitch = screen.getByRole('switch', { name: 'Coach AI for the team' })
+    expect(screen.getByText('Coach AI for the team')).toBeTruthy()
+    expect(coachSwitch.getAttribute('aria-describedby')).toBeTruthy()
+    expect(screen.getByText('Off for every athlete.')).toBeTruthy()
+    fireEvent.click(coachSwitch)
     expect(await screen.findByRole('dialog', { name: 'AI consent for amir' })).toBeTruthy()
     expect(useLaree.getState().data.settings.coach.aiConsent).toBe(false)
   })

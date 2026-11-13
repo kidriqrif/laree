@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useLaree } from '../data/store.ts'
 import { sessionName } from '../features/shared/activity/format.ts'
 import { landingFor } from './RoleSwitcher.tsx'
@@ -144,6 +144,29 @@ describe('athlete shell', () => {
     // Same route, so the route title does not change; the page must put it back itself.
     await router.navigate('/athlete/workout/no-such-workout')
     await waitFor(() => expect(document.title).toBe('Workout · Laree'))
+  })
+
+  it('opens a new page at the top, and keeps the scroll for a sheet and for Back', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const toTop = () => scrollTo.mock.calls.filter((c) => c[0] === 0 && c[1] === 0).length
+    try {
+      const router = renderAt('/athlete/week')
+      await screen.findByRole('heading', { level: 1, name: /^This week ?, / })
+      expect(toTop()).toBe(0)
+      await router.navigate('/athlete/today')
+      await screen.findByRole('heading', { level: 1, name: 'Today' })
+      expect(toTop()).toBe(1)
+      // A sheet changes the search only, so the page under it stays put.
+      await router.navigate('/athlete/today?sheet=log')
+      await router.navigate(-1)
+      expect(toTop()).toBe(1)
+      // Back leaves the position to the browser.
+      await router.navigate(-1)
+      await screen.findByRole('heading', { level: 1, name: /^This week ?, / })
+      expect(toTop()).toBe(1)
+    } finally {
+      scrollTo.mockRestore()
+    }
   })
 })
 

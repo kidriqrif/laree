@@ -147,7 +147,10 @@ function Editor({ saved, onSaved }: EditorProps) {
     { scope: 'page' },
   )
 
-  const blocker = useBlocker(() => dirtyRef.current)
+  // Only leaving the page asks first. A change to the search alone (the preview athlete) stays on it.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) => dirtyRef.current && currentLocation.pathname !== nextLocation.pathname,
+  )
   const proceeded = useRef(false)
 
   const copy = () => {

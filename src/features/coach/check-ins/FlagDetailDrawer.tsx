@@ -6,7 +6,7 @@ import { fmtDay, Sparkline } from '../../../charts/index.ts'
 import { currentDay, selectFitnessSeries, selectFlagRecords } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
 import { usualLabel } from '../../../domain/baselines.ts'
-import { NOTE_MAX_CHARS, RULES, summariseValues } from '../../../domain/flags.ts'
+import { flagValuesLine, NOTE_MAX_CHARS, RULES } from '../../../domain/flags.ts'
 import type { AthleteId, DayOffset } from '../../../domain/types.ts'
 import { Button, buttonClass } from '../../../ui/core/index.ts'
 import { TextField } from '../../../ui/form/index.ts'
@@ -118,10 +118,10 @@ export default function FlagDetailDrawer({ athleteId, flagId, onClose, onOpenChe
           <h3 id="fd-rule">The rule</h3>
           <p>{meta.ruleText}</p>
           <p className={styles.values} data-numeric>
-            {summariseValues(flag.ruleId, flag.valuesLatest)}
+            {flagValuesLine(flag, 'latest', today, fmtDay)}
           </p>
           <p className={styles.muted}>
-            Opened {fmtDay(flag.openedDay)}: {summariseValues(flag.ruleId, flag.valuesAtOpen)}
+            Opened {fmtDay(flag.openedDay)}: {flagValuesLine(flag, 'open', today, fmtDay)}
           </p>
           {usual ? <p className={styles.muted}>Baseline used by this rule: {usual}.</p> : null}
           {series ? (

@@ -8,16 +8,18 @@ import {
   emptyFlagsState,
   evaluateRules,
   explainFlag,
+  flagValuesLine,
   replayFlags,
   resolveFlag,
   stepFlags,
   summariseValues,
 } from './flags.ts';
-import type { AthleteData, FlagCheckIn, FlagEvaluation, FlagPlanned, FlagRuleId, FlagsState } from './flags.ts';
+import type { AthleteData, FlagCheckIn, FlagEvaluation, FlagPlanned, FlagRecord, FlagRuleId, FlagsState } from './flags.ts';
 import type { FitnessPoint } from './metrics/fitness.ts';
 
 // Day 98 is a Monday (98 = 14 x 7).
 const D = 100;
+const label = (d: number) => `day ${d}`;
 
 const ci = (day: number, o: Partial<FlagCheckIn> = {}): FlagCheckIn => ({
   day,
@@ -546,6 +548,34 @@ describe('explanations', () => {
       'Form −32 (Fitness 70, Fatigue 102) · 2nd day below −30',
     );
     expect(summariseValues('soreness-high', { today: 4, yesterday: 5 })).toBe('Soreness 4 today, 5 yesterday');
+  });
+
+  it('dates values measured on an earlier day instead of saying today', () => {
+    expect(summariseValues('soreness-high', { today: 5, yesterday: 4 }, '9 Nov')).toBe('Soreness 5 on 9 Nov, 4 the day before');
+    expect(summariseValues('rhr-high', samples['rhr-high'] ?? {}, '9 Nov')).toBe(
+      '56 bpm on 9 Nov, 55 bpm the day before · baseline 48 bpm · +8 and +7',
+    );
+    expect(summariseValues('mood-low-under-load', samples['mood-low-under-load'] ?? {}, '9 Nov')).toMatch(/^Mood 2 on 9 Nov · /);
+    expect(summariseValues('sleep-short', { last: 5.4, before: 5.6, avg7: 6.2 }, '9 Nov')).toBe(
+      '5.4 h the night to 9 Nov, 5.6 h the night before · 7-day average 6.2 h',
+    );
+    for (const id of RULE_IDS) {
+      const text = summariseValues(id, samples[id] ?? {}, '9 Nov');
+      expect(text).not.toMatch(/\b(today|yesterday|this morning|last night|now)\b/);
+    }
+  });
+
+  it('words a flag from today: dated when the values are older, plain when they are from today', () => {
+    const rec = {
+      ruleId: 'soreness-high',
+      openedDay: 90,
+      lastTrueDay: 92,
+      valuesAtOpen: { today: 4, yesterday: 4 },
+      valuesLatest: { today: 5, yesterday: 4 },
+    } as unknown as FlagRecord;
+    expect(flagValuesLine(rec, 'latest', 92, label)).toBe('Soreness 5 today, 4 yesterday');
+    expect(flagValuesLine(rec, 'latest', 96, label)).toBe('Soreness 5 on day 92, 4 the day before');
+    expect(flagValuesLine(rec, 'open', 92, label)).toBe('Soreness 4 on day 90, 4 the day before');
   });
 
   it('shows more decimals when rounding would hide the threshold', () => {

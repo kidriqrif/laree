@@ -16,7 +16,7 @@ import {
   selectWeek,
 } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
-import { RULES, summariseValues } from '../../../domain/flags.ts'
+import { flagValuesLine, RULES } from '../../../domain/flags.ts'
 import type { FlagRecord } from '../../../domain/flags.ts'
 import { weekdayIndex, weekOfDay, weekRange } from '../../../domain/time.ts'
 import type { Activity, AthleteId } from '../../../domain/types.ts'
@@ -223,7 +223,7 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
                   </div>
                   <p className={styles.rule}>{RULES[f.ruleId].ruleText}</p>
                   <p className={styles.values} data-numeric>
-                    {summariseValues(f.ruleId, f.valuesLatest)}
+                    {flagValuesLine(f, 'latest', today, fmtDay)}
                   </p>
                   <p className={styles.explain}>{f.explanation}</p>
                   <div className={styles.flagFoot}>

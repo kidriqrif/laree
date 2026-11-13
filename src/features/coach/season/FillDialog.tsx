@@ -87,7 +87,7 @@ export default function FillDialog({ isOpen, onOpenChange, athleteId, athleteNam
       isOpen={isOpen}
       onOpenChange={onOpenChange}
       title="Fill from library"
-      className={styles.fillDialog}
+      size="wide"
       footer={
         <div className={styles.dialogFooter}>
           <span className={styles.footerNote}>

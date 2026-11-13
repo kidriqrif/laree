@@ -525,9 +525,9 @@ Reviews in G11a only read and write notes. Fixes happen in G11b, one at a time, 
 
 ## M12: Release
 
-- [ ] **T12.1 README and demo script.** _Modifies README._ Overview, live link, a five-minute demo script following sections 7.1 to 7.6, dev commands, the all-rights-reserved notice and a note that the prototype is fictional data. Acceptance: following the script on the live site reaches each step without a dead end. Owns: `README.md`, `THIRD_PARTY_NOTICES.md` (refreshed from `package.json`).
-- [ ] **T12.2 Live-site check.** In the built-in browser at `https://kidriqrif.github.io/laree/` (or whichever URL Pages serves): deep links reload, no console errors, role switch and reset work, the manifest loads. Findings are fixed before tagging. Owns: `docs/qa/live-check.md`.
-- [ ] **T12.3 Tag `v0.1.0-prototype`.** Acceptance: the tag points at a commit whose Pages deploy succeeded, and the push of commit and tag is done without asking. Owns: git tag only. Depends on: T12.1, T12.2.
+- [x] **T12.1 README and demo script.** _Modifies README._ Overview, live link, a five-minute demo script following sections 7.1 to 7.6, dev commands, the all-rights-reserved notice and a note that the prototype is fictional data. Acceptance: following the script on the live site reaches each step without a dead end. Owns: `README.md`, `THIRD_PARTY_NOTICES.md` (refreshed from `package.json`).
+- [x] **T12.2 Live-site check.** In the built-in browser at `https://kidriqrif.github.io/laree/` (or whichever URL Pages serves): deep links reload, no console errors, role switch and reset work, the manifest loads. Findings are fixed before tagging. Owns: `docs/qa/live-check.md`. _Done on a Pages-style build of `agent-staging`, with the whole demo walked; the same check on the live URL follows the merge (see "Still to do after the merge" in that file)._
+- [ ] **T12.3 Tag `v0.1.0-prototype`.** Acceptance: the tag points at a commit whose Pages deploy succeeded, and the push of commit and tag is done without asking. Owns: git tag only. Depends on: T12.1, T12.2. _Waits for the pull request to be merged into `main` and for that deploy to succeed._
 
 ---
 

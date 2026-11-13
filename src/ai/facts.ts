@@ -10,7 +10,10 @@
 import { SEVERITY_RANK, selectFitnessSeries, selectFlagRecords, selectOpenFlags, selectWeek } from '../data/selectors.ts'
 import { ATHLETES } from '../data/seed/people.ts'
 import type { LareeData } from '../data/store.ts'
-import { RULES, summariseValues } from '../domain/flags.ts'
+import { fmtDay } from '../charts/format.ts'
+import { baselineOrStored } from '../domain/baselines.ts'
+import type { BaselineMetric } from '../domain/baselines.ts'
+import { flagValuesLine, RULES } from '../domain/flags.ts'
 import type { FlagRecord } from '../domain/flags.ts'
 import { weekOfDay, weekRange, weekdayIndex } from '../domain/time.ts'
 import type { AthleteId, DayOffset, PhaseKind, Sport } from '../domain/types.ts'
@@ -154,15 +157,18 @@ export function flagsOpenOn(data: LareeData, athleteId: AthleteId, day: DayOffse
     )
 }
 
-/** Rule text with values. Values measured after `day` are not quoted: the values at opening are. */
+/** Rule text with values, dated when measured before `day`. Values measured after `day` are not quoted: the values at opening are. */
 function flagFact(f: FlagRecord, day: DayOffset): { ruleId: string; text: string } {
   const later = f.lastTrueDay > day
-  const values = summariseValues(f.ruleId, later ? f.valuesAtOpen : f.valuesLatest)
+  const values = flagValuesLine(f, later ? 'open' : 'latest', day, fmtDay)
   return { ruleId: f.ruleId, text: `${RULES[f.ruleId].title}, ${values}${later ? ' when it opened' : ''}` }
 }
 
 export function buildCheckInFacts(data: LareeData, athleteId: AthleteId, today: DayOffset): CheckInFacts {
-  const base = ATHLETES.find((a) => a.id === athleteId)?.baselines ?? { restingHr: 0, hrvMs: 0 }
+  const stored = ATHLETES.find((a) => a.id === athleteId)?.baselines ?? { restingHr: 0, hrvMs: 0 }
+  // The same usual values the check-in drawer and the flags show: the last 28 days, else the stored baseline.
+  const mine = data.checkIns.filter((c) => c.athleteId === athleteId)
+  const usual = (metric: BaselineMetric): number => Math.round(baselineOrStored(mine, metric, today, stored).mean)
   const recent = data.checkIns
     .filter((c) => c.athleteId === athleteId && c.day <= today && c.day > today - 14)
     .toSorted((a, b) => a.day - b.day)
@@ -179,8 +185,8 @@ export function buildCheckInFacts(data: LareeData, athleteId: AthleteId, today: 
   return {
     athleteId,
     checkInsLast7: recent.filter((c) => c.day > today - 7).length,
-    baselineRestingHr: base.restingHr,
-    baselineHrvMs: base.hrvMs,
+    baselineRestingHr: usual('restingHr'),
+    baselineHrvMs: usual('hrvMs'),
     recent: recent.map((c) => ({
       weekday: dayName(c.day),
       sleepHours: c.sleepHours,

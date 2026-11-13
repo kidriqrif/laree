@@ -88,6 +88,10 @@
     border: var(--hairline) solid var(--color-rule-strong);
   }
 
+  .modal[data-kind="dialog"][data-size="wide"] {
+    inline-size: min(72rem, 100%);
+  }
+
   .dialog {
     display: flex;
     flex-direction: column;

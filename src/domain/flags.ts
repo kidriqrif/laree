@@ -479,30 +479,54 @@ function ordinal(n: number): string {
   return `${n}${suffix}`;
 }
 
-/** One-line summary of the values seen, as shown on the flag card. */
-export function summariseValues(ruleId: FlagRuleId, v: FlagValues): string {
+/**
+ * One-line summary of the values seen, as shown on the flag card.
+ * `on` names the day the values were measured, when that is not today, so "today" and "last night" never go stale.
+ */
+export function summariseValues(ruleId: FlagRuleId, v: FlagValues, on?: string): string {
+  const at = on ? ` on ${on}` : '';
   switch (ruleId) {
     case 'hrv-low':
-      return `7-day average ${n0(v.avg7)} ms (${n0(v.readings)} readings) · usual ${n0(v.mean)} ms ± ${n0(v.sd)} · line ${n0(v.line)} ms`;
+      return `7-day average ${n0(v.avg7)} ms${on ? ` to ${on}` : ''} (${n0(v.readings)} readings) · usual ${n0(v.mean)} ms ± ${n0(v.sd)} · line ${n0(v.line)} ms`;
     case 'rhr-high':
-      return `${n0(v.today)} bpm this morning, ${n0(v.yesterday)} bpm yesterday · baseline ${n0(v.mean)} bpm · +${n0(v.diffToday)} and +${n0(v.diffYesterday)}`;
+      return on
+        ? `${n0(v.today)} bpm on ${on}, ${n0(v.yesterday)} bpm the day before · baseline ${n0(v.mean)} bpm · +${n0(v.diffToday)} and +${n0(v.diffYesterday)}`
+        : `${n0(v.today)} bpm this morning, ${n0(v.yesterday)} bpm yesterday · baseline ${n0(v.mean)} bpm · +${n0(v.diffToday)} and +${n0(v.diffYesterday)}`;
     case 'sleep-short':
-      return `${n1(v.last)} h last night, ${n1(v.before)} h the night before · 7-day average ${n1(v.avg7)} h`;
+      return on
+        ? `${n1(v.last)} h the night to ${on}, ${n1(v.before)} h the night before · 7-day average ${n1(v.avg7)} h`
+        : `${n1(v.last)} h last night, ${n1(v.before)} h the night before · 7-day average ${n1(v.avg7)} h`;
     case 'soreness-high':
       return (
-        `Soreness ${n0(v.today)} today, ${n0(v.yesterday)} yesterday` +
+        (on ? `Soreness ${n0(v.today)} on ${on}, ${n0(v.yesterday)} the day before` : `Soreness ${n0(v.today)} today, ${n0(v.yesterday)} yesterday`) +
         (v.load3 === undefined ? '' : ` · last 3 days' load ${n0(v.load3)}`)
       );
     case 'mood-low-under-load':
-      return `Mood ${n0(v.mood)} today · Form ${near(Number(v.form), -25)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)}) · Ramp ${plus1(v.ramp)}`;
+      return `Mood ${n0(v.mood)}${on ? at : ' today'} · Form ${near(Number(v.form), -25)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)}) · Ramp ${plus1(v.ramp)}`;
     case 'ramp-high':
-      return `Ramp +${near(Number(v.ramp), 8)} · Fitness ${n1(v.fitness)} now, ${n1(v.fitnessWeekAgo)} a week ago`;
+      return `Ramp +${near(Number(v.ramp), 8)} · Fitness ${n1(v.fitness)}${on ? `${at}, ${n1(v.fitnessWeekAgo)} a week before` : ` now, ${n1(v.fitnessWeekAgo)} a week ago`}`;
     case 'form-deep':
-      return `Form ${near(Number(v.form), -30)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)}) · ${ordinal(Number(v.daysBelow))} day below ${MINUS}30`;
+      return `Form ${near(Number(v.form), -30)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)})${at} · ${ordinal(Number(v.daysBelow))} day below ${MINUS}30`;
     case 'key-missed':
       return `Missed: ${String(v.missed)} · ${n0(v.done)} of ${n0(v.planned)} key sessions done`;
   }
 }
+
+/**
+ * A flag's values line as seen on `today`: the latest values (or those at opening), dated when they
+ * were measured on an earlier day. `dayLabel` formats a day, such as "9 Nov".
+ */
+export function flagValuesLine(
+  f: FlagRecord,
+  which: 'latest' | 'open',
+  today: number,
+  dayLabel: (day: number) => string,
+): string {
+  const day = which === 'open' ? f.openedDay : f.lastTrueDay;
+  const values = which === 'open' ? f.valuesAtOpen : f.valuesLatest;
+  return summariseValues(f.ruleId, values, day < today ? dayLabel(day) : undefined);
+}
+
 
 // ---------------------------------------------------------------- lifecycle
 

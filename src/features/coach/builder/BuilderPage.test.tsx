@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -76,6 +76,21 @@ describe('BuilderPage', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'Amir' }))
     expect(screen.getByRole('list', { name: 'Targets for Amir' }).textContent).toMatch(/224-240 W/)
     expect(screen.getByText(/Amir's FTP is 255 W/)).toBeTruthy()
+  })
+
+  it('switches the preview athlete with unsaved edits, and asks only when leaving the page', async () => {
+    const router = setup('/coach/library/new')
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Sweet spot 3 x 12' } })
+    fireEvent.click(screen.getByRole('radio', { name: 'Irfan' }))
+    await waitFor(() => expect(router.state.location.search).toBe('?athlete=irfan'))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Targets for Irfan' })).toBeTruthy()
+    await act(async () => {
+      void router.navigate('/coach/library')
+    })
+    expect(await screen.findByRole('alertdialog')).toBeTruthy()
+    expect(screen.getByText('Leave without saving?')).toBeTruthy()
+    expect(router.state.location.pathname).toBe('/coach/library/new')
   })
 
   it('moves a step with Alt+Down', () => {

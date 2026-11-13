@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { currentDay } from '../data/selectors.ts'
+import { ATHLETES } from '../data/seed/people.ts'
 import { useLaree } from '../data/store.ts'
+import { baselineOrStored } from '../domain/baselines.ts'
 import { weekOfDay } from '../domain/time.ts'
 import { buildCheckInFacts, buildRecapFacts, buildSuggestFacts } from './facts.ts'
 import { simulateCheckIn, simulateRecap, simulateSuggestion, toPlanChanges } from './simulate.ts'
@@ -50,6 +52,15 @@ describe('simulate', () => {
     if (!last) throw new Error('seed has check-ins')
     const changed = simulateCheckIn({ ...facts, recent: [...facts.recent.slice(0, -1), { ...last, sleepHours: 3.3 }] })
     expect(changed.status === 'ok' && changed.text).not.toBe(a.text)
+  })
+
+  it('quotes the same usual HRV and resting HR as the check-in drawer', () => {
+    const today = currentDay()
+    const facts = buildCheckInFacts(data(), 'amir', today)
+    const mine = data().checkIns.filter((c) => c.athleteId === 'amir')
+    const stored = ATHLETES.find((a) => a.id === 'amir')!.baselines
+    expect(facts.baselineHrvMs).toBe(Math.round(baselineOrStored(mine, 'hrvMs', today, stored).mean))
+    expect(facts.baselineRestingHr).toBe(Math.round(baselineOrStored(mine, 'restingHr', today, stored).mean))
   })
 
   it('declines a check-in summary with fewer than 3 check-ins', () => {

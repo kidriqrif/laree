@@ -63,5 +63,5 @@ These came from code review of the AI consent work and were fixed in this milest
 ## Not verified this round
 
 - Rendering at 200% zoom, reduced motion and a colour-blindness simulator were not run in the browser. The rules behind them are in place (rem sizing, the reduced-motion rule, glyphs beside every status colour).
-- Offline reload and app install were not re-tested. Install needs a phone; it is on the M12 live-site check.
+- Offline reload and app install were not re-tested. Offline reload has since passed in the M12 check ([live-check.md](live-check.md)). Install needs a phone and the merged live site.
 - Rejected: DET-1, the detector's stripe advisory on Analytics. The stripes are the "over plan" hatch, which carries meaning without colour.

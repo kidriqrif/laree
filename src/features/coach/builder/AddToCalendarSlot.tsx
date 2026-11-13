@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { ATHLETES, isAthleteId } from '../../../app/people.ts'
 import type { AthleteId } from '../../../app/people.ts'
 import { useViewer } from '../../../app/viewer.ts'
@@ -9,6 +10,7 @@ import type { PlannedWorkout, WorkoutTemplate } from '../../../domain/types.ts'
 import { Button } from '../../../ui/core/index.ts'
 import { SegmentedControl, TextField } from '../../../ui/form/index.ts'
 import { Dialog, showUndoToast } from '../../../ui/overlay/index.ts'
+import { fmtWeekdayDate } from '../../shared/activity/format.ts'
 import { undoIfLatest, undoStepOf } from '../calendar/sessionModel.ts'
 import styles from './ExportDialogs.module.css'
 
@@ -48,10 +50,14 @@ export function sessionFromTemplate(
 export function AddToCalendarSlot({ template }: AddToCalendarSlotProps) {
   const today = currentDay()
   const coachAthlete = useViewer((s) => s.coachAthleteId)
+  // Opens on the athlete the builder previews, as Export does.
+  const [params] = useSearchParams()
+  const param = params.get('athlete')
+  const previewAthlete = isAthleteId(param) ? param : coachAthlete
   const planned = useLaree((s) => s.data.planned)
   const applyPlanChanges = useLaree((s) => s.applyPlanChanges)
   const [open, setOpen] = useState(false)
-  const [athleteId, setAthleteId] = useState<AthleteId>(coachAthlete)
+  const [athleteId, setAthleteId] = useState<AthleteId>(previewAthlete)
   const [date, setDate] = useState(() => dayToIso(today))
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(date)
   const day = valid ? dateToDay(date) : Number.NaN
@@ -68,7 +74,7 @@ export function AddToCalendarSlot({ template }: AddToCalendarSlotProps) {
     const w = sessionFromTemplate(template, planned, athleteId, day)
     const step = undoStepOf(() => applyPlanChanges([{ kind: 'add', workout: w }], `Added ${w.title}`))
     setOpen(false)
-    if (step) showUndoToast(`Added ${w.title} to ${name}'s plan on ${date}.`, () => undoIfLatest(step))
+    if (step) showUndoToast(`Added ${w.title} to ${name}'s plan on ${fmtWeekdayDate(day)}.`, () => undoIfLatest(step))
   }
 
   return (
@@ -76,7 +82,7 @@ export function AddToCalendarSlot({ template }: AddToCalendarSlotProps) {
       <Button
         variant="secondary"
         onPress={() => {
-          setAthleteId(coachAthlete)
+          setAthleteId(previewAthlete)
           setOpen(true)
         }}
       >
@@ -100,7 +106,7 @@ export function AddToCalendarSlot({ template }: AddToCalendarSlotProps) {
       >
         <div className={styles.body}>
           <SegmentedControl
-            aria-label="Athlete"
+            ariaLabel="Athlete"
             value={athleteId}
             onChange={(id) => {
               if (isAthleteId(id)) setAthleteId(id)

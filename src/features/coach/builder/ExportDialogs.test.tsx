@@ -118,6 +118,8 @@ describe('AddToCalendarSlot', () => {
     const day = currentDay() + 3
     wrap(<AddToCalendarSlot template={bike} />)
     fireEvent.click(screen.getByRole('button', { name: 'Add to calendar' }))
+    // The athlete choice has a name, so a screen reader says what the three names are for.
+    expect(screen.getByRole('radiogroup', { name: 'Athlete' })).toBeTruthy()
     fireEvent.click(screen.getByRole('radio', { name: 'Danial' }))
     const input = screen.getByLabelText('Day')
     fireEvent.change(input, { target: { value: dayIso(day) } })
@@ -127,6 +129,16 @@ describe('AddToCalendarSlot', () => {
     const added = planned.find((p) => p.athleteId === 'danial' && p.day === day && p.title === 'Threshold 4 × 8')
     expect(added).toBeTruthy()
     expect(added?.steps).toHaveLength(3)
+  })
+
+  it('opens on the athlete the builder previews', () => {
+    render(
+      <MemoryRouter initialEntries={['/coach/library/new?athlete=irfan']}>
+        <AddToCalendarSlot template={bike} />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Add to calendar' }))
+    expect(screen.getByRole('radio', { name: 'Irfan' }).getAttribute('aria-checked')).toBe('true')
   })
 
   it('refuses a past day', async () => {

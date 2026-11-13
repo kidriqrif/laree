@@ -23,7 +23,7 @@ import { useCoachReadOnly } from '../../../app/useCoachReadOnly.ts'
 import { DASH, FORM_BAND_LABEL, Sparkline, fmtDay, fmtNumber, fmtSigned } from '../../../charts/index.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
-import { RULES, summariseValues } from '../../../domain/flags.ts'
+import { flagValuesLine, RULES } from '../../../domain/flags.ts'
 import type { Severity } from '../../../domain/flags.ts'
 import { BAND_LABELS } from '../../../domain/metrics/compliance.ts'
 import { formBand } from '../../../domain/metrics/fitness.ts'
@@ -397,6 +397,7 @@ function StatusLine({ status }: { status: TeamStatus | null }) {
 const SEVERITY_ORDER: Severity[] = ['act', 'watch', 'info']
 
 function Attention({ items }: { items: AttentionItem[] }) {
+  const today = currentDay()
   if (items.length === 0) return <p className={styles.empty}>Nothing needs you. No open flags or missed key sessions.</p>
   return (
     <ul className={styles.attention}>
@@ -411,7 +412,7 @@ function Attention({ items }: { items: AttentionItem[] }) {
               <span className={styles.attnWho}>{item.name}</span>
               <span className={styles.attnWhat}>{RULES[item.flag.ruleId].title}</span>
               <span className={styles.attnData} data-mono>
-                {summariseValues(item.flag.ruleId, item.flag.valuesLatest)}
+                {flagValuesLine(item.flag, 'latest', today, fmtDay)}
               </span>
               <span className={styles.muted}>Raised {fmtDay(item.flag.openedDay)}</span>
             </Link>
