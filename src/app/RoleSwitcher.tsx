@@ -147,7 +147,10 @@ function CompactPicker({ choice, onChoose }: { choice: ViewerChoice; onChoose: (
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((o) => !o)}
       >
-        <span>Prototype · viewing as {personName(choice)}</span>
+        <span className={styles.menuLabel}>
+          <span className={styles.menuPrefix}>Prototype · viewing as{' '}</span>
+          <span className={styles.menuName}>{personName(choice)}</span>
+        </span>
         <ChevronDownIcon size={20} />
       </button>
       {open ? (

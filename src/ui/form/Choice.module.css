@@ -1,13 +1,16 @@
 @layer components {
   /* ---------- Segmented control ---------- */
+  /* On a small phone, or at a large text size, the segments wrap onto a second row rather than run off
+     the screen. The corner radius matches a segment's, so a wrapped group still reads as one control. */
   .segments {
     display: inline-flex;
+    flex-wrap: wrap;
     align-self: flex-start;
     max-inline-size: 100%;
     box-sizing: border-box;
     padding: 2px;
     border: var(--hairline) solid var(--color-control-border);
-    border-radius: var(--radius-pill);
+    border-radius: calc(var(--target-min) / 2 + 2px);
     background: var(--color-surface-sunken);
   }
 
@@ -24,7 +27,8 @@
     box-sizing: border-box;
     min-block-size: var(--target-min);
     min-inline-size: var(--target-min);
-    padding-inline: var(--space-4);
+    /* Narrower side padding on narrow screens first, so three labels still fit one row at 360 px. */
+    padding-inline: clamp(var(--space-2), 2.5vw, var(--space-4));
     border: 0;
     border-radius: var(--radius-pill);
     background: transparent;

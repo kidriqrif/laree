@@ -44,7 +44,7 @@
 
   .items {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: end;
     max-inline-size: var(--column-max);
     block-size: var(--bar-h);
@@ -80,8 +80,10 @@
     color: var(--color-on-accent);
   }
 
+  /* Labels grow with the browser text size until five of them would no longer fit across the
+     screen, then stop, as phone tab bars do. Never under 12 px. */
   .label {
-    font-size: var(--text-xs);
+    font-size: min(var(--text-xs), max(12px, 4vw));
     line-height: 1;
   }
 
@@ -121,7 +123,7 @@
   }
 
   .logLabel {
-    font-size: var(--text-xs);
+    font-size: min(var(--text-xs), max(12px, 4vw));
     font-weight: 700;
     line-height: 1;
   }

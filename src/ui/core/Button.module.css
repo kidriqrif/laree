@@ -6,16 +6,20 @@
     justify-content: center;
     gap: var(--space-2);
     box-sizing: border-box;
-    block-size: var(--space-12);
-    min-block-size: var(--target-min);
+    /* A label stays on one line while it fits. When a button would be wider than its space (a small
+       phone, a large text size) the label wraps and the button grows taller, instead of running off
+       the screen. At the default size every button keeps its 48 px height. */
+    min-block-size: var(--space-12);
     min-inline-size: var(--target-min);
+    max-inline-size: 100%;
     padding-inline: calc(var(--density-pad-x) + var(--space-1));
+    padding-block: var(--space-1);
     border: 0;
     border-radius: var(--radius-control);
     font: inherit;
     font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
+    line-height: 1.15;
+    text-align: center;
     cursor: pointer;
     text-decoration: none;
     transition:
@@ -24,8 +28,9 @@
   }
 
   :global([data-register="coach"]) .button {
-    block-size: var(--row-h);
+    min-block-size: var(--row-h);
     padding-inline: calc(var(--density-pad-x) + 2px);
+    padding-block: 2px;
   }
 
   .button[data-pressed] {

@@ -60,6 +60,8 @@
 
   .rows {
     display: grid;
+    /* The row layout follows the width of the list, not the screen: see the container rule below. */
+    container-type: inline-size;
     margin: 0;
     padding: 0;
     list-style: none;
@@ -105,15 +107,26 @@
     border-inline-start-color: var(--status-partial);
   }
 
-  /* Narrow screens: the title takes a line of its own, so the fixed columns cannot squeeze it out. */
-  @media (max-width: 639px) {
+  /* A narrow list (a phone, a laptop-width screen, or a large text size): the title takes a line of
+     its own, so the fixed columns cannot squeeze it out. The width is in rem because the fixed
+     columns are, so the switch moves with the browser text size. */
+  @container (max-width: 28rem) {
+    /* A wrapping line rather than columns: severity and name, then age and status at the end, and
+       each part moves down a line if even that does not fit. */
     .row {
-      grid-template-columns: 4.5rem minmax(0, 1fr) auto auto;
+      display: flex;
+      flex-wrap: wrap;
+      column-gap: var(--space-2);
+      row-gap: 2px;
+    }
+
+    .row > :nth-child(4) {
+      margin-inline-start: auto;
     }
 
     .row .rowTitle {
-      grid-column: 1 / -1;
-      grid-row: 2;
+      order: 1;
+      flex-basis: 100%;
       white-space: normal;
     }
   }

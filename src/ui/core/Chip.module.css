@@ -4,21 +4,26 @@
     align-items: center;
     gap: var(--space-1);
     box-sizing: border-box;
-    block-size: var(--space-8);
+    /* One line while it fits; on a small phone at a large text size the text wraps and the chip
+       grows, rather than run off the screen. The radius is half the one-line height, so a one-line
+       chip is still a pill and a wrapped one a rounded box. */
+    min-block-size: var(--space-8);
+    max-inline-size: 100%;
     padding-inline: var(--space-3);
+    padding-block: 2px;
     border: var(--hairline) solid var(--color-rule-strong);
-    border-radius: var(--radius-pill);
+    border-radius: calc(var(--space-8) / 2);
     background: transparent;
     color: var(--color-text);
     font-size: var(--text-sm);
     font-weight: 700;
-    line-height: 1;
-    white-space: nowrap;
+    line-height: 1.15;
   }
 
   :global([data-register="coach"]) .chip {
-    block-size: var(--space-5);
+    min-block-size: var(--space-5);
     padding-inline: var(--space-2);
+    padding-block: 1px;
     border-radius: var(--radius-1);
   }
 

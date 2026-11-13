@@ -64,11 +64,21 @@
     max-inline-size: 100%;
   }
 
-  /* On the narrowest phones the compact label truncates instead of pushing the bar wider than the screen. */
-  .menuButton > span {
+  /* On the narrowest phones, or at a large text size, the prefix truncates instead of pushing the bar
+     wider than the screen. The person's name never truncates: it is the part that matters. */
+  .menuLabel {
+    display: flex;
+    min-inline-size: 0;
+  }
+
+  .menuPrefix {
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .menuName {
+    flex: none;
   }
 
   .popoverRoot {

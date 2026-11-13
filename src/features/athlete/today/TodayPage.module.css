@@ -10,6 +10,7 @@
   /* "Today" stands on a 2 px ink line, like a name on a start line. */
   .head {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
     gap: var(--space-3);
@@ -30,6 +31,8 @@
     align-items: flex-end;
     gap: var(--space-1);
     margin: 0;
+    /* At a large text size the date wraps under "Today" and stays at the end. */
+    margin-inline-start: auto;
     padding-block-end: var(--space-1);
     text-align: end;
     font-size: var(--text-sm);
