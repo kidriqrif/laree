@@ -504,7 +504,9 @@ export function summariseValues(ruleId: FlagRuleId, v: FlagValues, on?: string):
     case 'mood-low-under-load':
       return `Mood ${n0(v.mood)}${on ? at : ' today'} · Form ${near(Number(v.form), -25)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)}) · Ramp ${plus1(v.ramp)}`;
     case 'ramp-high':
-      return `Ramp +${near(Number(v.ramp), 8)} · Fitness ${n1(v.fitness)}${on ? `${at}, ${n1(v.fitnessWeekAgo)} a week before` : ` now, ${n1(v.fitnessWeekAgo)} a week ago`}`;
+      return on
+        ? `Ramp +${near(Number(v.ramp), 8)} in the week to ${on} · Fitness ${n1(v.fitness)}, ${n1(v.fitnessWeekAgo)} a week before`
+        : `Ramp +${near(Number(v.ramp), 8)} · Fitness ${n1(v.fitness)} now, ${n1(v.fitnessWeekAgo)} a week ago`;
     case 'form-deep':
       return `Form ${near(Number(v.form), -30)} (Fitness ${n0(v.fitness)}, Fatigue ${n0(v.fatigue)})${at} · ${ordinal(Number(v.daysBelow))} day below ${MINUS}30`;
     case 'key-missed':
@@ -522,9 +524,19 @@ export function flagValuesLine(
   today: number,
   dayLabel: (day: number) => string,
 ): string {
-  const day = which === 'open' ? f.openedDay : f.lastTrueDay;
+  const checked = which === 'open' ? f.openedDay : f.lastTrueDay;
+  // Ramp reads Fitness up to the day before the check, so its values are dated by that day.
+  const measured = f.ruleId === 'ramp-high' ? checked - 1 : checked;
   const values = which === 'open' ? f.valuesAtOpen : f.valuesLatest;
-  return summariseValues(f.ruleId, values, day < today ? dayLabel(day) : undefined);
+  return summariseValues(f.ruleId, values, measured < today ? dayLabel(measured) : undefined);
+}
+
+/**
+ * The first part of a flag's latest values line, for compact rows such as the Check-ins inbox.
+ * Every dated line keeps its date in this part, so a short row never passes old values off as new.
+ */
+export function flagValuesShort(f: FlagRecord, today: number, dayLabel: (day: number) => string): string {
+  return flagValuesLine(f, 'latest', today, dayLabel).split(' · ')[0] ?? '';
 }
 
 

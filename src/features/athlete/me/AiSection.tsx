@@ -17,6 +17,8 @@ const ConsentSheet = lazy(() => import('../../../ai/AiConsentSheet.tsx'))
 export function AiSection({ athleteId }: AiSectionProps) {
   const athleteOn = useLaree((s) => s.data.settings[athleteId].aiConsent)
   const coachOn = useLaree((s) => s.data.settings.coach.aiConsent)
+  // Off but not saved for good, also after a reload: the warning stays under the switch until it is saved.
+  const unsaved = useLaree((s) => s.aiUnsavedOwners.includes(athleteId)) && !athleteOn
   const setAiConsent = useLaree((s) => s.setAiConsent)
   const [open, setOpen] = useState(false)
   const [error, setError] = useState('')
@@ -55,7 +57,7 @@ export function AiSection({ athleteId }: AiSectionProps) {
             isSelected={athleteOn}
             onChange={change}
             hint={athleteStatusLine(state)}
-            error={error || undefined}
+            error={error || (unsaved ? WITHDRAWAL_UNSAVED : undefined)}
           />
         </div>
       </Card>

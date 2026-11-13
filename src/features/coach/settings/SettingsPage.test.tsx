@@ -39,6 +39,25 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('Coach settings page', () => {
+  it('keeps the unsaved-withdrawal warning under the switch, as after a reload that restored it', async () => {
+    // State as merge() leaves it when only the session note held the coach's withdrawal.
+    useLaree.setState({ aiUnsavedOwners: ['coach'], aiWithdrawalUnsaved: true })
+    renderAt('/coach/settings')
+    await heading()
+    const toggle = screen.getByRole('switch', { name: 'Coach AI for the team' })
+    expect((toggle as HTMLInputElement).checked).toBe(false)
+    expect(toggle.getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByText(/could not save that choice for good/)).toBeTruthy()
+  })
+
+  it('shows no unsaved warning once the coach layer is on again', async () => {
+    useLaree.getState().setAiConsent('coach', true)
+    useLaree.setState({ aiUnsavedOwners: ['coach'], aiWithdrawalUnsaved: true })
+    renderAt('/coach/settings')
+    await heading()
+    expect(screen.queryByText(/could not save that choice for good/)).toBeNull()
+  })
+
   it('shows one consent row per athlete with the seeded state (all off)', async () => {
     renderAt('/coach/settings')
     await heading()

@@ -59,6 +59,8 @@ export default function SettingsPage() {
 
   const coach = data.settings.coach
   const coachOn = coach.aiConsent
+  // Off but not saved for good, also after a reload: the warning stays under the switch until it is saved.
+  const coachUnsaved = useLaree((s) => s.aiUnsavedOwners.includes('coach')) && !coachOn
   const singleKeys = coach.singleKeyShortcuts !== false
 
   const chooseTheme = (id: string) => {
@@ -178,6 +180,7 @@ export default function SettingsPage() {
               isDisabled={readOnly}
               label="Coach AI for the team"
               hint={coachOn ? 'On. AI runs for each athlete who has turned it on too.' : 'Off for every athlete.'}
+              error={coachUnsaved ? WITHDRAWAL_UNSAVED : undefined}
             />
             <div className={styles.tableWrap}>
               <table className={styles.table}>

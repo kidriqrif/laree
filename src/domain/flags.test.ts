@@ -9,6 +9,7 @@ import {
   evaluateRules,
   explainFlag,
   flagValuesLine,
+  flagValuesShort,
   replayFlags,
   resolveFlag,
   stepFlags,
@@ -576,6 +577,33 @@ describe('explanations', () => {
     expect(flagValuesLine(rec, 'latest', 92, label)).toBe('Soreness 5 today, 4 yesterday');
     expect(flagValuesLine(rec, 'latest', 96, label)).toBe('Soreness 5 on day 92, 4 the day before');
     expect(flagValuesLine(rec, 'open', 92, label)).toBe('Soreness 4 on day 90, 4 the day before');
+  });
+
+  it('dates ramp values by the day before the check, the day its Fitness is read', () => {
+    expect(summariseValues('ramp-high', samples['ramp-high'] ?? {}, '9 Nov')).toBe(
+      'Ramp +9 in the week to 9 Nov · Fitness 58.4, 49.2 a week before',
+    );
+    const rec = {
+      ruleId: 'ramp-high',
+      openedDay: 90,
+      lastTrueDay: 92,
+      valuesAtOpen: { ramp: 8.5, fitness: 57, fitnessWeekAgo: 48.5 },
+      valuesLatest: samples['ramp-high'],
+    } as unknown as FlagRecord;
+    // Checked today, but Fitness is read up to yesterday: never "now".
+    expect(flagValuesLine(rec, 'latest', 92, label)).toBe('Ramp +9 in the week to day 91 · Fitness 58.4, 49.2 a week before');
+    expect(flagValuesLine(rec, 'open', 92, label)).toBe('Ramp +9 in the week to day 89 · Fitness 57.0, 48.5 a week before');
+  });
+
+  it('keeps the date in the compact values line of every dated rule', () => {
+    for (const id of RULE_IDS) {
+      // Missed key sessions count the current week and never say "today", so they carry no date.
+      if (id === 'key-missed') continue;
+      const rec = { ruleId: id, openedDay: 90, lastTrueDay: 90, valuesAtOpen: samples[id], valuesLatest: samples[id] } as unknown as FlagRecord;
+      const short = flagValuesShort(rec, 96, label);
+      expect(`${id}: ${short}`).toContain(id === 'ramp-high' ? 'day 89' : 'day 90');
+      expect(`${id}: ${short}`).not.toContain(' · ');
+    }
   });
 
   it('shows more decimals when rounding would hide the threshold', () => {

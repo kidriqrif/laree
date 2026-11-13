@@ -6,7 +6,7 @@ import { useCoachReadOnly } from '../../../app/useCoachReadOnly.ts'
 import { fmtDay, Heatmap } from '../../../charts/index.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
-import { flagValuesLine, RULES } from '../../../domain/flags.ts'
+import { flagValuesShort, RULES } from '../../../domain/flags.ts'
 import type { FlagRecord } from '../../../domain/flags.ts'
 import type { AthleteId, DayOffset } from '../../../domain/types.ts'
 import { EmptyState } from '../../../ui/core/index.ts'
@@ -259,7 +259,7 @@ export default function CheckInsPage() {
                       {RULES[f.ruleId].title}
                       <span className={styles.muted} data-numeric>
                         {' '}
-                        {flagValuesLine(f, 'latest', today, fmtDay).split(' · ')[0]}
+                        {flagValuesShort(f, today, fmtDay)}
                       </span>
                     </span>
                     <span className={styles.muted}>{age(f.openedDay, today)}</span>

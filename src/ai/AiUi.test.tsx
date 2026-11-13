@@ -50,6 +50,20 @@ describe('AiSection', () => {
     expect(state()).toBe('active')
   })
 
+  it('keeps the unsaved-withdrawal warning under the switch, as after a reload that restored it', () => {
+    // State as merge() leaves it when only the session note held Amir's withdrawal.
+    useLaree.setState({ aiUnsavedOwners: ['amir'], aiWithdrawalUnsaved: true })
+    render(<AiSection athleteId="amir" />)
+    expect(screen.getByRole('switch', { name: 'AI summaries' }).getAttribute('aria-invalid')).toBe('true')
+    expect(screen.getByText(/could not save that choice for good/)).toBeTruthy()
+  })
+
+  it("does not show another athlete's unsaved withdrawal", () => {
+    useLaree.setState({ aiUnsavedOwners: ['danial'], aiWithdrawalUnsaved: true })
+    render(<AiSection athleteId="amir" />)
+    expect(screen.queryByText(/could not save that choice for good/)).toBeNull()
+  })
+
   it('turns off at once with one tap', async () => {
     useLaree.getState().setAiConsent('amir', true)
     render(<AiSection athleteId="amir" />)
