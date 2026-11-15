@@ -1,0 +1,44 @@
+name: Nightly backup
+
+# The free plan has no backups. This dumps the schema and data every night, encrypts the dump to
+# the owner's age public key (only the owner can read it) and keeps it as an artifact for 7 days.
+# Restore steps: docs/dev/runbook.md.
+on:
+  schedule:
+    - cron: '41 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - name: Skip unless configured
+        id: ready
+        run: |
+          if [ -n "$DB_URL" ] && [ -n "$AGE_RECIPIENT" ]; then echo "go=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: supabase/setup-cli@v1
+        if: steps.ready.outputs.go == 'true'
+        with:
+          version: 3.1.0
+      - name: Dump
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          mkdir dump
+          supabase db dump --db-url "$DB_URL" -f dump/schema.sql
+          supabase db dump --db-url "$DB_URL" --data-only --schema public,auth,storage -f dump/data.sql
+          sudo apt-get install -y age >/dev/null
+          tar -czf - dump | age -r "$AGE_RECIPIENT" -o "laree-$(date -u +%F).tar.gz.age"
+          rm -rf dump
+      - uses: actions/upload-artifact@v4
+        if: steps.ready.outputs.go == 'true'
+        with:
+          name: laree-backup
+          path: laree-*.tar.gz.age
+          retention-days: 7

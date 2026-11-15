@@ -454,6 +454,11 @@ begin
   end if;
 end $$;
 
+-- The daily keep-alive (.github/workflows/keepalive.yml) calls this: a free project pauses after
+-- a week without requests. It reads nothing.
+create function public.ping() returns integer language sql immutable as $$ select 1 $$;
+grant execute on function public.ping() to anon, authenticated;
+
 -- ---------------------------------------------------------------------------------------------
 -- Activity files: a private bucket, one folder per athlete ({athlete_id}/{activity_id}.{ext}).
 -- ---------------------------------------------------------------------------------------------

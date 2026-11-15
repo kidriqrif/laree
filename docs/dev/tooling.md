@@ -13,8 +13,8 @@ This page explains how the Laree repo is built, checked and deployed. It also li
 | Language | TypeScript 7 in strict mode |
 | Lint | oxlint |
 | Tests | Vitest with happy-dom |
-| Hosting | GitHub Pages, deployed by GitHub Actions |
-| Data | Browser only. A zustand store persisted to `localStorage` under the key `laree:v1`. No backend. |
+| Hosting | The demo on GitHub Pages; the live app on Vercel with Supabase (see `docs/dev/backend.md`) |
+| Data | Demo: browser only, a zustand store persisted to `localStorage` under `laree:v1`. Live: Supabase Postgres, synced into the same store (`docs/dev/backend.md`). |
 | Licence | All rights reserved (`LICENSE`). Third-party licences are listed in `THIRD_PARTY_NOTICES.md`. |
 
 ## Requirements
@@ -269,7 +269,7 @@ To see what Today loads, build with `npx vite build --sourcemap` and read the ch
 
 - **Every change goes through a pull request.** Nothing is committed to `main` directly. Each task is pushed to the `agent-staging` branch and opened as a pull request into `main`. CodeRabbit reviews it, review points are fixed on the same branch, and the owner merges. GitHub Pages deploys from `main`, so the live site changes only after a merge.
 - **Commit identity** for this repo only: `kidriqrif <208976798+kidriqrif@users.noreply.github.com>`.
-- **Never commit secrets.** `.env` and `.env.*` are ignored, apart from `.env.example`. The prototype needs no secrets at all.
+- **Never commit secrets.** `.env` and `.env.*` are ignored, apart from `.env.example`. The demo needs none. The live app's keys live in Vercel, Supabase and GitHub settings (`docs/dev/runbook.md`). Only the publishable Supabase key reaches the browser.
 - **Neutral metric names.** The UI says Load, Fitness, Fatigue, Form, Ramp, Weighted power and Intensity. See `docs/spec/metrics.md`.
 - **British spelling** in docs and UI: colour, centre, metre.
 

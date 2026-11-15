@@ -137,6 +137,25 @@ describe('log sheet', () => {
     expect(where()).toBe('/athlete/today')
   })
 
+  it('after Cancel, the next file reads normally even if the cancelled one finishes late', async () => {
+    mount()
+    fireEvent.click(screen.getByText('Import file'))
+    // The first file's bytes arrive only when the test lets them, after Cancel and the next pick.
+    let release: (b: ArrayBuffer) => void = () => undefined
+    const slow = new File([fixture('run.gpx')], 'slow.gpx')
+    Object.defineProperty(slow, 'arrayBuffer', {
+      value: () => new Promise<ArrayBuffer>((r) => (release = r)),
+    })
+    pick(slow)
+    expect(await screen.findByText('Reading slow.gpx')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    pick(new File([fixture('run.gpx')], 'second.gpx'))
+    release(new TextEncoder().encode('late and ignored').buffer as ArrayBuffer)
+    const preview = await screen.findByTestId('import-preview', undefined, { timeout: 5000 })
+    expect(within(preview).getByText('Run')).toBeTruthy()
+    expect(screen.queryByText(/Reading/)).toBeNull()
+  })
+
   it('a failed import names the file, stores nothing and keeps the chosen session', async () => {
     const options = matchOptions(data(), ME, currentDay())
     const target = options[options.length - 1]!.workout

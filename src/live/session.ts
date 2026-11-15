@@ -93,6 +93,7 @@ async function enter(session: Session): Promise<void> {
 export function boot(): void {
   if (booted) return
   booted = true
+  void import('./errors.ts').then((m) => m.watchErrors())
   // Ask the browser to keep this site's data under storage pressure (iOS clears it otherwise).
   void navigator.storage?.persist?.().catch(() => false)
   const auth = supabase().auth

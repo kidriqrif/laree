@@ -8,7 +8,10 @@ Training planner for triathlon, running and cycling.
 
 Laree is for a coach and the athletes they train one-to-one. Athletes get a simple phone app: today's session, a quick log, a morning check-in and a lap that fills as the week goes. The coach gets a data-dense desktop tool: the whole team at a glance, flags from check-ins, a calendar, season plans, a workout builder and file exports.
 
-**Status:** prototype, to be tagged v0.1.0-prototype at release. A clickable prototype on fictional mock data, with no accounts and no backend. What you change is saved in this browser's localStorage until the week ends. Each Monday the demo starts again from a fresh seed. If the browser will not save, changes last only for this visit.
+**Status:** two builds from one code base.
+
+- **The demo** (GitHub Pages): a clickable prototype on fictional mock data, with no accounts and no backend. What you change is saved in this browser's localStorage until the week ends. Each Monday the demo starts again from a fresh seed.
+- **The live app** (Vercel and Supabase): real accounts with email-code sign-in, a coach and their athletes, data in Postgres with row-level access rules, offline logging that syncs later, opt-in AI for premium users, and data export and deletion. A build is live when `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are set. See [docs/dev/backend.md](docs/dev/backend.md) and [docs/dev/runbook.md](docs/dev/runbook.md).
 
 ## Live site
 

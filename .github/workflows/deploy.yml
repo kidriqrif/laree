@@ -8,6 +8,9 @@ on:
       - 'docs/**'
       - '**.md'
       - 'LICENSE'
+      # The database deploys on its own (supabase-deploy.yml); the demo does not use it.
+      - 'supabase/**'
+      - 'vercel.json'
   workflow_dispatch:
 
 permissions:

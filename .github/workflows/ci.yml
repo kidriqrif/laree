@@ -1,0 +1,51 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [agent-staging]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:manifest
+      - run: npm run check:base
+      - run: npm run check:budget
+      # The live build must also stay inside the Today budget.
+      - name: Live build budget
+        run: npx vite build --outDir dist-live && node scripts/check-budget.ts dist-live
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci
+
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.1.0
+      - name: Start the database
+        run: supabase db start
+      - name: Access-rule tests
+        run: supabase test db
+      - name: Schema lint
+        run: supabase db lint --level warning --fail-on error

@@ -21,16 +21,23 @@ async function parseInWorker(bytes: ArrayBuffer, fileName: string, slot: { curre
   const w = new Worker(new URL('../../../io/import/worker.ts', import.meta.url), { type: 'module' })
   slot.current = w
   return new Promise<ImportResult>((resolve, reject) => {
-    w.onmessage = (e: MessageEvent<ImportResult>) => {
+    const done = () => {
       if (slot.current === w) slot.current = null
       w.terminate()
+    }
+    w.addEventListener('message', (e: MessageEvent<ImportResult>) => {
+      done()
       resolve(e.data)
-    }
-    w.onerror = () => {
-      if (slot.current === w) slot.current = null
-      w.terminate()
+    })
+    // A reply that cannot be read, or a worker that fails, ends the read with an error: never a stuck "Reading".
+    w.addEventListener('messageerror', () => {
+      done()
+      reject(new Error('worker reply unreadable'))
+    })
+    w.addEventListener('error', () => {
+      done()
       reject(new Error('worker failed'))
-    }
+    })
     w.postMessage({ buffer: bytes, fileName }, [bytes])
   })
 }

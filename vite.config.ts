@@ -21,6 +21,8 @@ const shortcutIcon = [{ src: 'pwa-192.png', sizes: '192x192', type: 'image/png' 
 // base './' keeps the build path-agnostic: the repo may be renamed later.
 export default defineConfig({
   base: './',
+  // The build id in error reports: the commit on Vercel, empty elsewhere.
+  define: { 'import.meta.env.VITE_APP_VERSION': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 12)) },
   plugins: [
     react(),
     VitePWA({
