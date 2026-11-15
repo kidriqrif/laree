@@ -23,7 +23,11 @@
     "check:manifest": "node scripts/check-manifest.ts",
     "check:base": "node scripts/check-base-path.ts",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "brand": "node scripts/brand/build-logo.ts && node scripts/brand/rasterize.ts"
+    "brand": "node scripts/brand/build-logo.ts && node scripts/brand/rasterize.ts",
+    "db:start": "supabase start -x studio,imgproxy,logflare,vector,supavisor,realtime,postgres-meta,edge-runtime,mailpit",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:stop": "supabase stop"
   },
   "dependencies": {
     "@fontsource-variable/anybody": "5.3.0",
@@ -56,6 +60,7 @@
     "fontkit": "2.0.4",
     "happy-dom": "21.0.4",
     "oxlint": "1.92.0",
+    "supabase": "3.1.0",
     "typescript": "7.0.2",
     "vite": "8.3.6",
     "vite-plugin-pwa": "2.0.0",
