@@ -8,6 +8,7 @@ import { Button } from '../../../ui/core/index.ts'
 import { NumberField, Rating, TextField } from '../../../ui/form/index.ts'
 import { Sheet, showToast, useSheetParam } from '../../../ui/overlay/index.ts'
 import type { CheckIn, DayOffset } from '../../../domain/types.ts'
+import { baselineFromCheckIns } from '../../../domain/baselines.ts'
 import { baselineNote, MOOD_NAMES, SORENESS_NAMES } from './checkinText.ts'
 import styles from './CheckIn.module.css'
 import { newId } from '../../../data/ids.ts'
@@ -60,7 +61,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
 
   const history = mine.filter((c) => c.day !== day)
   // A new athlete has no stored baseline (0) and little history: no "usual" to compare with yet.
-  const known = (k: 'restingHr' | 'hrvMs') => stored[k] > 0 || history.filter((c) => c[k] !== undefined).length >= 7
+  const known = (k: 'restingHr' | 'hrvMs') => stored[k] > 0 || baselineFromCheckIns(history, k, day) !== null
   const hrNote = known('restingHr') ? baselineNote('restingHr', Number.isFinite(hr) ? hr : undefined, history, day, stored) : null
   const hrvNote = known('hrvMs') ? baselineNote('hrvMs', Number.isFinite(hrv) ? hrv : undefined, history, day, stored) : null
 

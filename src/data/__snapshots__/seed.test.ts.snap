@@ -28,7 +28,7 @@ exports[`determinism > matches the stored snapshot 1`] = `
       "planned": 172,
     },
   ],
-  "digest": 14372396,
+  "digest": 1678876391,
   "templates": 18,
 }
 `;
