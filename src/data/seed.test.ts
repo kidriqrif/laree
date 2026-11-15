@@ -237,7 +237,7 @@ describe('badges and streaks (gamification.md 4.5)', () => {
 });
 
 describe('check-ins and flags (checkins-flags.md demo coverage)', () => {
-  const flagsOf = (id: AthleteId) => seed.flagsState[id].flags;
+  const flagsOf = (id: AthleteId) => seed.flagsState[id]!.flags;
 
   it("has Danial's sick week flags: two open mid-week 11, all resolved in week 12", () => {
     const f = flagsOf('danial');
@@ -294,7 +294,7 @@ describe('other days of the week', () => {
       const s = generateSeed({ today });
       expect(s.activities.every((a) => a.day < today)).toBe(true);
       expect(s.badges).toHaveLength(18);
-      const open = IDS.flatMap((id) => s.flagsState[id].flags).filter((f) => f.status !== 'resolved');
+      const open = IDS.flatMap((id) => s.flagsState[id]!.flags).filter((f) => f.status !== 'resolved');
       expect(open.some((f) => f.ruleId === 'form-deep' && f.status === 'open')).toBe(true);
     }
   });
