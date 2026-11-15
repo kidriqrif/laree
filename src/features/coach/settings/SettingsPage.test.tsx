@@ -96,19 +96,19 @@ describe('Coach settings page', () => {
     expect(screen.getByText('Off for every athlete.')).toBeTruthy()
     fireEvent.click(coachSwitch)
     expect(await screen.findByRole('dialog', { name: 'AI consent for amir' })).toBeTruthy()
-    expect(useLaree.getState().data.settings.coach.aiConsent).toBe(false)
+    expect(useLaree.getState().data.settings.coach!.aiConsent).toBe(false)
   })
 
   it('switches the theme through the store', async () => {
     renderAt('/coach/settings')
     await heading()
     fireEvent.click(screen.getByRole('radio', { name: 'Dark' }))
-    expect(useLaree.getState().data.settings.coach.theme).toBe('dark')
+    expect(useLaree.getState().data.settings.coach!.theme).toBe('dark')
     await waitFor(() => expect(document.documentElement.getAttribute('data-theme')).toBe('dark'))
     fireEvent.click(screen.getByRole('radio', { name: 'Light' }))
-    expect(useLaree.getState().data.settings.coach.theme).toBe('light')
+    expect(useLaree.getState().data.settings.coach!.theme).toBe('light')
     fireEvent.click(screen.getByRole('radio', { name: 'System' }))
-    expect(useLaree.getState().data.settings.coach.theme).toBe('system')
+    expect(useLaree.getState().data.settings.coach!.theme).toBe('system')
   })
 
   it('the single-key switch writes the coach setting and is on by default', async () => {
@@ -117,10 +117,10 @@ describe('Coach settings page', () => {
     const toggle = screen.getByRole('switch', { name: 'Single-key shortcuts' }) as HTMLInputElement
     expect(toggle.checked).toBe(true)
     fireEvent.click(toggle)
-    expect(useLaree.getState().data.settings.coach.singleKeyShortcuts).toBe(false)
+    expect(useLaree.getState().data.settings.coach!.singleKeyShortcuts).toBe(false)
     await waitFor(() => expect((screen.getByRole('switch', { name: 'Single-key shortcuts' }) as HTMLInputElement).checked).toBe(false))
     fireEvent.click(screen.getByRole('switch', { name: 'Single-key shortcuts' }))
-    expect(useLaree.getState().data.settings.coach.singleKeyShortcuts).toBe(true)
+    expect(useLaree.getState().data.settings.coach!.singleKeyShortcuts).toBe(true)
   })
 
   it('links to the reset page', async () => {

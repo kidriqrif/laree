@@ -16,6 +16,13 @@ export const PLAN_LAST_WEEK = 29;
 
 export const weekFirstDay = (week: number): DayOffset => 7 * (week - 1);
 
+/** A seed table's row for one of the three seed athletes. Throws for any other id: a bug, not data. */
+export function seedOf<T>(table: Readonly<Record<string, T>>, athleteId: AthleteId): T {
+  const row = table[athleteId];
+  if (row === undefined) throw new Error(`No seed data for athlete ${athleteId}`);
+  return row;
+}
+
 export const COACH: Coach = { id: 'coach', displayName: 'Coach' };
 
 export const ATHLETES: Athlete[] = [

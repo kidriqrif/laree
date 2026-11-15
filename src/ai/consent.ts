@@ -3,12 +3,10 @@ import type { AthleteId, PersonId } from '../domain/types.ts'
 
 export type AiState = 'off' | 'athlete-only' | 'waiting-for-athlete' | 'active'
 
-export interface ConsentSettings {
-  coach: { aiConsent: boolean }
-  amir: { aiConsent: boolean }
-  danial: { aiConsent: boolean }
-  irfan: { aiConsent: boolean }
-}
+/** Settings keyed by owner: 'coach' and each athlete id. A missing owner has not agreed. */
+export type ConsentSettings = Readonly<Record<string, { aiConsent: boolean } | undefined>>
+
+const agreed = (settings: ConsentSettings, owner: string): boolean => settings[owner]?.aiConsent === true
 
 export interface ViewerLike {
   role: 'coach' | 'athlete'
@@ -28,11 +26,11 @@ export function isAiActive(athleteOn: boolean, coachOn: boolean): boolean {
 }
 
 export function aiStateFor(settings: ConsentSettings, athleteId: AthleteId): AiState {
-  return aiStateOf(settings[athleteId].aiConsent, settings.coach.aiConsent)
+  return aiStateOf(agreed(settings, athleteId), agreed(settings, 'coach'))
 }
 
 export function isAiActiveFor(settings: ConsentSettings, athleteId: AthleteId): boolean {
-  return isAiActive(settings[athleteId].aiConsent, settings.coach.aiConsent)
+  return isAiActive(agreed(settings, athleteId), agreed(settings, 'coach'))
 }
 
 function isOwnerViewing(owner: PersonId, viewer: ViewerLike): boolean {

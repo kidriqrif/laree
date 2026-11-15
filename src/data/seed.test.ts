@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { badges, streak } from '../domain/gamification.ts';
 import type { GamificationInput } from '../domain/gamification.ts';
 import { setNow, weekOfDay } from '../domain/time.ts';
@@ -13,7 +13,11 @@ const TODAY = 118;
 const IDS: AthleteId[] = ['amir', 'danial', 'irfan'];
 const week = weekOfDay;
 
+/** The seed reads the clock (time of day for today's sessions), so every run pins it: Sunday 15 November 2026, 12:00 in Kuala Lumpur. */
+const PINNED = Date.UTC(2026, 10, 15, 4);
+setNow(PINNED);
 const seed = generateSeed({ today: TODAY });
+setNow(null);
 
 function input(s: Seed, id: AthleteId): GamificationInput {
   const mine = <T extends { athleteId: AthleteId }>(xs: readonly T[]): T[] => xs.filter((x) => x.athleteId === id);
@@ -31,6 +35,7 @@ function input(s: Seed, id: AthleteId): GamificationInput {
   };
 }
 
+beforeEach(() => setNow(PINNED));
 afterEach(() => setNow(null));
 
 describe('determinism', () => {
@@ -237,7 +242,7 @@ describe('badges and streaks (gamification.md 4.5)', () => {
 });
 
 describe('check-ins and flags (checkins-flags.md demo coverage)', () => {
-  const flagsOf = (id: AthleteId) => seed.flagsState[id].flags;
+  const flagsOf = (id: AthleteId) => seed.flagsState[id]!.flags;
 
   it("has Danial's sick week flags: two open mid-week 11, all resolved in week 12", () => {
     const f = flagsOf('danial');
@@ -294,7 +299,7 @@ describe('other days of the week', () => {
       const s = generateSeed({ today });
       expect(s.activities.every((a) => a.day < today)).toBe(true);
       expect(s.badges).toHaveLength(18);
-      const open = IDS.flatMap((id) => s.flagsState[id].flags).filter((f) => f.status !== 'resolved');
+      const open = IDS.flatMap((id) => s.flagsState[id]!.flags).filter((f) => f.status !== 'resolved');
       expect(open.some((f) => f.ruleId === 'form-deep' && f.status === 'open')).toBe(true);
     }
   });

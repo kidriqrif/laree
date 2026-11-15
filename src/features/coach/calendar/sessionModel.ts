@@ -4,6 +4,7 @@ import { useLaree } from '../../../data/store.ts'
 import type { UndoEntry } from '../../../data/store.ts'
 import { workoutTotals } from '../../../domain/steps.ts'
 import type { AthleteId, DayOffset, PlainStep, PlannedWorkout, Sport, Step } from '../../../domain/types.ts'
+import { newId } from '../../../data/ids.ts'
 
 export const SPORT_OPTIONS: ReadonlyArray<{ id: Sport; label: string }> = [
   { id: 'swim', label: 'Swim' },
@@ -128,9 +129,7 @@ export function newSession(
   day: DayOffset,
 ): PlannedWorkout {
   const same = existing.filter((p) => p.athleteId === athleteId && p.day === day)
-  let n = same.length + 1
-  let id = `pw-${athleteId}-${day}-${n}`
-  while (existing.some((p) => p.id === id)) id = `pw-${athleteId}-${day}-${++n}`
+  const id = newId()
   const durationS = 3600
   return {
     id,

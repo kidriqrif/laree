@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { useViewer } from '../../../app/viewer.ts'
 import { currentDay, earnedAwards, selectFitnessSeries, selectProgress, selectWeek } from '../../../data/selectors.ts'
-import { ATHLETES } from '../../../data/seed/people.ts'
+import { ATHLETES } from '../../../app/people.ts'
 import { useLaree } from '../../../data/store.ts'
 import { BADGE_KEYS } from '../../../domain/gamification.ts'
 import type { BadgeKey } from '../../../domain/gamification.ts'

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { ATHLETES as FOCUS } from '../../../app/people.ts'
-import { ATHLETES } from '../../../data/seed/people.ts'
+import { ATHLETES } from '../../../app/people.ts'
 import { useViewer } from '../../../app/viewer.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'

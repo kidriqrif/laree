@@ -280,7 +280,6 @@ function SeasonBody() {
       at = b + 1
       return {
         ...p,
-        id: `${athleteId}-${p.kind}-${a}`,
         firstWeek: a,
         lastWeek: b,
         weeklyTargets: weeklyTargets(p.kind, a, b, base?.load, base?.hours),

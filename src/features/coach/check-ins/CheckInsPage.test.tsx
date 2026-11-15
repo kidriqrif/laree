@@ -27,7 +27,7 @@ async function renderPage(search = '') {
 }
 
 const allFlags = () =>
-  (['amir', 'danial', 'irfan'] as AthleteId[]).flatMap((a) => useLaree.getState().data.flagsState[a].flags)
+  (['amir', 'danial', 'irfan'] as AthleteId[]).flatMap((a) => useLaree.getState().data.flagsState[a]!.flags)
 const firstOpen = () => {
   // The "open" filter also lists acknowledged flags, so pick one that is really open.
   const f = filterFlags(allFlags(), 'open', currentDay()).find((x) => x.status === 'open')
@@ -35,7 +35,7 @@ const firstOpen = () => {
   return f
 }
 const record = (f: { id: string; athleteId: string }) =>
-  useLaree.getState().data.flagsState[f.athleteId as AthleteId].flags.find((x) => x.id === f.id)
+  useLaree.getState().data.flagsState[f.athleteId as AthleteId]!.flags.find((x) => x.id === f.id)
 
 describe('check-ins grid', () => {
   it('shows values for a seeded athlete and a missing day as missing, never zero', async () => {

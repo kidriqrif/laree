@@ -198,8 +198,8 @@ describe('Overview status line', () => {
       const flagsState = { ...s.data.flagsState }
       for (const id of IDS) {
         flagsState[id] = {
-          ...flagsState[id],
-          flags: flagsState[id].flags.map((f) => (f.status === 'open' ? { ...f, status: 'resolved' as const } : f)),
+          ...flagsState[id]!,
+          flags: flagsState[id]!.flags.map((f) => (f.status === 'open' ? { ...f, status: 'resolved' as const } : f)),
         }
       }
       return { data: { ...s.data, checkIns, flagsState } }

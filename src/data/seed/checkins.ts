@@ -1,6 +1,6 @@
 /** Morning check-ins, with the scripted stories from docs/spec/checkins-flags.md "Demo coverage". */
 import type { AthleteId, CheckIn, DayOffset } from '../../domain/types.ts';
-import { ATHLETES, weekFirstDay } from './people.ts';
+import { ATHLETES, seedOf, weekFirstDay } from './people.ts';
 import { clamped, gauss, rngFor } from './rng.ts';
 
 /** A check-in as the seed stores it: the domain CheckIn plus the optional unwell marker. */
@@ -84,7 +84,7 @@ export function buildCheckIns(athleteId: AthleteId, today: DayOffset): SeedCheck
     const noteIndex = rng();
 
     const sickWindow = danialSick && day >= 69 && day <= 84;
-    const story = HISTORY_STORIES[athleteId][day];
+    const story = seedOf(HISTORY_STORIES, athleteId)[day];
     const present = rule.present(day) || sickWindow || story !== undefined || (!rule.absent(day) && presentRoll < 0.88);
     if (!present) continue;
     // The demo's missing check-in: Danial has not checked in yet this morning. Monday keeps it,

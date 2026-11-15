@@ -12,6 +12,7 @@ import { dateToDay, dayToDate, KL_OFFSET_MS } from '../../../domain/time.ts'
 import type { Activity, ActivitySummary, AthleteId, DayOffset, LoadResult, PlannedWorkout, Sport } from '../../../domain/types.ts'
 import type { ParsedActivity } from '../../../io/import/types.ts'
 import { sessionName } from '../../shared/activity/format.ts'
+import { newId } from '../../../data/ids.ts'
 
 export const NOT_PLANNED = 'none'
 const DAY_MS = 86_400_000
@@ -145,13 +146,9 @@ export function thresholdsFor(data: LareeData, athleteId: AthleteId, day: DayOff
   return thresholdsOn(athleteId, day, data.thresholds)
 }
 
-/** A new, unused id for a log: stable for the same day and the same count. */
-export function newActivityId(data: LareeData, athleteId: AthleteId, kind: 'q' | 'i' | 's', day: DayOffset): string {
-  const prefix = `${athleteId}-${kind}-${day}-`
-  const taken = new Set(data.activities.map((a) => a.id))
-  let n = data.activities.filter((a) => a.id.startsWith(prefix)).length
-  while (taken.has(`${prefix}${n}`)) n++
-  return `${prefix}${n}`
+/** A new id for a log. */
+export function newActivityId(): string {
+  return newId()
 }
 
 /** Start time for a log with no time of its own: the plan's, or 07:00, kept before "now" on today. */

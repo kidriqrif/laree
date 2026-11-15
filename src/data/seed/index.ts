@@ -41,6 +41,7 @@ import {
   CURRENT_WEEK,
   PLAN_LAST_WEEK,
   RACES,
+  seedOf,
   THRESHOLDS,
   weekFirstDay,
 } from './people.ts';
@@ -118,7 +119,7 @@ function fitnessFor(athleteId: AthleteId, activities: readonly Activity[], today
     0,
     today,
   );
-  const start = START_FORM[athleteId];
+  const start = seedOf(START_FORM, athleteId);
   return fitnessSeries(loads, { startFitness: start.fitness, startFatigue: start.fatigue });
 }
 

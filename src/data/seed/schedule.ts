@@ -12,7 +12,7 @@ import type {
   Sport,
   WeeklyTarget,
 } from '../../domain/types.ts';
-import { PLAN_LAST_WEEK, RACES, THRESHOLDS, thresholdsOn, weekFirstDay } from './people.ts';
+import { PLAN_LAST_WEEK, RACES, seedOf, THRESHOLDS, thresholdsOn, weekFirstDay } from './people.ts';
 import { scaleSteps, templateById } from './templates.ts';
 
 export const MORNING = 360;
@@ -85,7 +85,7 @@ const NOTES: Record<string, string> = {
 };
 
 function hasBrick(athleteId: AthleteId): boolean {
-  return SLOTS[athleteId].some((s) => s.brick);
+  return seedOf(SLOTS, athleteId).some((s) => s.brick);
 }
 
 function racesOf(athleteId: AthleteId): Race[] {
@@ -105,7 +105,7 @@ export function phaseKindOf(phases: readonly Phase[], week: number): PhaseKind {
 /** Standard-week load at size 1, used as the base load of the plan. */
 function referenceLoad(athleteId: AthleteId, week: number): number {
   let total = 0;
-  for (const slot of SLOTS[athleteId]) {
+  for (const slot of seedOf(SLOTS, athleteId)) {
     if (slot.fromWeek !== undefined) continue;
     const t = templateById(Array.isArray(slot.template) ? (slot.template[0] as string) : slot.template);
     const th = thresholdsOn(athleteId, weekFirstDay(week), THRESHOLDS);
@@ -117,7 +117,7 @@ function referenceLoad(athleteId: AthleteId, week: number): number {
 
 function referenceHours(athleteId: AthleteId): number {
   let total = 0;
-  for (const slot of SLOTS[athleteId]) {
+  for (const slot of seedOf(SLOTS, athleteId)) {
     if (slot.fromWeek !== undefined) continue;
     const t = templateById(Array.isArray(slot.template) ? (slot.template[0] as string) : slot.template);
     const steps = scaleSteps(t.steps, slot.mult ?? 1, 'ref');
@@ -197,12 +197,12 @@ export function buildPlanned(athleteId: AthleteId, phases: readonly Phase[]): Pl
     const kind = phaseKindOf(phases, week);
     const raceThisWeek = races.filter((r) => weekOfDay(r.day) === week);
     const bcRace = raceThisWeek.find((r) => r.priority !== 'A');
-    const weekScale = (target.loadTarget / baseLoad) * VOLUME[athleteId] * (bcRace ? 0.8 : 1);
+    const weekScale = (target.loadTarget / baseLoad) * seedOf(VOLUME, athleteId) * (bcRace ? 0.8 : 1);
     const first = weekFirstDay(week);
     const th = thresholdsOn(athleteId, first, THRESHOLDS);
     const rideEnd = new Map<DayOffset, number>();
 
-    for (const slot of SLOTS[athleteId]) {
+    for (const slot of seedOf(SLOTS, athleteId)) {
       if (slot.fromWeek !== undefined && week < slot.fromWeek) continue;
       const day = first + slot.day;
       if (raceThisWeek.some((r) => r.day === day)) continue;

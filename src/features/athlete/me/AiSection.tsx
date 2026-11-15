@@ -15,8 +15,8 @@ const ConsentSheet = lazy(() => import('../../../ai/AiConsentSheet.tsx'))
 
 /** The athlete side of docs/ia 7.6: the AI summaries toggle, its status and the consent sheet A9. */
 export function AiSection({ athleteId }: AiSectionProps) {
-  const athleteOn = useLaree((s) => s.data.settings[athleteId].aiConsent)
-  const coachOn = useLaree((s) => s.data.settings.coach.aiConsent)
+  const athleteOn = useLaree((s) => s.data.settings[athleteId]?.aiConsent === true)
+  const coachOn = useLaree((s) => s.data.settings.coach?.aiConsent === true)
   // Off but not saved for good, also after a reload: the warning stays under the switch until it is saved.
   const unsaved = useLaree((s) => s.aiUnsavedOwners.includes(athleteId)) && !athleteOn
   const setAiConsent = useLaree((s) => s.setAiConsent)

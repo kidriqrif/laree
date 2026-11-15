@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInRouterContext, useNavigate } from 'react-router'
 import { useViewer } from '../../../app/viewer.ts'
-import { ATHLETES } from '../../../data/seed/people.ts'
+import { ATHLETES } from '../../../app/people.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
 import { nowMinute } from '../../../domain/time.ts'
@@ -202,7 +202,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
     attempt(() => {
       const startMinute = defaultStartMinute(workout, effectiveDay, today, nowMinute(), durationS)
       const a = buildQuickActivity({
-        id: existing?.id ?? newActivityId(data, athleteId, 'q', effectiveDay),
+        id: existing?.id ?? newActivityId(),
         athleteId,
         day: effectiveDay,
         startMinute: existing?.startMinute ?? startMinute,
@@ -224,7 +224,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
     attempt(() => {
       const startMinute = defaultStartMinute(workout, effectiveDay, today, nowMinute(), workout?.plannedDurationS ?? 45 * 60)
       const a = buildSyncedActivity({
-        id: existing?.id ?? newActivityId(data, athleteId, 's', effectiveDay),
+        id: existing?.id ?? newActivityId(),
         athleteId,
         day: effectiveDay,
         startMinute,
@@ -303,7 +303,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
         const matches = x.matches && workout !== undefined
         if (matches && moveSession && workout.day !== fileDay) moveWorkout(workout.id, fileDay)
         // The existing log's id is reused (and so replaced) only when this file takes its session.
-        const id = x.replaced ? x.replaced.id : newActivityId(useLaree.getState().data, athleteId, 'i', fileDay)
+        const id = x.replaced ? x.replaced.id : newActivityId()
         logActivity(
           buildImportedActivity({
             id,

@@ -3,18 +3,14 @@
  * shape, or returns null when it cannot be understood (the app then offers a reset).
  */
 import type { AthleteId, PersonId, Settings, Threshold } from '../domain/types.ts'
+import { defaultSettings } from '../domain/settings.ts'
 
 /** Version of the saved shape. Bump it and add a step below when the shape changes. */
 export const STORE_VERSION = 2
 
 const OWNERS: readonly PersonId[] = ['coach', 'amir', 'danial', 'irfan']
 
-export function defaultSettings(owner: PersonId): Settings {
-  const s: Settings = { owner, units: 'metric', theme: 'system', aiConsent: false }
-  // On unless the coach turns them off in Settings (IA section 10, WCAG 2.1.4).
-  if (owner === 'coach') s.singleKeyShortcuts = true
-  return s
-}
+export { defaultSettings }
 
 export function defaultSettingsMap(): Record<PersonId, Settings> {
   return Object.fromEntries(OWNERS.map((o) => [o, defaultSettings(o)])) as Record<PersonId, Settings>
@@ -34,7 +30,7 @@ function v0ToV1(old: Record<string, unknown>): Record<string, unknown> {
   const g = isRecord(oldSettings) ? oldSettings : {}
   const settings = defaultSettingsMap()
   for (const owner of OWNERS) {
-    const s = settings[owner]
+    const s = settings[owner] ?? (settings[owner] = defaultSettings(owner))
     if (g['theme'] === 'light' || g['theme'] === 'dark' || g['theme'] === 'system') s.theme = g['theme']
     if (typeof g['aiConsent'] === 'boolean') s.aiConsent = g['aiConsent']
   }

@@ -6,7 +6,7 @@ import { useCoachReadOnly } from '../../../app/useCoachReadOnly.ts'
 import { fmtDay, Heatmap } from '../../../charts/index.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
-import { flagValuesShort, RULES } from '../../../domain/flags.ts'
+import { flagsOf, flagValuesShort, RULES } from '../../../domain/flags.ts'
 import type { FlagRecord } from '../../../domain/flags.ts'
 import type { AthleteId, DayOffset } from '../../../domain/types.ts'
 import { EmptyState } from '../../../ui/core/index.ts'
@@ -32,7 +32,8 @@ const FlagDetailDrawer = lazy(() => import('./FlagDetailDrawer.tsx'))
 const CheckInDetailDrawer = lazy(() => import('./CheckInDetailDrawer.tsx'))
 
 const GRID_DAYS = 14
-const NAME_BY_ID = Object.fromEntries(ATHLETES.map((a) => [a.id, a.name])) as Record<AthleteId, string>
+/** The roster can change after load (sign-in), so names are looked up when drawn. */
+const nameOf = (id: string): string => ATHLETES.find((a) => a.id === id)?.name ?? id
 
 /** How long ago a flag opened: "Today", "Yesterday" or "9 d ago". */
 function age(day: DayOffset, today: DayOffset): string {
@@ -90,7 +91,7 @@ export default function CheckInsPage() {
   const legend = legendFor(info)
 
   // ---- inbox
-  const allFlags: FlagRecord[] = ATHLETES.flatMap((a) => data.flagsState[a.id].flags)
+  const allFlags: FlagRecord[] = ATHLETES.flatMap((a) => flagsOf(data.flagsState, a.id).flags)
   const flags = filterFlags(
     athleteFilter ? allFlags.filter((f) => f.athleteId === athleteFilter) : allFlags,
     status,
@@ -254,7 +255,7 @@ export default function CheckInsPage() {
                     <span className={styles.sev} data-severity={f.severity}>
                       {SEVERITY_LABEL[f.severity]}
                     </span>
-                    <span>{NAME_BY_ID[f.athleteId as AthleteId] ?? f.athleteId}</span>
+                    <span>{nameOf(f.athleteId)}</span>
                     <span className={styles.rowTitle}>
                       {RULES[f.ruleId].title}
                       <span className={styles.muted} data-numeric>
@@ -338,7 +339,7 @@ function KudosPanel({ readOnly, today }: { readOnly: boolean; today: DayOffset }
           <tbody>
             {recent.map((a) => (
               <tr key={a.id}>
-                <td>{NAME_BY_ID[a.athleteId as AthleteId] ?? a.athleteId}</td>
+                <td>{nameOf(a.athleteId)}</td>
                 <td>{a.title}</td>
                 <td className={styles.date}>{fmtDay(a.day)}</td>
                 {readOnly ? null : (
@@ -366,7 +367,7 @@ function KudosPanel({ readOnly, today }: { readOnly: boolean; today: DayOffset }
           <tbody>
             {sent.map((k) => (
               <tr key={k.id}>
-                <td>{NAME_BY_ID[k.athleteId as AthleteId] ?? k.athleteId}</td>
+                <td>{nameOf(k.athleteId)}</td>
                 <td>{k.message ?? 'Nice work.'}</td>
                 <td className={styles.date}>{fmtDay(k.day)}</td>
               </tr>

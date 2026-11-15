@@ -1,7 +1,7 @@
 import { useInRouterContext } from 'react-router'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
-import { ATHLETES } from '../../../data/seed/people.ts'
+import { ATHLETES } from '../../../app/people.ts'
 import { PlainButton } from '../../../ui/core/index.ts'
 import { useSheetParam } from '../../../ui/overlay/index.ts'
 import type { AthleteId, DayOffset } from '../../../domain/types.ts'

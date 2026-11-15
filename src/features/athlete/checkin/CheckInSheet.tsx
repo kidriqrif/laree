@@ -3,13 +3,14 @@ import { useInRouterContext } from 'react-router'
 import { useViewer } from '../../../app/viewer.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
-import { ATHLETES } from '../../../data/seed/people.ts'
+import { ATHLETES } from '../../../app/people.ts'
 import { Button } from '../../../ui/core/index.ts'
 import { NumberField, Rating, TextField } from '../../../ui/form/index.ts'
 import { Sheet, showToast, useSheetParam } from '../../../ui/overlay/index.ts'
 import type { CheckIn, DayOffset } from '../../../domain/types.ts'
 import { baselineNote, MOOD_NAMES, SORENESS_NAMES } from './checkinText.ts'
 import styles from './CheckIn.module.css'
+import { newId } from '../../../data/ids.ts'
 
 /** Today's check-in can be changed until midnight Malaysia time, which is when the day offset rolls on. */
 export function canEditCheckIn(day: DayOffset): boolean {
@@ -65,7 +66,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
       return
     }
     const next: CheckIn = {
-      id: existing?.id ?? `${athleteId}-c-${day}`,
+      id: existing?.id ?? newId(),
       athleteId,
       day,
       sleepHours: Number.isFinite(sleep) ? sleep : 7,

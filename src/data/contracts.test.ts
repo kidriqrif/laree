@@ -28,7 +28,7 @@ const data = () => st().data
 
 function listAgreesWithRecords() {
   for (const id of ['amir', 'danial', 'irfan'] as const) {
-    for (const rec of data().flagsState[id].flags) {
+    for (const rec of data().flagsState[id]!.flags) {
       const row = data().flags.find((f) => f.id === rec.id)
       expect(row?.state).toBe(rec.status)
     }
@@ -95,7 +95,7 @@ describe('plan changes and undo', () => {
 
 const quiet = () =>
   (['irfan', 'danial', 'amir'] as const).find(
-    (id) => !data().flagsState[id].flags.some((f) => f.ruleId === 'sleep-short' && f.status !== 'resolved'),
+    (id) => !data().flagsState[id]!.flags.some((f) => f.ruleId === 'sleep-short' && f.status !== 'resolved'),
   )!
 
 describe('check-ins and flags', () => {
@@ -227,7 +227,7 @@ describe('AI consent', () => {
     useViewer.getState().viewAs('coach')
     expect(st().setAiConsent('coach', true)).toBe(true)
     expect(st().setAiConsent('amir', true)).toBe(false)
-    expect(data().settings.amir.aiConsent).toBe(false)
+    expect(data().settings.amir!.aiConsent).toBe(false)
     expect(selectAiState(data(), 'amir')).toBe('waiting-for-athlete')
   })
 

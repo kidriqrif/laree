@@ -13,6 +13,7 @@ import { Button } from '../../../ui/core/index.ts'
 import { SegmentedControl, Switch } from '../../../ui/form/index.ts'
 import { showToast } from '../../../ui/overlay/index.ts'
 import styles from './SettingsPage.module.css'
+import { settingsOf } from '../../../domain/settings.ts'
 
 /** The consent dialog loads only when a coach opens it for an athlete. */
 const AiConsentDialog = lazy(() => import('./AiConsentDialog.tsx').then((m) => ({ default: m.AiConsentDialog })))
@@ -57,7 +58,7 @@ export default function SettingsPage() {
   const setAiConsent = useLaree((s) => s.setAiConsent)
   const [consentFor, setConsentFor] = useState<AthleteId | null>(null)
 
-  const coach = data.settings.coach
+  const coach = settingsOf(data.settings, 'coach')
   const coachOn = coach.aiConsent
   // Off but not saved for good, also after a reload: the warning stays under the switch until it is saved.
   const coachUnsaved = useLaree((s) => s.aiUnsavedOwners.includes('coach')) && !coachOn
@@ -196,7 +197,7 @@ export default function SettingsPage() {
                 <tbody>
                   {ATHLETES.map((a) => {
                     const state = selectAiState(data, a.id)
-                    const athleteOn = data.settings[a.id].aiConsent
+                    const athleteOn = data.settings[a.id]?.aiConsent === true
                     return (
                       <tr key={a.id}>
                         <th scope="row">{a.name}</th>

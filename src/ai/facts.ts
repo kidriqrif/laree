@@ -8,7 +8,7 @@
  * (docs/spec/ai.md 3); the MVP uses opaque ids.
  */
 import { SEVERITY_RANK, selectFitnessSeries, selectFlagRecords, selectOpenFlags, selectWeek } from '../data/selectors.ts'
-import { ATHLETES } from '../data/seed/people.ts'
+import { ATHLETES } from '../app/people.ts'
 import type { LareeData } from '../data/store.ts'
 import { fmtDay } from '../charts/format.ts'
 import { baselineOrStored } from '../domain/baselines.ts'

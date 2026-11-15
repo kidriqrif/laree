@@ -5,9 +5,9 @@
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { ATHLETES } from '../app/people.ts'
+import { ATHLETE_IDS, ATHLETES } from '../app/people.ts'
 import { useViewer } from '../app/viewer.ts'
-import { acknowledgeFlag, addFlagNote, resolveFlag, stepFlags, undoFlagAction } from '../domain/flags.ts'
+import { acknowledgeFlag, addFlagNote, flagsOf, resolveFlag, stepFlags, undoFlagAction } from '../domain/flags.ts'
 import type { AthleteData, FlagLifecycle, FlagRecord, FlagsState } from '../domain/flags.ts'
 import type { BadgeSeen, WeekExcuse } from '../domain/gamification.ts'
 import { evaluateCompliance } from '../domain/metrics/compliance.ts'
@@ -48,6 +48,8 @@ import {
 import { generateSeed } from './seed/index.ts'
 import type { SeedCheckIn } from './seed/index.ts'
 import { earnedAwards, selectFitnessSeries } from './selectors.ts'
+import { settingsOf } from '../domain/settings.ts'
+import { newId } from './ids.ts'
 
 /** Everything that is saved. */
 export interface LareeData {
@@ -228,10 +230,8 @@ function isUsable(d: unknown): d is LareeData {
     if (typeof r[k] !== 'object' || r[k] === null) return false
   }
   const fs = r['flagsState'] as Record<string, unknown>
-  return ['amir', 'danial', 'irfan'].every((id) => typeof fs[id] === 'object' && fs[id] !== null)
+  return ATHLETE_IDS.every((id) => typeof fs[id] === 'object' && fs[id] !== null)
 }
-
-const ATHLETE_IDS: readonly AthleteId[] = ['amir', 'danial', 'irfan']
 
 const RESOLUTION_NOTE: Record<string, string> = {
   auto: 'Back inside the usual range.',
@@ -274,10 +274,10 @@ const unsavedWithdrawals = new Set<string>()
  * Also says which owners the notes had to turn off: the main save still holds their old choice.
  */
 function withAiWithdrawals(data: LareeData): { data: LareeData; withdrawn: PersonId[] } {
-  const owners = readAiWithdrawn().filter((o): o is PersonId => o in data.settings && data.settings[o as PersonId].aiConsent)
+  const owners = readAiWithdrawn().filter((o): o is PersonId => data.settings[o]?.aiConsent === true)
   if (owners.length === 0) return { data, withdrawn: [] }
   const settings = { ...data.settings }
-  for (const o of owners) settings[o] = { ...settings[o], aiConsent: false }
+  for (const o of owners) settings[o] = { ...settingsOf(settings, o), aiConsent: false }
   return { data: { ...data, settings }, withdrawn: owners }
 }
 
@@ -316,7 +316,7 @@ function runFlags(data: LareeData, athleteId: AthleteId, day: DayOffset): Pick<L
     })),
     evaluations: ev.planned.map((e) => ({ plannedId: e.plannedId, band: e.band })),
   }
-  return syncFlags(data, athleteId, stepFlags(athleteId, day, input, data.flagsState[athleteId]))
+  return syncFlags(data, athleteId, stepFlags(athleteId, day, input, flagsOf(data.flagsState, athleteId)))
 }
 
 /** Re-match plans and activities for one athlete so activities carry their plan link and band. */
@@ -437,9 +437,7 @@ export const useLaree = create<LareeState>()(
           if (!t) return undefined
           const planned = get().data.planned
           const same = planned.filter((p) => p.athleteId === athleteId && p.day === day)
-          let n = same.length + 1
-          let id = `pw-${athleteId}-${day}-${n}`
-          while (planned.some((p) => p.id === id)) id = `pw-${athleteId}-${day}-${++n}`
+          const id = newId()
           const w: PlannedWorkout = {
             id,
             athleteId,
@@ -505,13 +503,13 @@ export const useLaree = create<LareeState>()(
           for (const id of athleteId ? [athleteId] : ATHLETE_IDS) patch((d) => runFlags(d, id, day))
         },
         acknowledgeFlag: (flagId, athleteId, day = clockToday()) =>
-          patch((d) => syncFlags(d, athleteId, acknowledgeFlag(d.flagsState[athleteId], flagId, day))),
+          patch((d) => syncFlags(d, athleteId, acknowledgeFlag(flagsOf(d.flagsState, athleteId), flagId, day))),
         resolveFlag: (flagId, athleteId, note, day = clockToday()) =>
-          patch((d) => syncFlags(d, athleteId, resolveFlag(d.flagsState[athleteId], flagId, day, note))),
+          patch((d) => syncFlags(d, athleteId, resolveFlag(flagsOf(d.flagsState, athleteId), flagId, day, note))),
         addFlagNote: (flagId, athleteId, text, day = clockToday()) =>
-          patch((d) => syncFlags(d, athleteId, addFlagNote(d.flagsState[athleteId], flagId, day, text))),
+          patch((d) => syncFlags(d, athleteId, addFlagNote(flagsOf(d.flagsState, athleteId), flagId, day, text))),
         undoFlagAction: (athleteId, flagId, before, after, unquiet) => {
-          const next = undoFlagAction(get().data.flagsState[athleteId], flagId, before, after, unquiet)
+          const next = undoFlagAction(flagsOf(get().data.flagsState, athleteId), flagId, before, after, unquiet)
           if (!next) return false
           // Through syncFlags, so the list rows and the lifecycle records never disagree.
           patch((d) => syncFlags(d, athleteId, next))
@@ -519,8 +517,7 @@ export const useLaree = create<LareeState>()(
         },
         sendKudos: (input, day = clockToday()) => {
           patch((d) => {
-            const n = d.kudos.filter((k) => k.athleteId === input.athleteId).length + 1
-            const k: Kudos = { id: `kudos-${input.athleteId}-${day}-${n}`, athleteId: input.athleteId, day, seenByAthlete: false }
+            const k: Kudos = { id: newId(), athleteId: input.athleteId, day, seenByAthlete: false }
             if (input.activityId !== undefined) k.activityId = input.activityId
             if (input.message !== undefined && input.message.trim() !== '') k.message = input.message.trim()
             return { kudos: [...d.kudos, k] }
@@ -554,10 +551,7 @@ export const useLaree = create<LareeState>()(
           patch((d) => ({ badges: awardBadges(d, athleteId, clockToday()) }))
         },
         addRace: (race) => {
-          const taken = new Set(get().data.races.map((r) => r.id))
-          let n = get().data.races.filter((r) => r.athleteId === race.athleteId).length + 1
-          let id = `race-${race.athleteId}-${n}`
-          while (taken.has(id)) id = `race-${race.athleteId}-${++n}`
+          const id = newId()
           patch((d) => ({ races: [...d.races, { ...race, id }] }))
           return id
         },
@@ -571,7 +565,7 @@ export const useLaree = create<LareeState>()(
           const derived = derivePhases(race, options).map((p) => ({
             ...p,
             athleteId: race.athleteId,
-            id: `${race.athleteId}-${p.kind}-${p.firstWeek}`,
+            id: newId(),
           }))
           if (derived.length > 0) get().setPhases(race.athleteId, derived)
           return derived
@@ -590,7 +584,7 @@ export const useLaree = create<LareeState>()(
           // Agreeing is personal. Withdrawing is open to either person (docs/spec/ai.md 2.2).
           if (on && !isOwnerViewing) return false
           if (!on && !isOwnerViewing && !(viewer.role === 'coach' && owner !== 'coach')) return false
-          patch((d) => ({ settings: { ...d.settings, [owner]: { ...d.settings[owner], aiConsent: on } } }))
+          patch((d) => ({ settings: { ...d.settings, [owner]: { ...settingsOf(d.settings, owner), aiConsent: on } } }))
           // The save above is synchronous, so its outcome is known here. A withdrawal that did not
           // reach the main save is written as a small note of its own, which loading applies.
           // Each owner is tracked on their own: the flag stays up until every withdrawal is saved.
@@ -611,7 +605,7 @@ export const useLaree = create<LareeState>()(
           return true
         },
         setSettings: (owner, change) =>
-          patch((d) => ({ settings: { ...d.settings, [owner]: { ...d.settings[owner], ...change } } })),
+          patch((d) => ({ settings: { ...d.settings, [owner]: { ...settingsOf(d.settings, owner), ...change } } })),
         setDraft: (key, value) => patch((d) => ({ drafts: { ...d.drafts, [key]: value } })),
         clearDraft: (key) =>
           patch((d) => {

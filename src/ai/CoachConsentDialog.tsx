@@ -19,7 +19,7 @@ export default function CoachConsentDialog({ athleteId, isOpen, onClose }: Coach
   const settings = useLaree((s) => s.data.settings)
   const setAiConsent = useLaree((s) => s.setAiConsent)
   const [error, setError] = useState('')
-  const coachOn = settings.coach.aiConsent
+  const coachOn = settings.coach?.aiConsent === true
   // Off in memory but not saved anywhere: the only useful action is to try saving the withdrawal again.
   const unsaved = useLaree((s) => s.aiUnsavedOwners.includes('coach')) && !coachOn
 
@@ -75,7 +75,7 @@ export default function CoachConsentDialog({ athleteId, isOpen, onClose }: Coach
             <li key={a.id} className={styles.row} data-current={a.id === athleteId ? 'true' : undefined}>
               <span>{a.name}</span>
               <span>
-                {settings[a.id].aiConsent ? 'Athlete has agreed' : 'Athlete has not agreed'}
+                {settings[a.id]?.aiConsent ? 'Athlete has agreed' : 'Athlete has not agreed'}
                 {' · '}
                 {coachRowLabel(state)}
               </span>

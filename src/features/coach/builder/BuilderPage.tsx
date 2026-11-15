@@ -107,7 +107,7 @@ function Editor({ saved, onSaved }: EditorProps) {
   const today = currentDay()
   const previewTh = useMemo(() => thresholdsFor(data, previewId, today), [data, previewId, today])
 
-  const id = savedId ?? nextTemplateId(data.templates)
+  const id = savedId ?? nextTemplateId()
   const template = useMemo(() => toTemplate(id, draft.meta, draft.steps), [id, draft])
   const segments = useMemo(() => segmentsOf(draft.steps, draft.meta.sport, previewTh), [draft, previewTh])
   const zoneSeconds = useMemo(() => {
