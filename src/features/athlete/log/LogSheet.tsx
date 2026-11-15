@@ -68,13 +68,15 @@ import {
   thresholdsFor,
 } from './logModel.ts'
 import styles from './LogSheet.module.css'
+import { isLive } from '../../../app/mode.ts'
 
 type Method = 'quick' | 'import' | 'sync'
 
 const METHODS = [
   { id: 'quick', label: 'Quick log' },
   { id: 'import', label: 'Import file' },
-  { id: 'sync', label: 'Sync device' },
+  // Device sync is simulated: the demo shows it, the live app has no device link yet.
+  ...(isLive ? [] : [{ id: 'sync', label: 'Sync device' }]),
 ]
 
 const SPORT_OPTIONS = SPORTS.map((s) => ({ id: s, label: SPORT_NAMES[s] }))
@@ -96,7 +98,7 @@ type ImportState =
   | { status: 'idle' }
   | { status: 'reading'; name: string }
   | { status: 'error'; name: string; error: ImportError }
-  | { status: 'ready'; name: string; activities: ParsedActivity[] }
+  | { status: 'ready'; name: string; activities: ParsedActivity[]; file: File }
 
 function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChange: (open: boolean) => void }) {
   const athleteId = useViewer((s) => s.athleteId)
@@ -253,7 +255,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
       if (ticket !== reading.current) return
       const result = await parseInWorker(bytes, file.name, worker)
       if (ticket !== reading.current) return
-      setImp(result.ok ? { status: 'ready', name: file.name, activities: result.activities } : { status: 'error', name: file.name, error: result.error })
+      setImp(result.ok ? { status: 'ready', name: file.name, activities: result.activities, file } : { status: 'error', name: file.name, error: result.error })
     } catch {
       if (ticket !== reading.current) return
       setImp({
@@ -297,6 +299,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
     if (importBlocked) return
     attempt(() => {
       let n = 0
+      let firstId: string | null = null
       for (const x of plans) {
         if (!x.sport) continue
         const { day: fileDay } = startOf(x.p)
@@ -304,6 +307,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
         if (matches && moveSession && workout.day !== fileDay) moveWorkout(workout.id, fileDay)
         // The existing log's id is reused (and so replaced) only when this file takes its session.
         const id = x.replaced ? x.replaced.id : newActivityId()
+        firstId ??= id
         logActivity(
           buildImportedActivity({
             id,
@@ -318,6 +322,12 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
           }),
         )
         n++
+      }
+      // The live app keeps the original file, so it can be read again when the metrics improve.
+      if (isLive && firstId && imp.status === 'ready') {
+        const original = imp.file
+        const activityId = firstId
+        void import('../../../live/files.ts').then((m) => m.keepActivityFile(athleteId, activityId, original))
       }
       finish(n === 1 ? 'Logged 1 session from your file' : `Logged ${n} sessions from your file`)
     })

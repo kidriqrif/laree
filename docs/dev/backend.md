@@ -41,6 +41,26 @@ Activity files go in the private `activity-files` bucket at `{athlete_id}/{activ
 
 Retention: `ai_runs` 90 days, `client_errors` 30 days, `audit_log` 1 year, purged nightly by `pg_cron`.
 
+## The live app
+
+The live code is in `src/live/` and loads as its own chunk after the first paint, so the demo and the Today budget never carry the Supabase client.
+
+- **Sign-in** (`SignInPage.tsx`): a 6-digit code sent by email, typed into the app. A link would open the browser instead of an installed PWA. The same code creates a new account.
+- **Onboarding** (`Onboarding.tsx`): the person's name and two consents, health data and storage in Singapore, written to `consents`. Invitations show here too; accepting an athlete invitation also records `coach_sharing`.
+- **Guards** (`LiveGate.tsx`): a coach stays on coach pages, a coached athlete on athlete pages. A self-coached athlete opens both, so they can plan their own training. The role picker, `#/brand`, `#/kit` and `#/reset` redirect to the person's home page.
+- **Day 0** (`src/app/liveEpoch.ts`): the live app fixes day 0 to Monday 27 July 2026. Day offsets saved in a body never move, so records are stored as the app holds them.
+
+### Sync
+
+`src/live/sync/` keeps the store and the database in step. The store stays the only source for screens.
+
+1. **Diff** (`diff.ts`, `docs.ts`): every store change is compared with the last known state, record by record. Each changed record the person may write becomes an upsert. Each removed one becomes a tombstone (`deleted_at`).
+2. **Outbox** (`outbox.ts`, `idbOutbox.ts`): writes wait in IndexedDB, one queue per account. A newer write to a row replaces the older one. Writes are upserts keyed on the record's own id, so sending one twice is harmless.
+3. **Send and pull** (`engine.ts`): a sync sends the queue in order, then pulls. The first pull of a visit reads every row. Later pulls read only rows changed since. A queued write wins over the server's copy of its row. Syncs run after a change, on `online`, when the app comes back into view, and every 60 seconds. After a failure they back off up to 5 minutes.
+4. **Derived data**: after a pull, matches, flags and badges are worked out again for the athletes whose rows changed. Each person then sends only what they own. For example, a coach's device steps the flag rules and sends `flag_states`.
+
+A write the access rules refuse is dropped and reported. The next pull restores the server's copy. Original activity files wait in IndexedDB until they reach the bucket (`files.ts`).
+
 ## Local development
 
 Needs Docker.

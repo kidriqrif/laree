@@ -6,6 +6,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { ATHLETE_IDS, ATHLETES } from '../app/people.ts'
+import { isLive } from '../app/mode.ts'
 import { useViewer } from '../app/viewer.ts'
 import { acknowledgeFlag, addFlagNote, flagsOf, resolveFlag, stepFlags, undoFlagAction } from '../domain/flags.ts'
 import type { AthleteData, FlagLifecycle, FlagRecord, FlagsState } from '../domain/flags.ts'
@@ -50,6 +51,7 @@ import type { SeedCheckIn } from './seed/index.ts'
 import { earnedAwards, selectFitnessSeries } from './selectors.ts'
 import { settingsOf } from '../domain/settings.ts'
 import { newId } from './ids.ts'
+import { TEMPLATES } from './seed/templates.ts'
 
 /** Everything that is saved. */
 export interface LareeData {
@@ -150,6 +152,8 @@ export interface LareeState extends Persisted {
   skipCheckIn: (athleteId: AthleteId, day?: DayOffset) => void
   /** Re-run the flag rules for one athlete, or for all three. Running twice in a day is harmless. */
   refreshFlags: (athleteId?: AthleteId, day?: DayOffset) => void
+  /** Re-match activities, re-run the flag rules and award badges for one athlete, as after any change. */
+  resettle: (athleteId: AthleteId) => void
   acknowledgeFlag: (flagId: string, athleteId: AthleteId, day?: DayOffset) => void
   resolveFlag: (flagId: string, athleteId: AthleteId, note?: string, day?: DayOffset) => void
   addFlagNote: (flagId: string, athleteId: AthleteId, text: string, day?: DayOffset) => void
@@ -217,6 +221,21 @@ export function freshData(): LareeData {
   return { ...copy, skippedCheckIns: [], activityNotes: {}, settings: defaultSettingsMap(), drafts: {}, prefs: {} }
 }
 
+/**
+ * The live app before the account's data arrives: no people's records, only the built-in library.
+ * The built-in templates are shared, not copied, so the sync can tell them from the coach's own.
+ */
+export function emptyLiveData(): LareeData {
+  return {
+    thresholds: [], races: [], phases: [], templates: [...TEMPLATES], planned: [], activities: [],
+    checkIns: [], flags: [], flagsState: {}, kudos: [], badges: [], badgeSeen: {}, excuses: [],
+    skippedCheckIns: [], activityNotes: {}, settings: {}, drafts: {}, prefs: {},
+  }
+}
+
+/** Where the live app keeps its offline copy of the account's data. */
+export const LIVE_STORE_KEY = 'laree:live:v1'
+
 const ARRAYS = [
   'thresholds', 'races', 'phases', 'templates', 'planned', 'activities',
   'checkIns', 'flags', 'kudos', 'badges', 'excuses',
@@ -230,6 +249,8 @@ function isUsable(d: unknown): d is LareeData {
     if (typeof r[k] !== 'object' || r[k] === null) return false
   }
   const fs = r['flagsState'] as Record<string, unknown>
+  // The live roster loads after the saved copy, and a new athlete has no flag state yet.
+  if (isLive) return true
   return ATHLETE_IDS.every((id) => typeof fs[id] === 'object' && fs[id] !== null)
 }
 
@@ -408,7 +429,7 @@ export const useLaree = create<LareeState>()(
         return r.added
       }
       return {
-        data: freshData(),
+        data: isLive ? emptyLiveData() : freshData(),
         anchor: runtimeStartEpochDay(),
         storageFailed: false,
         aiWithdrawalUnsaved: false,
@@ -499,6 +520,7 @@ export const useLaree = create<LareeState>()(
               ? {}
               : { skippedCheckIns: [...d.skippedCheckIns, { athleteId, day }] },
           ),
+        resettle: (athleteId) => settle(athleteId),
         refreshFlags: (athleteId, day = clockToday()) => {
           for (const id of athleteId ? [athleteId] : ATHLETE_IDS) patch((d) => runFlags(d, id, day))
         },
@@ -627,7 +649,7 @@ export const useLaree = create<LareeState>()(
       }
     },
     {
-      name: STORE_KEY,
+      name: isLive ? LIVE_STORE_KEY : STORE_KEY,
       version: STORE_VERSION,
       storage: createLareeStorage<Persisted>(),
       partialize: (s) => ({ data: s.data, anchor: s.anchor }),

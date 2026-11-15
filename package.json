@@ -6,7 +6,8 @@
   "sideEffects": [
     "**/*.css",
     "./src/app/main.tsx",
-    "./src/styles/fonts.ts"
+    "./src/styles/fonts.ts",
+    "./src/app/liveEpoch.ts"
   ],
   "license": "UNLICENSED",
   "description": "Laree: training planner for triathlon, running and cycling (prototype).",
@@ -24,10 +25,11 @@
     "check:base": "node scripts/check-base-path.ts",
     "check": "npm run typecheck && npm run lint && npm run test",
     "brand": "node scripts/brand/build-logo.ts && node scripts/brand/rasterize.ts",
-    "db:start": "supabase start -x studio,imgproxy,logflare,vector,supavisor,realtime,postgres-meta,edge-runtime,mailpit",
+    "db:start": "supabase start -x studio,imgproxy,logflare,vector,supavisor,realtime,postgres-meta,edge-runtime",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "db:stop": "supabase stop"
+    "db:stop": "supabase stop",
+    "check:budget": "node scripts/check-budget.ts"
   },
   "dependencies": {
     "@fontsource-variable/anybody": "5.3.0",
@@ -35,10 +37,12 @@
     "@fontsource-variable/atkinson-hyperlegible-next": "5.3.0",
     "@garmin/fitsdk": "21.221.0",
     "@internationalized/date": "3.12.4",
+    "@supabase/supabase-js": "2.119.0",
     "d3-array": "3.2.5",
     "d3-scale": "4.0.3",
     "d3-shape": "3.2.1",
     "d3-time-format": "4.1.1",
+    "idb-keyval": "6.3.0",
     "react": "19.3.1",
     "react-aria-components": "1.22.1",
     "react-dom": "19.3.1",

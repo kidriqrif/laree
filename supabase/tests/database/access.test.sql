@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(54);
+select plan(55);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -150,6 +150,7 @@ reset role;
 select pg_temp.login('00000000-0000-4000-a000-0000000000b1', 'b1@example.test');
 set local role authenticated;
 select is((select count(*)::int from invitations), 1, 'the invitee sees the invitation to their email');
+select is((select coach_name from my_invitations()), 'coach.a', 'the invitee sees who invited them');
 select lives_ok(
   $$select accept_invitation((select id from invitations limit 1))$$, 'B1 accepts coach A''s invitation');
 select is((select coach_id::text from coach_athletes where status = 'active'), '00000000-0000-4000-a000-00000000000a',

@@ -253,6 +253,19 @@ begin
 end $$;
 grant execute on function public.accept_invitation(uuid) to authenticated;
 
+-- Open invitations to the signed-in email, with the inviting coach's name (which the invitee
+-- cannot read from profiles before accepting).
+create function public.my_invitations()
+returns table (id uuid, role public.user_role, coach_name text, expires_at timestamptz)
+language sql stable security definer set search_path = '' as $$
+  select i.id, i.role, coalesce(p.display_name, ''), i.expires_at
+  from public.invitations i left join public.profiles p on p.id = i.coach_id
+  where i.email = lower(coalesce((select auth.jwt()) ->> 'email', ''))
+    and i.accepted_at is null and i.expires_at > now()
+  order by i.created_at
+$$;
+grant execute on function public.my_invitations() to authenticated;
+
 -- ---------------------------------------------------------------------------------------------
 -- Synced documents
 -- ---------------------------------------------------------------------------------------------

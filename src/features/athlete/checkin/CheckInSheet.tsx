@@ -11,6 +11,7 @@ import type { CheckIn, DayOffset } from '../../../domain/types.ts'
 import { baselineNote, MOOD_NAMES, SORENESS_NAMES } from './checkinText.ts'
 import styles from './CheckIn.module.css'
 import { newId } from '../../../data/ids.ts'
+import { isLive } from '../../../app/mode.ts'
 
 /** Today's check-in can be changed until midnight Malaysia time, which is when the day offset rolls on. */
 export function canEditCheckIn(day: DayOffset): boolean {
@@ -50,15 +51,18 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
   const [sleep, setSleep] = useState<number>(existing?.sleepHours ?? yesterday?.sleepHours ?? 7)
   const [soreness, setSoreness] = useState<number>(existing?.soreness ?? yesterday?.soreness ?? 2)
   const [mood, setMood] = useState<number>(existing?.mood ?? yesterday?.mood ?? 3)
-  const [hr, setHr] = useState<number>(existing?.restingHr ?? simulatedWatch(stored.restingHr, day, 1, 1))
-  const [hrv, setHrv] = useState<number>(existing?.hrvMs ?? simulatedWatch(stored.hrvMs, day, 2, 2))
+  // The demo fills these from a simulated watch. The live app has no watch link: they start empty.
+  const [hr, setHr] = useState<number>(existing?.restingHr ?? (isLive ? Number.NaN : simulatedWatch(stored.restingHr, day, 1, 1)))
+  const [hrv, setHrv] = useState<number>(existing?.hrvMs ?? (isLive ? Number.NaN : simulatedWatch(stored.hrvMs, day, 2, 2)))
   const [edited, setEdited] = useState(false)
   const [note, setNote] = useState(existing?.note ?? '')
   const [closed, setClosed] = useState(false)
 
   const history = mine.filter((c) => c.day !== day)
-  const hrNote = baselineNote('restingHr', Number.isFinite(hr) ? hr : undefined, history, day, stored)
-  const hrvNote = baselineNote('hrvMs', Number.isFinite(hrv) ? hrv : undefined, history, day, stored)
+  // A new athlete has no stored baseline (0) and little history: no "usual" to compare with yet.
+  const known = (k: 'restingHr' | 'hrvMs') => stored[k] > 0 || history.length >= 7
+  const hrNote = known('restingHr') ? baselineNote('restingHr', Number.isFinite(hr) ? hr : undefined, history, day, stored) : null
+  const hrvNote = known('hrvMs') ? baselineNote('hrvMs', Number.isFinite(hrv) ? hrv : undefined, history, day, stored) : null
 
   const submit = () => {
     if (!canEditCheckIn(day)) {
@@ -123,7 +127,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
           <div>
             <div className={styles.pair}>
               <NumberField
-                label="Resting heart rate"
+                label={isLive ? 'Resting heart rate (optional)' : 'Resting heart rate'}
                 unit="bpm"
                 value={hr}
                 onChange={(v) => {
@@ -135,7 +139,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
                 formatOptions={{ maximumFractionDigits: 0 }}
               />
               <NumberField
-                label="HRV"
+                label={isLive ? 'HRV (optional)' : 'HRV'}
                 unit="ms"
                 value={hrv}
                 onChange={(v) => {
@@ -148,7 +152,11 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
               />
             </div>
             <p className={styles.source}>
-              {edited ? 'Started from your watch (simulated). You changed it.' : 'From your watch (simulated).'}
+              {isLive
+                ? 'From your watch app, if it shows them.'
+                : edited
+                  ? 'Started from your watch (simulated). You changed it.'
+                  : 'From your watch (simulated).'}
             </p>
             {hrNote ? <p className={styles.usual}>{hrNote}</p> : null}
             {hrvNote ? <p className={styles.usual}>{hrvNote}</p> : null}

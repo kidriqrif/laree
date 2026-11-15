@@ -14,6 +14,10 @@ import { SegmentedControl, Switch } from '../../../ui/form/index.ts'
 import { showToast } from '../../../ui/overlay/index.ts'
 import styles from './SettingsPage.module.css'
 import { settingsOf } from '../../../domain/settings.ts'
+import { isLive } from '../../../app/mode.ts'
+
+const AccountPanel = lazy(() => import('../../../live/AccountPanel.tsx'))
+const CoachTeamPanel = lazy(() => import('../../../live/CoachTeamPanel.tsx'))
 
 /** The consent dialog loads only when a coach opens it for an athlete. */
 const AiConsentDialog = lazy(() => import('./AiConsentDialog.tsx').then((m) => ({ default: m.AiConsentDialog })))
@@ -38,8 +42,10 @@ const SECTIONS = [
   { id: 'theme', label: 'Theme' },
   { id: 'keyboard', label: 'Keyboard' },
   { id: 'ai', label: 'AI consent' },
-  { id: 'prototype', label: 'Prototype' },
-] as const
+  ...(isLive
+    ? ([{ id: 'team', label: 'Team' }, { id: 'account', label: 'Account' }] as const)
+    : ([{ id: 'prototype', label: 'Prototype' }] as const)),
+]
 
 /** Scroll a section to the top of the sheet and move focus to its heading. */
 function goToSection(id: string) {
@@ -114,7 +120,7 @@ export default function SettingsPage() {
                 <dt>Units</dt>
                 <dd>
                   Metric (km, metres, kilograms)
-                  <p className={styles.hint}>Metric is the only system in this prototype.</p>
+                  <p className={styles.hint}>Metric is the only system for now.</p>
                 </dd>
               </div>
             </dl>
@@ -212,22 +218,29 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className={styles.section} aria-labelledby="settings-prototype">
-            <h2 id="settings-prototype" tabIndex={-1} className={styles.sectionTitle}>
-              Prototype
-            </h2>
-            <dl className={styles.rows}>
-              <div className={styles.row}>
-                <dt>Demo data</dt>
-                <dd>
-                  <Link to="/reset" className={styles.link}>
-                    Reset demo data
-                  </Link>
-                  <p className={styles.hint}>Puts the seeded demo back on this device. Your changes are lost.</p>
-                </dd>
-              </div>
-            </dl>
-          </section>
+          {isLive ? (
+            <Suspense fallback={null}>
+              <CoachTeamPanel headingId="settings-team" />
+              <AccountPanel headingId="settings-account" />
+            </Suspense>
+          ) : (
+            <section className={styles.section} aria-labelledby="settings-prototype">
+              <h2 id="settings-prototype" tabIndex={-1} className={styles.sectionTitle}>
+                Prototype
+              </h2>
+              <dl className={styles.rows}>
+                <div className={styles.row}>
+                  <dt>Demo data</dt>
+                  <dd>
+                    <Link to="/reset" className={styles.link}>
+                      Reset demo data
+                    </Link>
+                    <p className={styles.hint}>Puts the seeded demo back on this device. Your changes are lost.</p>
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
         </div>
       </div>
 

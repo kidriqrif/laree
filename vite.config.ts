@@ -54,7 +54,8 @@ export default defineConfig({
       },
     }),
   ],
-  build: { target: 'es2022', rolldownOptions: { output: { postBanner: fitNotice } } },
+  // The manifest lets scripts/check-budget.ts measure what Today loads.
+  build: { target: 'es2022', manifest: true, rolldownOptions: { output: { postBanner: fitNotice } } },
   worker: { rolldownOptions: { output: { postBanner: fitNotice } } },
   test: {
     environment: 'happy-dom',

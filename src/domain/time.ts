@@ -1,7 +1,8 @@
 /**
  * Time model. The only file in the domain that reads the clock.
- * Day 0 is Monday 00:00 (Asia/Kuala_Lumpur, UTC+8, no DST) of history week 1,
- * 16 weeks before the current week (week 17).
+ * Day 0 is Monday 00:00 (Asia/Kuala_Lumpur, UTC+8, no DST) of history week 1. In the demo it is
+ * 16 weeks before the current week (week 17), so the seed always looks current. The live app fixes
+ * day 0 to one Monday for good (setFixedStart), so a saved day offset means the same date forever.
  */
 import type { DayOffset } from './types.ts';
 
@@ -32,8 +33,22 @@ function klEpochDay(instant: Date): number {
   return Math.floor((instant.getTime() + KL_OFFSET_MS) / DAY_MS);
 }
 
+let fixedStart: number | null = null;
+
+/** Fix day 0 to an epoch day (a Monday), or null to roll with the current week as the demo does. */
+export function setFixedStart(epochDay: number | null): void {
+  if (epochDay !== null && (((epochDay + 3) % 7) + 7) % 7 !== 0) throw new Error('Day 0 must be a Monday');
+  fixedStart = epochDay;
+}
+
+/** Epoch day of a YYYY-MM-DD calendar date. */
+export function isoToEpochDay(iso: string): number {
+  return Math.floor(Date.parse(`${iso}T00:00:00Z`) / DAY_MS);
+}
+
 /** Epoch day of the runtime start (a Monday). */
 export function runtimeStartEpochDay(instant: Date = now()): number {
+  if (fixedStart !== null) return fixedStart;
   const todayEpoch = klEpochDay(instant);
   const sinceMonday = (((todayEpoch + 3) % 7) + 7) % 7; // 1970-01-01 was a Thursday
   return todayEpoch - sinceMonday - 7 * HISTORY_WEEKS;
@@ -113,4 +128,12 @@ export function relativeWeekLabel(offset: number): string {
 
 export function weekLabel(week: number): string {
   return relativeWeekLabel(relativeWeek(week));
+}
+
+/** Weeks of plan the screens show beyond the current week. */
+export const PLAN_WEEKS_AHEAD = 12;
+
+/** The last week the plan screens reach: the current week plus PLAN_WEEKS_AHEAD (week 29 in the demo). */
+export function lastPlanWeek(): number {
+  return weekOfDay(today()) + PLAN_WEEKS_AHEAD;
 }

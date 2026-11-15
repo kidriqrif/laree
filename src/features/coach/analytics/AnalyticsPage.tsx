@@ -15,7 +15,7 @@ import { BAND_LABELS, band, displayPct, roundHalfAway } from '../../../domain/me
 import { formBand } from '../../../domain/metrics/fitness.ts'
 import type { PolarisationResult } from '../../../domain/metrics/zones.ts'
 import type { ComplianceBand } from '../../../domain/types.ts'
-import { relativeWeek, weekOfDay, weekRange } from '../../../domain/time.ts'
+import { lastPlanWeek, relativeWeek, weekOfDay, weekRange } from '../../../domain/time.ts'
 import { Curve, FORM_BAND_LABEL, Heatmap, PMC, Bars, ZoneBar, fmtDay, fmtNumber, fmtPace, fmtSigned } from '../../../charts/index.ts'
 import type { BarDatum, HeatCell, HeatLevel, HeatRow } from '../../../charts/index.ts'
 import { Card, Chip, Skeleton } from '../../../ui/core/index.ts'
@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
 
   const spec = RANGES.find((r) => r.id === range) ?? RANGES[1]
   const firstWeek = spec.weeks === 0 ? 1 : Math.max(1, week - spec.weeks + 1)
-  const lastWeek = spec.weeks === 0 ? PLAN_LAST_WEEK : week
+  const lastWeek = spec.weeks === 0 ? Math.max(PLAN_LAST_WEEK, lastPlanWeek()) : week
   const firstDay = weekRange(firstWeek).firstDay
   const name = ATHLETES.find((a) => a.id === athleteId)?.name ?? athleteId
 
@@ -184,7 +184,7 @@ export default function AnalyticsPage() {
   const weeks = analytics.weekly.filter((w) => w.week >= firstWeek && w.week <= lastWeek)
   const nowPoint = analytics.fitness.find((p) => p.day === today)
   const earlier = analytics.fitness.find((p) => p.day === Math.max(firstDay, 0))
-  const pmcLast = spec.weeks === 0 ? weekRange(PLAN_LAST_WEEK).lastDay : weekRange(week + 2).lastDay
+  const pmcLast = spec.weeks === 0 ? weekRange(Math.max(PLAN_LAST_WEEK, lastPlanWeek())).lastDay : weekRange(week + 2).lastDay
   const pmcPoints = analytics.fitness.filter((p) => p.day >= firstDay && p.day <= pmcLast)
   const races = data.races
     .filter((r) => r.athleteId === athleteId && r.day >= firstDay && r.day <= pmcLast)
