@@ -30,6 +30,7 @@ import type { Severity } from '../domain/flags.ts'
 import type { LareeData } from './store.ts'
 import { ATHLETE_IDS } from '../app/people.ts'
 import { START_FORM } from './seed/index.ts'
+import { coachLayerOn } from '../ai/consent.ts'
 /** A live athlete has no seeded starting form: their fitness builds from zero. */
 const NO_FORM = { fitness: 0, fatigue: 0 }
 
@@ -379,7 +380,7 @@ export type AiState = 'off' | 'athlete-only' | 'waiting-for-athlete' | 'active'
  */
 export function selectAiState(data: LareeData, athleteId: AthleteId): AiState {
   const athlete = data.settings[athleteId]?.aiConsent === true
-  const coach = data.settings.coach?.aiConsent === true
+  const coach = coachLayerOn(data.settings, athleteId)
   if (athlete && coach) return 'active'
   if (athlete) return 'athlete-only'
   return coach ? 'waiting-for-athlete' : 'off'
@@ -434,7 +435,7 @@ export const selectTemplate = (data: LareeData, id: string): WorkoutTemplate | u
 
 /** AI runs for an athlete only when both layers are on (docs/spec/ai.md 2.1). */
 export function aiActiveFor(settings: Readonly<Record<string, Settings>>, athleteId: AthleteId): boolean {
-  return settings.coach?.aiConsent === true && settings[athleteId]?.aiConsent === true
+  return coachLayerOn(settings, athleteId) && settings[athleteId]?.aiConsent === true
 }
 
 /** The threshold in force on a day: the latest row of that kind effective on or before it. */

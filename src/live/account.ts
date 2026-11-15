@@ -4,9 +4,11 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { create } from 'zustand'
+import { setCoachLayer } from '../ai/consent.ts'
 import { setRoster } from '../app/people.ts'
 import type { Athlete, Person } from '../app/people.ts'
 import { useViewer } from '../app/viewer.ts'
+import { useLaree } from '../data/store.ts'
 import type { Sport } from '../domain/types.ts'
 import type { SyncContext } from './sync/docs.ts'
 
@@ -56,6 +58,9 @@ interface AccountState {
 }
 
 export const useAccount = create<AccountState>(() => ({ status: 'loading', account: null, invitations: [], error: null }))
+
+/** The version of the consent wording. A new wording gets a new version and asks again. */
+export const CONSENT_VERSION = '2026-11'
 
 const CACHE_KEY = 'laree:live:account'
 const PROFILE_COLUMNS = 'id, role, plan, display_name, focus, sports, weight_kg, baselines, onboarded_at'
@@ -118,8 +123,24 @@ export function syncContext(a: Account): SyncContext {
   }
 }
 
+/** AI tiers (docs/dev/backend.md): the coach's grant for a coached athlete, the plan for a self-coached one. */
+function applyAiTier(a: Account): void {
+  const granted = (athleteId: string) => a.links.some((l) => l.athlete_id === athleteId && l.ai_access)
+  if (a.profile.role === 'coach') {
+    setCoachLayer({ on: granted, offReason: () => 'Turn on AI access for them in Settings, under Team.' })
+  } else if (isSelfCoached(a)) {
+    const premium = a.profile.plan === 'premium'
+    setCoachLayer({ on: () => premium, offReason: () => 'AI is part of the premium plan.' })
+  } else {
+    setCoachLayer({ on: granted, offReason: () => "Your coach hasn't turned on AI for you yet." })
+  }
+  // Selectors read the layer: wake them.
+  useLaree.setState({})
+}
+
 /** Point the roster and the viewer at this account. */
 export function applyAccount(a: Account): void {
+  applyAiTier(a)
   const coachName = a.profile.role === 'coach' ? a.profile.display_name : (a.coach?.display_name ?? 'Coach')
   const coach: Person = { id: 'coach', name: coachName || 'Coach', blurb: '' }
   setRoster(coach, a.athletes.map(asAthlete))

@@ -172,9 +172,13 @@ create policy links_update on public.coach_athletes for update to authenticated
   using (coach_id = (select auth.uid()) or athlete_id = (select auth.uid()))
   with check (coach_id = (select auth.uid()) or athlete_id = (select auth.uid()));
 
+-- Rules for people using the app. The owner (no signed-in user, e.g. the SQL editor) is not bound.
 create function private.guard_link_update() returns trigger
 language plpgsql set search_path = '' as $$
 begin
+  if (select auth.uid()) is null then
+    return new;
+  end if;
   if new.ai_access is distinct from old.ai_access and (select auth.uid()) is distinct from old.coach_id then
     raise exception 'Only the coach changes AI access' using errcode = '42501';
   end if;

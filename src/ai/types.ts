@@ -9,10 +9,10 @@ export type AiFeature = 'recap' | 'checkin' | 'suggest'
 
 interface Base {
   feature: AiFeature
-  /** Always "Simulated AI - prototype". */
-  label: typeof AI_LABEL
-  /** The model the MVP would use. */
-  model: typeof MODEL_SUMMARY | typeof MODEL_PLAN
+  /** "Simulated AI - prototype" in the demo; who wrote the text in the live app. */
+  label: string
+  /** The model the MVP would use in the demo; the model that wrote it in the live app. */
+  model: string
   athleteId: AthleteId
 }
 

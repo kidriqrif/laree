@@ -61,6 +61,37 @@ The live code is in `src/live/` and loads as its own chunk after the first paint
 
 A write the access rules refuse is dropped and reported. The next pull restores the server's copy. Original activity files wait in IndexedDB until they reach the bucket (`files.ts`).
 
+## AI
+
+Rules decide what a summary says, and a model only rewrites the wording. The weekly recap and the check-in summary are worked out on the device, as in the demo (`src/ai/simulate.ts`). The live app shows that text at once, labelled "Rule-based summary". It then asks the `ai` Edge Function to reword it. Next-week suggestions stay rule-based, because a model never changes a plan.
+
+The `ai` function (`supabase/functions/ai/`):
+
+1. Checks the caller's token and `ai_allowed(athlete)`.
+2. Allows at most 40 requests per person per day.
+3. Sends only the draft headline and lines: no names, notes, files or raw check-ins.
+4. Tries each provider in `AI_PROVIDERS` in turn, moving on after a rate limit, an error or a 20-second timeout.
+5. Refuses any reply that is not the expected JSON, or that writes a number the draft does not contain, and tries the next provider.
+6. Logs the provider, model, outcome and token counts, never the text, to `ai_runs`.
+
+Providers are any OpenAI-compatible API. The default chain uses free tiers listed in [awesome-free-llm-apis](https://github.com/mnfst/awesome-free-llm-apis): OpenRouter, then Groq, then Google Gemini. Each provider needs its own key, from that provider's own site. Set the chain without a deploy:
+
+```bash
+npx supabase secrets set OPENROUTER_API_KEY=... GROQ_API_KEY=... GEMINI_API_KEY=...
+```
+
+```bash
+npx supabase secrets set AI_PROVIDERS='[{"name":"OpenRouter","baseUrl":"https://openrouter.ai/api/v1","model":"meta-llama/llama-3.3-70b-instruct:free","keyEnv":"OPENROUTER_API_KEY"}]'
+```
+
+Free models come and go. If one stops answering, change its `model`. A provider without a key is skipped. With no keys at all, the app keeps the rule-based text.
+
+## Privacy
+
+- `#/privacy` explains, in plain English, what is kept, why, who sees it, where it is stored, what AI receives and the person's rights. The Malay version and a lawyer's review are owner follow-ups.
+- **Download my data** (Account, in Me or Settings): one JSON file with the profile, consents, coach links, the names of activity files and every record the person owns. A coach's athletes' records belong to the athletes and are left out.
+- **Delete my account**: the `delete-account` Edge Function removes the person's activity files, then their auth user. Every row they own goes with it. A coach's athletes keep their own data.
+
 ## Local development
 
 Needs Docker.

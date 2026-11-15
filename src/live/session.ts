@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import type { Session, SupabaseClient } from '@supabase/supabase-js'
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '../app/mode.ts'
 import { emptyLiveData, LIVE_STORE_KEY, useLaree } from '../data/store.ts'
+import { followAiConsent } from './aiConsent.ts'
 import { applyAccount, cacheAccount, loadAccount, loadInvitations, readCachedAccount, syncContext, useAccount } from './account.ts'
 import type { Account } from './account.ts'
 import { startSync, useSyncStatus } from './sync/engine.ts'
@@ -59,10 +60,14 @@ function claimStore(uid: string): void {
   if (owner !== uid) useLaree.setState({ data: emptyLiveData(), undoStack: [] })
 }
 
+let stopAiConsent: (() => void) | null = null
+
 function ready(a: Account): void {
   applyAccount(a)
   useAccount.setState({ status: 'ready', account: a, error: null })
   startSyncFor(a)
+  stopAiConsent?.()
+  stopAiConsent = a.profile.role === 'athlete' ? followAiConsent(a.uid) : null
   // Files logged offline go up once the app is open and online.
   void import('./files.ts').then((m) => m.sendWaitingFiles())
 }
@@ -123,6 +128,8 @@ export async function verifyCode(email: string, token: string): Promise<string |
 export const pendingWrites = (): number => useSyncStatus.getState().pending
 
 export async function signOut(): Promise<void> {
+  stopAiConsent?.()
+  stopAiConsent = null
   sync?.stop()
   sync = null
   syncedFor = ''

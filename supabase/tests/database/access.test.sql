@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(55);
+select plan(56);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -30,6 +30,9 @@ insert into coach_athletes (coach_id, athlete_id) values
 select throws_ok(
   $$update profiles set plan = 'free' where id = '00000000-0000-4000-a000-00000000000a'$$,
   '23514', null, 'a coach must stay on premium');
+select lives_ok(
+  $$update coach_athletes set ai_access = false where coach_id = '00000000-0000-4000-a000-00000000000b'$$,
+  'the owner (no signed-in user) may change a link');
 
 -- One row for A1 in every athlete table, written as the owner (bypasses access rules).
 do $$

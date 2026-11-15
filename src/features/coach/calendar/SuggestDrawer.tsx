@@ -8,6 +8,7 @@ import { Button } from '../../../ui/core/index.ts'
 import { Drawer, showUndoToast } from '../../../ui/overlay/index.ts'
 import { undoIfLatest, undoStepOf } from './sessionModel.ts'
 import styles from './SuggestDrawer.module.css'
+import { isLive } from '../../../app/mode.ts'
 
 type Decision = 'accept' | 'reject'
 
@@ -50,7 +51,8 @@ export default function SuggestDrawer({ athleteId, onClose }: { athleteId: Athle
     <Drawer isOpen onOpenChange={(o) => !o && onClose()} title={`Suggest next week for ${name}`}>
       <div className={styles.body} data-testid="suggest-drawer">
         <p className={styles.meta}>
-          {output.label} · <span className={styles.model}>{output.model}</span>
+          {isLive ? 'Rule-based suggestion' : output.label}
+          {isLive ? null : <> · <span className={styles.model}>{output.model}</span></>}
         </p>
         {output.status === 'declined' ? (
           <p>{output.message}</p>

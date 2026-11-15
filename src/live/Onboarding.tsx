@@ -2,12 +2,11 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
+import { CONSENT_VERSION } from './account.ts'
 import type { Account, Invitation } from './account.ts'
 import { refreshAccount, supabase } from './session.ts'
 import styles from './live.module.css'
 
-/** The version of the consent wording below. A new wording gets a new version and asks again. */
-export const CONSENT_VERSION = '2026-11'
 
 interface OnboardingProps {
   account: Account

@@ -41,7 +41,7 @@ const SECTIONS = [
   { id: 'units', label: 'Units' },
   { id: 'theme', label: 'Theme' },
   { id: 'keyboard', label: 'Keyboard' },
-  { id: 'ai', label: 'AI consent' },
+  ...(isLive ? [] : ([{ id: 'ai', label: 'AI consent' }] as const)),
   ...(isLive
     ? ([{ id: 'team', label: 'Team' }, { id: 'account', label: 'Account' }] as const)
     : ([{ id: 'prototype', label: 'Prototype' }] as const)),
@@ -174,49 +174,52 @@ export default function SettingsPage() {
             </dl>
           </section>
 
-          <section className={styles.section} aria-labelledby="settings-ai">
-            <h2 id="settings-ai" tabIndex={-1} className={styles.sectionTitle}>
-              AI consent
-            </h2>
-            <p className={styles.hint}>
-              AI runs for an athlete only when both the athlete and Coach have turned it on. Coach can never turn it on for an athlete.
-            </p>
-            <Switch
-              isSelected={coachOn}
-              onChange={toggleCoachAi}
-              isDisabled={readOnly}
-              label="Coach AI for the team"
-              hint={coachOn ? 'On. AI runs for each athlete who has turned it on too.' : 'Off for every athlete.'}
-              error={coachUnsaved ? WITHDRAWAL_UNSAVED : undefined}
-            />
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <caption className={styles.srOnly}>AI consent by athlete</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Athlete</th>
-                    <th scope="col">Athlete's consent</th>
-                    <th scope="col">Coach's consent</th>
-                    <th scope="col">Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ATHLETES.map((a) => {
-                    const state = selectAiState(data, a.id)
-                    const athleteOn = data.settings[a.id]?.aiConsent === true
-                    return (
-                      <tr key={a.id}>
-                        <th scope="row">{a.name}</th>
-                        <td>{athleteOn ? 'On' : 'Off'}</td>
-                        <td>{coachOn ? 'On' : 'Off'}</td>
-                        <td>{AI_RESULT[state]}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          {/* Live, AI access is per athlete in Team, and each athlete agrees for themself. */}
+          {isLive ? null : (
+            <section className={styles.section} aria-labelledby="settings-ai">
+              <h2 id="settings-ai" tabIndex={-1} className={styles.sectionTitle}>
+                AI consent
+              </h2>
+              <p className={styles.hint}>
+                AI runs for an athlete only when both the athlete and Coach have turned it on. Coach can never turn it on for an athlete.
+              </p>
+              <Switch
+                isSelected={coachOn}
+                onChange={toggleCoachAi}
+                isDisabled={readOnly}
+                label="Coach AI for the team"
+                hint={coachOn ? 'On. AI runs for each athlete who has turned it on too.' : 'Off for every athlete.'}
+                error={coachUnsaved ? WITHDRAWAL_UNSAVED : undefined}
+              />
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <caption className={styles.srOnly}>AI consent by athlete</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Athlete</th>
+                      <th scope="col">Athlete's consent</th>
+                      <th scope="col">Coach's consent</th>
+                      <th scope="col">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ATHLETES.map((a) => {
+                      const state = selectAiState(data, a.id)
+                      const athleteOn = data.settings[a.id]?.aiConsent === true
+                      return (
+                        <tr key={a.id}>
+                          <th scope="row">{a.name}</th>
+                          <td>{athleteOn ? 'On' : 'Off'}</td>
+                          <td>{coachOn ? 'On' : 'Off'}</td>
+                          <td>{AI_RESULT[state]}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           {isLive ? (
             <Suspense fallback={null}>

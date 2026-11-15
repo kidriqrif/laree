@@ -8,6 +8,32 @@ export type ConsentSettings = Readonly<Record<string, { aiConsent: boolean } | u
 
 const agreed = (settings: ConsentSettings, owner: string): boolean => settings[owner]?.aiConsent === true
 
+/**
+ * The second layer in the live app. The demo's second layer is Coach's own switch. Live, it is
+ * the account's tier: the coach's per-athlete grant, or the premium plan for a self-coached athlete.
+ */
+export interface CoachLayer {
+  on(athleteId: AthleteId): boolean
+  /** Why it is off, in words for the athlete. */
+  offReason(athleteId: AthleteId): string
+}
+
+let coachLayer: CoachLayer | null = null
+
+export function setCoachLayer(layer: CoachLayer | null): void {
+  coachLayer = layer
+}
+
+/** Is the second layer on for this athlete? */
+export function coachLayerOn(settings: ConsentSettings, athleteId: AthleteId): boolean {
+  return coachLayer ? coachLayer.on(athleteId) : agreed(settings, 'coach')
+}
+
+/** The live app's reason the second layer is off, or null in the demo. */
+export function coachLayerOffReason(athleteId: AthleteId): string | null {
+  return coachLayer && !coachLayer.on(athleteId) ? coachLayer.offReason(athleteId) : null
+}
+
 export interface ViewerLike {
   role: 'coach' | 'athlete'
   athleteId: AthleteId
@@ -26,11 +52,11 @@ export function isAiActive(athleteOn: boolean, coachOn: boolean): boolean {
 }
 
 export function aiStateFor(settings: ConsentSettings, athleteId: AthleteId): AiState {
-  return aiStateOf(agreed(settings, athleteId), agreed(settings, 'coach'))
+  return aiStateOf(agreed(settings, athleteId), coachLayerOn(settings, athleteId))
 }
 
 export function isAiActiveFor(settings: ConsentSettings, athleteId: AthleteId): boolean {
-  return isAiActive(agreed(settings, athleteId), agreed(settings, 'coach'))
+  return isAiActive(agreed(settings, athleteId), coachLayerOn(settings, athleteId))
 }
 
 function isOwnerViewing(owner: PersonId, viewer: ViewerLike): boolean {

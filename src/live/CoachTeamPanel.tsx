@@ -1,6 +1,7 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- status region for invite and access messages */
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useLaree } from '../data/store.ts'
 import { useAccount } from './account.ts'
 import { refreshAccount, supabase } from './session.ts'
 import styles from './live.module.css'
@@ -32,6 +33,7 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
   const [sent, setSent] = useState<Sent[]>([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const settings = useLaree((s) => s.data.settings)
 
   const [version, setVersion] = useState(0)
   const load = useCallback(() => setVersion((v) => v + 1), [])
@@ -133,6 +135,9 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
                     <input type="checkbox" checked={on} onChange={(e) => void setAi(a.id, e.target.checked)} />
                     <span>{a.display_name || 'Athlete'}</span>
                   </label>
+                  <span className={styles.small}>
+                    {settings[a.id]?.aiConsent ? 'They have agreed' : 'They have not agreed yet'}
+                  </span>
                 </li>
               )
             })}

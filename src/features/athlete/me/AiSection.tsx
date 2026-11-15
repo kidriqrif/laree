@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
-import { aiStateOf, athleteStatusLine, WITHDRAWAL_UNSAVED } from '../../../ai/consent.ts'
+import { aiStateOf, athleteStatusLine, coachLayerOffReason, coachLayerOn, WITHDRAWAL_UNSAVED } from '../../../ai/consent.ts'
+import { isLive } from '../../../app/mode.ts'
 import { useLaree } from '../../../data/store.ts'
 import type { AthleteId } from '../../../domain/types.ts'
 import { Card } from '../../../ui/core/index.ts'
@@ -16,7 +17,8 @@ const ConsentSheet = lazy(() => import('../../../ai/AiConsentSheet.tsx'))
 /** The athlete side of docs/ia 7.6: the AI summaries toggle, its status and the consent sheet A9. */
 export function AiSection({ athleteId }: AiSectionProps) {
   const athleteOn = useLaree((s) => s.data.settings[athleteId]?.aiConsent === true)
-  const coachOn = useLaree((s) => s.data.settings.coach?.aiConsent === true)
+  const coachOn = useLaree((s) => coachLayerOn(s.data.settings, athleteId))
+  const offReason = coachOn ? null : coachLayerOffReason(athleteId)
   // Off but not saved for good, also after a reload: the warning stays under the switch until it is saved.
   const unsaved = useLaree((s) => s.aiUnsavedOwners.includes(athleteId)) && !athleteOn
   const setAiConsent = useLaree((s) => s.setAiConsent)
@@ -49,14 +51,15 @@ export function AiSection({ athleteId }: AiSectionProps) {
       <Card>
         <div className={styles.facts}>
           <p className={styles.sub}>
-            AI can write a weekly recap of your training. Coach gets a check-in summary and next-week suggestions. This
-            prototype shows simulated output only, and Coach must also turn AI on before anything appears.
+            {isLive
+              ? 'AI can rewrite your weekly recap and check-in summary in plain words. It is off until you turn it on.'
+              : 'AI can write a weekly recap of your training. Coach gets a check-in summary and next-week suggestions. This prototype shows simulated output only, and Coach must also turn AI on before anything appears.'}
           </p>
           <Switch
             label="AI summaries"
             isSelected={athleteOn}
             onChange={change}
-            hint={athleteStatusLine(state)}
+            hint={offReason ? `${athleteOn ? 'On for you.' : 'Off.'} ${offReason}` : athleteStatusLine(state)}
             error={error || (unsaved ? WITHDRAWAL_UNSAVED : undefined)}
           />
         </div>

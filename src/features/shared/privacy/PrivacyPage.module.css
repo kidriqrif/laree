@@ -1,0 +1,29 @@
+@layer components {
+  .page {
+    display: grid;
+    gap: var(--space-3);
+    max-inline-size: 40rem;
+    padding-block: var(--space-6);
+  }
+
+  .page h1 {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+  }
+
+  .page h2 {
+    margin-block-start: var(--space-4);
+    font-size: var(--text-lg);
+  }
+
+  .page ul {
+    display: grid;
+    gap: var(--space-2);
+    padding-inline-start: var(--space-5);
+  }
+
+  .updated {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+}
