@@ -60,7 +60,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
 
   const history = mine.filter((c) => c.day !== day)
   // A new athlete has no stored baseline (0) and little history: no "usual" to compare with yet.
-  const known = (k: 'restingHr' | 'hrvMs') => stored[k] > 0 || history.length >= 7
+  const known = (k: 'restingHr' | 'hrvMs') => stored[k] > 0 || history.filter((c) => c[k] !== undefined).length >= 7
   const hrNote = known('restingHr') ? baselineNote('restingHr', Number.isFinite(hr) ? hr : undefined, history, day, stored) : null
   const hrvNote = known('hrvMs') ? baselineNote('hrvMs', Number.isFinite(hrv) ? hrv : undefined, history, day, stored) : null
 
@@ -70,7 +70,8 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
       return
     }
     const next: CheckIn = {
-      id: existing?.id ?? newId(),
+      // Live, one id per athlete and day, so two devices checking in the same day write one row.
+      id: existing?.id ?? (isLive ? `checkin-${day}` : newId()),
       athleteId,
       day,
       sleepHours: Number.isFinite(sleep) ? sleep : 7,

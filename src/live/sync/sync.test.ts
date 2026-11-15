@@ -34,6 +34,7 @@ function fakeServer() {
   let clock = 0
   let down = false
   const writes: string[] = []
+  const hooks: { beforePull?: (table: string) => void } = {}
   const as = (ctx: SyncContext): Backend => ({
     async send(table, _scope, ops) {
       if (down) throw new TypeError('Failed to fetch')
@@ -58,6 +59,7 @@ function fakeServer() {
     },
     async pull(table, _scope: Scope, since) {
       if (down) throw new TypeError('Failed to fetch')
+      hooks.beforePull?.(table)
       const readable = (key: string) => key === ctx.uid || ctx.athleteIds.includes(key)
       return [...(tables.get(table)?.values() ?? [])]
         .filter((r) => readable(r.key) && (since === null || r.updatedAt > since))
@@ -68,6 +70,7 @@ function fakeServer() {
     as,
     tables,
     writes,
+    hooks,
     setDown: (v: boolean) => {
       down = v
     },
@@ -221,16 +224,76 @@ describe('sync', () => {
     expect(result.stalled).toBe(false)
   })
 
-  it('a pull does not undo a write still waiting to be sent', async () => {
+  it('a pull does not undo a write made while it runs', async () => {
     const server = fakeServer()
     const a = signIn(server, athleteCtx)
     await a.handle.syncNow()
-    server.setDown(true)
     const c = checkIn(today())
-    useLaree.getState().saveCheckIn(c)
-    server.setDown(false)
-    // Send fails once more, then the pull runs with the write still queued.
+    // The check-in is saved while the pull is reading: it is queued, not yet sent.
+    server.hooks.beforePull = (table) => {
+      if (table === 'activities') useLaree.getState().saveCheckIn(c)
+    }
     await a.handle.syncNow()
+    server.hooks.beforePull = undefined
+    expect(a.outbox.has('check_ins', ATHLETE, c.id)).toBe(true)
     expect(useLaree.getState().data.checkIns.some((x) => x.id === c.id)).toBe(true)
+  })
+
+  it('sends the good writes of a batch that holds one refused write', async () => {
+    const server = fakeServer()
+    const ok: Op = { table: 'planned_workouts', scope: 'athlete', key: ATHLETE, id: 'p-ok', day: null, body: { id: 'p-ok' } }
+    const bad: Op = { table: 'planned_workouts', scope: 'athlete', key: OTHER, id: 'p-bad', day: null, body: { id: 'p-bad' } }
+    const box = new Outbox(memoryOutboxStore([bad, ok]))
+    await box.load()
+    const result = await box.flush(server.as(coachCtx).send)
+    expect(result.rejected.map((o) => o.id)).toEqual(['p-bad'])
+    expect(result.sent).toBe(1)
+    expect(server.tables.get('planned_workouts')?.has(`${ATHLETE}/p-ok`)).toBe(true)
+  })
+
+  it('undoes a refused write on the next pull', async () => {
+    const server = fakeServer()
+    // The server refuses every write from this athlete, as after an access change.
+    const refusing = { ...server.as(athleteCtx), send: async () => ({ ok: false as const, denied: true, message: 'refused' }) }
+    useLaree.setState({ data: emptyLiveData() })
+    const box = new Outbox(memoryOutboxStore())
+    const handle = startSync({ backend: refusing, outbox: box, ctx: athleteCtx, intervalMs: 3_600_000 })
+    sessions.push(handle)
+    await handle.syncNow()
+    useLaree.getState().saveCheckIn(checkIn(today()))
+    await handle.syncNow()
+    expect(useLaree.getState().data.checkIns).toEqual([])
+  })
+
+  it('carries kudos seen from the athlete to the coach without the athlete writing kudos', async () => {
+    const server = fakeServer()
+    const c = signIn(server, coachCtx)
+    await c.handle.syncNow()
+    useLaree.getState().sendKudos({ athleteId: ATHLETE, message: 'Great week' })
+    await c.handle.syncNow()
+    signOut()
+
+    const a = signIn(server, athleteCtx)
+    await a.handle.syncNow()
+    const k = useLaree.getState().data.kudos[0]!
+    useLaree.getState().markKudosSeen(ATHLETE)
+    await a.handle.syncNow()
+    expect(server.tables.get('kudos')?.get(`${ATHLETE}/${k.id}`)?.body['seenByAthlete']).toBe(false)
+    expect(server.tables.get('kudos_seen')?.get(`${ATHLETE}/seen`)?.body['ids']).toEqual([k.id])
+    signOut()
+
+    const c2 = signIn(server, coachCtx)
+    await c2.handle.syncNow()
+    expect(useLaree.getState().data.kudos[0]?.seenByAthlete).toBe(true)
+  })
+
+  it('files a record under the row owner, whatever its body says', async () => {
+    const server = fakeServer()
+    await server.as(athleteCtx).send('check_ins', 'athlete', [
+      { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: 'x', day: null, body: { ...checkIn(today()), id: 'x', athleteId: OTHER } },
+    ])
+    const c = signIn(server, coachCtx)
+    await c.handle.syncNow()
+    expect(useLaree.getState().data.checkIns.map((x) => x.athleteId)).toEqual([ATHLETE])
   })
 })

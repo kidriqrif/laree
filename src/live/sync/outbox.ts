@@ -29,6 +29,8 @@ export class Outbox {
   private ops: Op[] = []
   private saving: Promise<void> = Promise.resolve()
   private readonly store: OutboxStore
+  /** Called when the queue could not be written to the device. */
+  onSaveError: ((e: unknown) => void) | null = null
 
   constructor(store: OutboxStore) {
     this.store = store
@@ -36,8 +38,10 @@ export class Outbox {
 
   async load(): Promise<void> {
     const saved = await this.store.load()
-    // Writes made before the load finished come after the saved ones.
+    // Writes made before the load finished come after the saved ones. Save the merged queue at
+    // once, so an early save of only the new writes is never the last word.
     this.ops = [...saved.filter((o) => !this.ops.some((p) => opKey(p) === opKey(o))), ...this.ops]
+    await this.persist()
   }
 
   get pending(): readonly Op[] {
@@ -60,7 +64,11 @@ export class Outbox {
 
   private persist(): Promise<void> {
     const snapshot = [...this.ops]
-    this.saving = this.saving.then(() => this.store.save(snapshot)).catch(() => undefined)
+    this.saving = this.saving
+      .then(() => this.store.save(snapshot))
+      .catch((e: unknown) => {
+        this.onSaveError?.(e)
+      })
     return this.saving
   }
 
@@ -74,11 +82,31 @@ export class Outbox {
       let j = i + 1
       while (j < queue.length && (queue[j] as Op).table === first.table && j - i < 500) j++
       const batch = queue.slice(i, j)
-      let outcome: SendResult
-      try {
-        outcome = await send(first.table, first.scope, batch)
-      } catch (e) {
-        outcome = { ok: false, denied: false, message: e instanceof Error ? e.message : String(e) }
+      let outcome = await attempt(send, batch)
+      // One refused write must not sink the others in its batch: send them one by one instead.
+      if (!outcome.ok && outcome.denied && batch.length > 1) {
+        const done = new Set<Op>()
+        for (const op of batch) {
+          const one = await attempt(send, [op])
+          if (!one.ok && !one.denied) {
+            outcome = one
+            break
+          }
+          if (one.ok) result.sent++
+          else {
+            result.rejected.push(op)
+            result.message = one.message
+          }
+          done.add(op)
+        }
+        this.ops = this.ops.filter((o) => !done.has(o))
+        if (!outcome.ok && !outcome.denied) {
+          result.stalled = true
+          result.message = outcome.message
+          break
+        }
+        i = j
+        continue
       }
       if (!outcome.ok && !outcome.denied) {
         result.stalled = true
@@ -101,6 +129,15 @@ export class Outbox {
   async clear(): Promise<void> {
     this.ops = []
     await this.persist()
+  }
+}
+
+async function attempt(send: SendBatch, ops: readonly Op[]): Promise<SendResult> {
+  const first = ops[0] as Op
+  try {
+    return await send(first.table, first.scope, ops)
+  } catch (e) {
+    return { ok: false, denied: false, message: e instanceof Error ? e.message : String(e) }
   }
 }
 

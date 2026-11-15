@@ -92,15 +92,17 @@ language sql stable security definer set search_path = '' as $$
   )
 $$;
 
-create function public.has_active_coach(athlete uuid) returns boolean
-language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.coach_athletes l where l.athlete_id = athlete and l.status = 'active')
-$$;
-
 -- The athlete themself, or their active coach.
 create function public.can_read_athlete(athlete uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
   select athlete = (select auth.uid()) or public.is_coach_of(athlete)
+$$;
+
+-- Only for the athlete or their coach: anyone else learns nothing (false).
+create function public.has_active_coach(athlete uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select public.can_read_athlete(athlete)
+     and exists (select 1 from public.coach_athletes l where l.athlete_id = athlete and l.status = 'active')
 $$;
 
 -- Who writes an athlete's plan: their active coach, or the athlete when they have no coach.
@@ -110,10 +112,10 @@ language sql stable security definer set search_path = '' as $$
       or (athlete = (select auth.uid()) and not public.has_active_coach(athlete))
 $$;
 
--- The latest answer a person gave for one consent purpose.
+-- The latest answer a person gave for one consent purpose. Only for them or their coach.
 create function public.has_consent(person uuid, what text) returns boolean
 language sql stable security definer set search_path = '' as $$
-  select coalesce((
+  select public.can_read_athlete(person) and coalesce((
     select c.granted from public.consents c
     where c.user_id = person and c.purpose = what
     order by c.at desc, c.id desc limit 1
@@ -205,7 +207,9 @@ create policy invitations_create on public.invitations for insert to authenticat
 create policy invitations_withdraw on public.invitations for delete to authenticated
   using (coach_id = (select auth.uid()) and accepted_at is null);
 
-grant select, insert on public.consents to authenticated;
+grant select on public.consents to authenticated;
+-- Who and when are the server's: only the answer itself is written by the person.
+grant insert (purpose, granted, text_version) on public.consents to authenticated;
 create policy consents_read on public.consents for select to authenticated
   using (user_id = (select auth.uid()) or public.is_coach_of(user_id));
 create policy consents_add on public.consents for insert to authenticated
@@ -352,7 +356,13 @@ select private.create_athlete_docs('check_ins', 'athlete');
 select private.create_athlete_docs('check_in_skips', 'athlete');
 select private.create_athlete_docs('badges', 'athlete');
 select private.create_athlete_docs('badge_seen', 'athlete');
-select private.create_athlete_docs('kudos', 'both');
+-- Kudos are the coach's words: only the planner writes them. The athlete marks them seen in a
+-- record of their own, so they can never change or remove the coach's message.
+select private.create_athlete_docs('kudos', 'planner');
+select private.create_athlete_docs('kudos_seen', 'athlete');
+
+-- One check-in per athlete and day, whichever device sends it.
+create unique index check_ins_one_per_day on public.check_ins (athlete_id, day) where deleted_at is null;
 
 -- One owner-scoped document table: a person's own library or settings. With coach_reads, the
 -- owner's active coach can read it too (settings carry the athlete's AI switch).
@@ -478,6 +488,12 @@ begin
       )$p$;
     execute $p$
       create policy activity_files_add on storage.objects for insert to authenticated with check (
+        bucket_id = 'activity-files' and (storage.foldername(name))[1] = (select auth.uid())::text
+      )$p$;
+    execute $p$
+      create policy activity_files_replace on storage.objects for update to authenticated using (
+        bucket_id = 'activity-files' and (storage.foldername(name))[1] = (select auth.uid())::text
+      ) with check (
         bucket_id = 'activity-files' and (storage.foldername(name))[1] = (select auth.uid())::text
       )$p$;
     execute $p$

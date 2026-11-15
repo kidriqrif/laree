@@ -7,7 +7,7 @@ const PAGE = 1000
 const ownerColumn = (scope: Scope): string => (scope === 'athlete' ? 'athlete_id' : 'owner_id')
 
 /** Refused by the access rules or the table's checks: sending again cannot help. */
-const FINAL_CODES = new Set(['42501', '23502', '23503', '23514', '22P02'])
+const FINAL_CODES = new Set(['42501', '23502', '23503', '23505', '23514', '22P02'])
 
 interface DbRow {
   athlete_id?: string
@@ -40,12 +40,18 @@ export function supabaseBackend(client: SupabaseClient): Backend {
       const owner = ownerColumn(scope)
       const columns = `${owner}, id, ${scope === 'athlete' ? 'day, ' : ''}body, updated_at, deleted_at`
       const out: PulledRow[] = []
-      for (let from = 0; ; from += PAGE) {
-        let q = client.from(table).select(columns).order('updated_at').order('id').range(from, from + PAGE - 1)
-        if (since) q = q.gt('updated_at', since)
+      // Keyset pages: each page starts after the last row read. A row updated during the pull moves
+      // to the end and is read again, instead of shifting an unread row out of reach.
+      let after: { at: string; id: string } | null = null
+      for (;;) {
+        let q = client.from(table).select(columns).order('updated_at').order('id').limit(PAGE)
+        if (after) q = q.or(`updated_at.gt."${after.at}",and(updated_at.eq."${after.at}",id.gt."${after.id}")`)
+        else if (since) q = q.gt('updated_at', since)
         const { data, error } = await q
         if (error) throw new Error(error.message)
         const rows = (data ?? []) as unknown as DbRow[]
+        const last = rows[rows.length - 1]
+        if (last) after = { at: last.updated_at, id: last.id }
         for (const r of rows) {
           out.push({
             key: String(r[owner as 'athlete_id' | 'owner_id']),

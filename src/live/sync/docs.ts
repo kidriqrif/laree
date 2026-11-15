@@ -48,8 +48,10 @@ export interface SliceSpec {
   writer: Writer
   docs(data: LareeData, ctx: SyncContext): Doc[]
   body(doc: Doc): Record<string, unknown>
-  /** The slice built from every row the person can read. `base` supplies what rows do not hold. */
+  /** The slice built from every row the person can read. */
   build(rows: readonly Row[], ctx: SyncContext): Partial<LareeData>
+  /** For a table that adds to another slice: applied after every build, to the built data. */
+  merge?(data: LareeData, rows: readonly Row[]): Partial<LareeData>
 }
 
 const iso = (day: number): string => dayToIso(day)
@@ -72,7 +74,8 @@ function list<T extends { athleteId: string }>(
     writer,
     docs: (data) => (data[slice] as unknown as T[]).map((x) => ({ key: x.athleteId, id: idOf(x), day: dayOf(x), src: x })),
     body: (doc) => asObject(doc.src),
-    build: (rows) => ({ [slice]: live(rows).map((r) => r.body as unknown as T) }) as Partial<LareeData>,
+    // The row's owner is the record's athlete, whatever the body says: the access rules check the row.
+    build: (rows) => ({ [slice]: live(rows).map((r) => ({ ...r.body, athleteId: r.key }) as unknown as T) }) as Partial<LareeData>,
   }
 }
 
@@ -134,8 +137,26 @@ export const SPECS: readonly SliceSpec[] = [
       badgeSeen: Object.fromEntries(live(rows).map((r) => [r.key, Array.isArray(r.body['ids']) ? (r.body['ids'] as string[]) : []])),
     }),
   },
-  // Kudos: the coach sends, the athlete marks them seen.
-  list<WithId & { day: number }>('kudos', 'kudos', 'both', byId, (x) => iso(x.day)),
+  // Kudos are the coach's words. The athlete marks them seen in a record of their own.
+  list<WithId & { day: number }>('kudos', 'kudos', 'planner', byId, (x) => iso(x.day)),
+  {
+    slice: 'kudos',
+    table: 'kudos_seen',
+    scope: 'athlete',
+    writer: 'athlete',
+    docs: (data) => {
+      const seen = new Map<string, string[]>()
+      for (const k of data.kudos) if (k.seenByAthlete) seen.set(k.athleteId, [...(seen.get(k.athleteId) ?? []), k.id])
+      return [...seen].map(([key, ids]) => ({ key, id: 'seen', day: null, src: ids }))
+    },
+    body: (doc) => ({ ids: doc.src }),
+    build: () => ({}),
+    merge: (data, rows) => {
+      const seen = new Set(live(rows).flatMap((r) => (Array.isArray(r.body['ids']) ? (r.body['ids'] as string[]) : [])))
+      if (!data.kudos.some((k) => !k.seenByAthlete && seen.has(k.id))) return {}
+      return { kudos: data.kudos.map((k) => (!k.seenByAthlete && seen.has(k.id) ? { ...k, seenByAthlete: true } : k)) }
+    },
+  },
   // A person's own library. The built-in templates are not stored; a row overrides or hides one.
   {
     slice: 'templates',

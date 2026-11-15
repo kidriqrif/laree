@@ -334,7 +334,12 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
       if (isLive && firstId && imp.status === 'ready') {
         const original = imp.file
         const activityId = firstId
-        void import('../../../live/files.ts').then((m) => m.keepActivityFile(athleteId, activityId, original))
+        void import('../../../live/files.ts')
+          .then((m) => m.keepActivityFile(athleteId, activityId, original))
+          .then((kept) => {
+            if (!kept) showToast('Your session is saved, but its original file could not be kept.')
+          })
+          .catch(() => undefined)
       }
       finish(n === 1 ? 'Logged 1 session from your file' : `Logged ${n} sessions from your file`)
     })

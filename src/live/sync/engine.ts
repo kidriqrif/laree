@@ -77,10 +77,17 @@ export function startSync(opts: SyncOptions): SyncHandle {
   let stopped = false
   let failures = 0
   let retryAt = 0
+  /** Tables to rebuild on the next pull even if nothing changed there: a refused write must be undone. */
+  const forced = new Set<string>()
   let debounce: ReturnType<typeof setTimeout> | undefined
 
-  const setStatus = (change: Partial<SyncStatus>) =>
+  const setStatus = (change: Partial<SyncStatus>) => {
+    // A stopped sync (sign-out, another account) must not touch the next one's status.
+    if (stopped) return
     useSyncStatus.setState({ ...change, pending: outbox.pending.length })
+  }
+  outbox.onSaveError = () =>
+    setStatus({ problem: 'Changes could not be saved on this device. Keep the app open until they are sent.' })
 
   const unsubscribe = useLaree.subscribe((state) => {
     if (state.data === baseline) return
@@ -102,21 +109,27 @@ export function startSync(opts: SyncOptions): SyncHandle {
     debounce = setTimeout(() => void syncNow(), Math.max(delay, retryAt - Date.now()))
   }
 
-  /** Rebuild the given tables from the server's rows, with the queued writes on top. */
+  /** The server's rows for one table, with the writes still queued here on top. */
+  function rowsOf(table: string): Row[] {
+    const rows = new Map<string, Row>(mirror.get(table) ?? [])
+    for (const op of outbox.pending) {
+      if (op.table !== table) continue
+      rows.set(rowKey(op), { key: op.key, id: op.id, day: op.day, body: op.body ?? {}, deleted: op.body === null })
+    }
+    return [...rows.values()]
+  }
+
+  /** Rebuild the given tables in the store, then apply every table that adds to another slice. */
   function applyMirror(tables: ReadonlySet<string>) {
     const patch: Partial<LareeData> = {}
-    for (const spec of SPECS) {
-      if (!tables.has(spec.table)) continue
-      const rows = new Map<string, Row>(mirror.get(spec.table) ?? [])
-      for (const op of outbox.pending) {
-        if (op.table !== spec.table) continue
-        rows.set(rowKey(op), { key: op.key, id: op.id, day: op.day, body: op.body ?? {}, deleted: op.body === null })
-      }
-      Object.assign(patch, spec.build([...rows.values()], ctx))
-    }
+    for (const spec of SPECS) if (tables.has(spec.table)) Object.assign(patch, spec.build(rowsOf(spec.table), ctx))
     applying = true
     try {
-      useLaree.setState((s) => ({ data: { ...s.data, ...patch } }))
+      useLaree.setState((s) => {
+        let data: LareeData = { ...s.data, ...patch }
+        for (const spec of SPECS) if (spec.merge) data = { ...data, ...spec.merge(data, rowsOf(spec.table)) }
+        return { data }
+      })
     } finally {
       applying = false
     }
@@ -124,19 +137,26 @@ export function startSync(opts: SyncOptions): SyncHandle {
 
   async function pull(): Promise<Set<string>> {
     const full = !hydrated
-    const touched = new Set<string>()
-    const tables = new Set<string>()
+    // Read every table first. The mirror and cursors change only once all reads succeed, so a
+    // failed read leaves nothing half-applied and the next try reads the same rows again.
+    const read: [string, PulledRow[]][] = []
     for (const spec of SPECS) {
-      const rows = await backend.pull(spec.table, spec.scope, full ? null : (cursor.get(spec.table) ?? null))
-      let m = mirror.get(spec.table)
-      if (!m || full) mirror.set(spec.table, (m = new Map()))
+      read.push([spec.table, await backend.pull(spec.table, spec.scope, full ? null : (cursor.get(spec.table) ?? null))])
+      if (stopped) return new Set()
+    }
+    const touched = new Set<string>()
+    const tables = new Set<string>(forced)
+    for (const [table, rows] of read) {
+      let m = mirror.get(table)
+      if (!m || full) mirror.set(table, (m = new Map()))
       for (const r of rows) {
         m.set(rowKey(r), r)
         touched.add(r.key)
-        if (r.updatedAt > (cursor.get(spec.table) ?? '')) cursor.set(spec.table, r.updatedAt)
+        if (r.updatedAt > (cursor.get(table) ?? '')) cursor.set(table, r.updatedAt)
       }
-      if (full || rows.length > 0) tables.add(spec.table)
+      if (full || rows.length > 0) tables.add(table)
     }
+    forced.clear()
     if (tables.size > 0) applyMirror(tables)
     if (full) for (const id of ctx.athleteIds) touched.add(id)
     hydrated = true
@@ -147,9 +167,12 @@ export function startSync(opts: SyncOptions): SyncHandle {
     setStatus({ syncing: true })
     try {
       const sent = await outbox.flush(backend.send)
+      if (stopped) return
+      for (const op of sent.rejected) forced.add(op.table)
       if (sent.rejected.length > 0) opts.onRejected?.(sent.rejected, sent.message)
       if (sent.stalled) throw new Error(sent.message ?? 'The server could not be reached')
       const touched = await pull()
+      if (stopped) return
       const store = useLaree.getState()
       for (const id of touched) if (ctx.athleteIds.includes(id)) store.resettle(id)
       failures = 0
@@ -161,6 +184,7 @@ export function startSync(opts: SyncOptions): SyncHandle {
         problem: sent.rejected.length > 0 ? 'Some changes were not allowed and were undone.' : null,
       })
     } catch (e) {
+      if (stopped) return
       failures++
       retryAt = Date.now() + Math.min(MAX_BACKOFF_MS, 2000 * 2 ** failures)
       setStatus({ syncing: false, offline: true, problem: e instanceof Error ? e.message : String(e) })

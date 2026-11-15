@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(56);
+select plan(62);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -39,11 +39,13 @@ do $$
 declare t text;
 begin
   foreach t in array array['planned_workouts', 'races', 'phases', 'thresholds', 'excuses', 'activity_notes',
-    'flag_states', 'activities', 'check_ins', 'check_in_skips', 'badges', 'badge_seen', 'kudos'] loop
+    'flag_states', 'activities', 'check_ins', 'check_in_skips', 'badges', 'badge_seen', 'kudos', 'kudos_seen'] loop
     execute format('insert into public.%I (athlete_id, id, day, body) values (%L, %L, current_date, %L)',
       t, '00000000-0000-4000-a000-0000000000a1', 'row-1', '{"x": 1}');
   end loop;
 end $$;
+insert into consents (user_id, purpose, granted, text_version)
+  values ('00000000-0000-4000-a000-0000000000a1', 'health_data', true, '2026-11');
 insert into settings (owner_id, id, body) values ('00000000-0000-4000-a000-0000000000a1', 'settings', '{"aiConsent": true}');
 insert into workout_templates (owner_id, id, body) values ('00000000-0000-4000-a000-00000000000a', 't-1', '{"name": "Tempo"}');
 
@@ -67,6 +69,9 @@ select is((select count(*)::int from check_in_skips), 0, 'coach B: check_in_skip
 select is((select count(*)::int from badges), 0, 'coach B: badges hidden');
 select is((select count(*)::int from badge_seen), 0, 'coach B: badge_seen hidden');
 select is((select count(*)::int from kudos), 0, 'coach B: kudos hidden');
+select is((select count(*)::int from kudos_seen), 0, 'coach B: kudos_seen hidden');
+select is(has_consent('00000000-0000-4000-a000-0000000000a1', 'health_data'), false, 'coach B cannot probe A1''s consents');
+select is(has_active_coach('00000000-0000-4000-a000-0000000000a1'), false, 'coach B cannot probe whether A1 has a coach');
 select is((select count(*)::int from settings), 0, 'coach B: settings hidden');
 select is((select count(*)::int from workout_templates), 0, 'coach B: coach A''s library hidden');
 select is((select count(*)::int from profiles where id = '00000000-0000-4000-a000-0000000000a1'), 0,
@@ -113,10 +118,18 @@ select throws_ok(
   $$insert into planned_workouts (athlete_id, id, body) values ('00000000-0000-4000-a000-0000000000a1', 'mine', '{}')$$,
   '42501', null, 'a coached athlete cannot write their plan');
 select lives_ok(
-  $$insert into check_ins (athlete_id, id, day, body) values ('00000000-0000-4000-a000-0000000000a1', 'ci-3', current_date, '{}')$$,
+  $$insert into check_ins (athlete_id, id, day, body) values ('00000000-0000-4000-a000-0000000000a1', 'ci-3', current_date + 1, '{}')$$,
   'A1 checks in');
+select throws_ok(
+  $$insert into check_ins (athlete_id, id, day, body) values ('00000000-0000-4000-a000-0000000000a1', 'ci-4', current_date + 1, '{}')$$,
+  '23505', null, 'one check-in per athlete and day');
+update kudos set body = '{"message": "changed"}' where id = 'row-1';
+select is((select body from kudos where id = 'row-1'), '{"x": 1}'::jsonb, 'an athlete cannot change a coach''s kudos');
 select lives_ok(
-  $$update kudos set body = '{"seenByAthlete": true}' where id = 'row-1'$$, 'A1 marks kudos seen');
+  $$update kudos_seen set body = '{"ids": ["row-1"]}' where id = 'row-1'$$, 'A1 marks kudos seen in their own record');
+select throws_ok(
+  $$insert into consents (purpose, granted, text_version, at) values ('ai', true, '2026-11', now() + interval '1 day')$$,
+  '42501', null, 'the consent time is the server''s');
 select throws_ok(
   $$update profiles set plan = 'premium' where id = '00000000-0000-4000-a000-0000000000a1'$$,
   '42501', null, 'nobody changes their own plan');

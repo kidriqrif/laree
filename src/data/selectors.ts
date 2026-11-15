@@ -37,13 +37,15 @@ const NO_FORM = { fitness: 0, fatigue: 0 }
 
 /** Cache by a string key; an entry is reused while every argument is identical (Object.is). */
 function memoize<A extends readonly unknown[], R>(fn: (...args: A) => R, keyOf: (...args: A) => string): (...args: A) => R {
-  const cache = new Map<string, { args: A; result: R }>()
+  const cache = new Map<string, { args: A; roster: readonly AthleteId[]; result: R }>()
   return (...args: A): R => {
     const key = keyOf(...args)
     const hit = cache.get(key)
-    if (hit && hit.args.length === args.length && hit.args.every((a, i) => Object.is(a, args[i]))) return hit.result
+    // A new roster (sign-in) is a new list, so results for the old one are not reused.
+    if (hit && hit.roster === ATHLETE_IDS && hit.args.length === args.length && hit.args.every((a, i) => Object.is(a, args[i])))
+      return hit.result
     const result = fn(...args)
-    cache.set(key, { args, result })
+    cache.set(key, { args, roster: ATHLETE_IDS, result })
     return result
   }
 }
