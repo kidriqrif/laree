@@ -152,9 +152,14 @@ export const SPECS: readonly SliceSpec[] = [
     body: (doc) => ({ ids: doc.src }),
     build: () => ({}),
     merge: (data, rows) => {
-      const seen = new Set(live(rows).flatMap((r) => (Array.isArray(r.body['ids']) ? (r.body['ids'] as string[]) : [])))
-      if (!data.kudos.some((k) => !k.seenByAthlete && seen.has(k.id))) return {}
-      return { kudos: data.kudos.map((k) => (!k.seenByAthlete && seen.has(k.id) ? { ...k, seenByAthlete: true } : k)) }
+      // Matched by athlete and id together: two athletes may each hold a record with the same id.
+      const seen = new Set(
+        live(rows).flatMap((r) => (Array.isArray(r.body['ids']) ? (r.body['ids'] as string[]).map((id) => `${r.key}/${id}`) : [])),
+      )
+      const newlySeen = (k: { id: string; athleteId: string; seenByAthlete: boolean }) =>
+        !k.seenByAthlete && seen.has(`${k.athleteId}/${k.id}`)
+      if (!data.kudos.some(newlySeen)) return {}
+      return { kudos: data.kudos.map((k) => (newlySeen(k) ? { ...k, seenByAthlete: true } : k)) }
     },
   },
   // A person's own library. The built-in templates are not stored; a row overrides or hides one.

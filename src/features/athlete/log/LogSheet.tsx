@@ -76,6 +76,7 @@ import {
 } from './logModel.ts'
 import styles from './LogSheet.module.css'
 import { isLive } from '../../../app/mode.ts'
+import { keepOriginal } from './keepOriginal.ts'
 
 type Method = 'quick' | 'import' | 'sync'
 
@@ -331,15 +332,13 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
         n++
       }
       // The live app keeps the original file, so it can be read again when the metrics improve.
-      if (isLive && firstId && imp.status === 'ready') {
+      // (`__LIVE__` is a literal, so the demo build leaves the upload code out.)
+      if (__LIVE__ && firstId && imp.status === 'ready') {
         const original = imp.file
         const activityId = firstId
-        void import('../../../live/files.ts')
-          .then((m) => m.keepActivityFile(athleteId, activityId, original))
-          .then((kept) => {
-            if (!kept) showToast('Your session is saved, but its original file could not be kept.')
-          })
-          .catch(() => undefined)
+        void keepOriginal(() => import('../../../live/files.ts'), athleteId, activityId, original).then((kept) => {
+          if (!kept) showToast('Your session is saved, but its original file could not be kept.')
+        })
       }
       finish(n === 1 ? 'Logged 1 session from your file' : `Logged ${n} sessions from your file`)
     })

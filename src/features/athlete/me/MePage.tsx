@@ -14,7 +14,9 @@ import { AiSection } from './AiSection.tsx'
 import { changeLines, currentOf, historyOf, kindsFor, valueText, zoneRows } from './thresholds.ts'
 import styles from './MePage.module.css'
 
-const AccountPanel = lazy(() => import('../../../live/AccountPanel.tsx'))
+// `__LIVE__` is a literal: in the demo build the import is dead code and the live app's
+// files are left out of the build.
+const AccountPanel = lazy(() => (__LIVE__ ? import('../../../live/AccountPanel.tsx') : Promise.reject(new Error('live build only'))))
 
 const THEMES: ReadonlyArray<{ id: ThemePreference; label: string }> = [
   { id: 'system', label: 'System' },

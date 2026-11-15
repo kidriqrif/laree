@@ -24,8 +24,9 @@ Day-to-day running of the live app. How it works: [backend.md](backend.md).
 | `SUPABASE_ACCESS_TOKEN` | secret | `supabase-deploy.yml` |
 | `SUPABASE_DB_PASSWORD` | secret | `supabase-deploy.yml` |
 | `SUPABASE_DB_URL` | secret, the session pooler connection string | `backup.yml` |
+| `SUPABASE_SECRET_KEY` | secret, the project's secret (service role) key | `backup.yml`, to read the private file bucket |
 | `SUPABASE_PROJECT_REF` | variable | `supabase-deploy.yml` |
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | variables | `keepalive.yml` |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | variables | `keepalive.yml`; `backup.yml` uses the URL |
 | `BACKUP_AGE_RECIPIENT` | variable, your age public key (`age1…`) | `backup.yml` |
 
 The deploy and backup jobs use a GitHub environment named `production`. Add the secrets there, or at repository level.
@@ -66,17 +67,30 @@ update public.profiles set plan = 'premium' where id = (select id from auth.user
 
 ## Restore a backup
 
-1. Download the newest `laree-backup` artifact from the "Nightly backup" workflow run.
-2. Decrypt it with your age key: `age -d -i key.txt laree-YYYY-MM-DD.tar.gz.age | tar -xz`
-3. Into an empty project, apply `dump/schema.sql`, then `dump/data.sql`, with `psql` and the new project's connection string.
-4. Point Vercel's `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` at the new project and redeploy.
+A backup holds the rows (`dump/data.sql`: the app's tables and the accounts) and the original activity files (`dump/files/`, listed in `dump/files.txt`). It does not hold the schema, the Edge Functions or any setting: those come from this repository and from the steps below. Do the steps in this order. The app keeps pointing at the old project until the last step.
 
-Keep the age private key somewhere safe and offline. Without it the backups cannot be read.
+1. **Get the backup.** Download the newest `laree-backup` artifact from the "Nightly backup" workflow run and decrypt it with your age key: `age -d -i key.txt laree-YYYY-MM-DD.tar.gz.age | tar -xz`
+2. **Make an empty project** in `ap-southeast-1` and note its project ref, database password, URL and keys.
+3. **Apply the migrations.** `npx supabase link --project-ref NEW_REF`, then `npx supabase db push`. This creates the tables, the access rules, the sign-up trigger on `auth.users`, and the `activity-files` bucket with its rules. A data dump contains none of these.
+4. **Deploy the functions and their secrets.** `npx supabase functions deploy ai delete-account`, then set every secret from "Settings to keep in place" with `npx supabase secrets set`. Without this step, AI and "Delete my account" do not work in the restored app.
+5. **Set up sign-in** as in "Settings to keep in place": site URL, redirect URLs, email templates, OTP expiry and SMTP.
+6. **Load the rows.** The dump's first line turns triggers off for its own session (`SET session_replication_role = replica`). That matters: the sign-up trigger would otherwise make a second profile for every account, and the stamp triggers would rewrite every row's time. So load the file as it is, in one transaction, as the `postgres` user:
+
+   ```bash
+   psql "NEW_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -f dump/data.sql
+   ```
+
+7. **Upload the files.** `SUPABASE_URL=https://NEW_REF.supabase.co SUPABASE_SECRET_KEY=… scripts/restore-files.sh dump`
+8. **Check it.** In the SQL editor: `select count(*) from auth.users`, `select count(*) from public.profiles` (the two match) and `select count(*) from storage.objects where bucket_id = 'activity-files'` (it matches `wc -l dump/files.txt`).
+9. **Point GitHub at the new project**, or the next deploy and the next backup still use the old one: `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `SUPABASE_DB_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
+10. **Switch the app.** Set Vercel's `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the new project and redeploy. Everyone signs in again: sessions belong to the old project.
+
+Keep the age private key somewhere safe and offline. Without it the backups cannot be read. Try a restore into a scratch project once, before you need it.
 
 ## Rotate a key
 
 - **AI provider key:** create a new key on the provider's site, set it with `supabase secrets set`, then revoke the old one.
-- **Supabase secret (service role) key:** create a new secret key under Settings, API keys. Functions read it from the platform, so nothing else changes. Then delete the old key.
+- **Supabase secret (service role) key:** create a new secret key under Settings, API keys. Functions read it from the platform. Update `SUPABASE_SECRET_KEY` in GitHub for the backup. Then delete the old key.
 - **Database password:** reset it under Settings, Database. Update `SUPABASE_DB_PASSWORD` and `SUPABASE_DB_URL` in GitHub.
 
 ## If data leaks

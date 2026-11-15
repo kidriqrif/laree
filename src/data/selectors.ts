@@ -29,7 +29,7 @@ import type {
 import type { Severity } from '../domain/flags.ts'
 import type { LareeData } from './store.ts'
 import { ATHLETE_IDS } from '../app/people.ts'
-import { START_FORM } from './seed/index.ts'
+import { START_FORM } from './seed/people.ts'
 import { coachLayerOn } from '../ai/consent.ts'
 /** A live athlete has no seeded starting form: their fitness builds from zero. */
 const NO_FORM = { fitness: 0, fatigue: 0 }

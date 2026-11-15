@@ -107,6 +107,7 @@ export function SignInPage() {
             <button
               type="button"
               className={styles.link}
+              disabled={busy}
               onClick={() => {
                 setStep('email')
                 setCode('')

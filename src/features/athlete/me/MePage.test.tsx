@@ -4,7 +4,8 @@ import { RouterProvider } from 'react-router/dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { routes } from '../../../app/router.tsx'
 import { useViewer } from '../../../app/viewer.ts'
-import { freshData, useLaree } from '../../../data/store.ts'
+import { freshData } from '../../../data/freshData.ts'
+import { useLaree } from '../../../data/store.ts'
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })

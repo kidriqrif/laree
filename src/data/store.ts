@@ -34,7 +34,7 @@ import type {
   ThresholdSource,
   WorkoutTemplate,
 } from '../domain/types.ts'
-import { defaultSettingsMap, migrate, STORE_VERSION } from './migrations.ts'
+import { migrate, STORE_VERSION } from './migrations.ts'
 import {
   createLareeStorage,
   isSavedDataUnreadable,
@@ -46,7 +46,7 @@ import {
   readAiWithdrawnSessionOnly,
   STORE_KEY,
 } from './persist.ts'
-import { generateSeed } from './seed/index.ts'
+import { freshData } from './freshData.ts'
 import type { SeedCheckIn } from './seed/index.ts'
 import { earnedAwards, selectFitnessSeries } from './selectors.ts'
 import { settingsOf } from '../domain/settings.ts'
@@ -198,27 +198,6 @@ export interface LareeState extends Persisted {
   dismissStorageBanner: () => void
   /** Restore the seed exactly, and send the viewer back to the role picker (IA 7.8). */
   reset: () => void
-}
-
-/** A fresh copy of the seed data, dated to the current week. */
-export function freshData(): LareeData {
-  const s = generateSeed()
-  const copy = structuredClone({
-    thresholds: s.thresholds,
-    races: s.races,
-    phases: s.phases,
-    templates: s.templates,
-    planned: s.planned,
-    activities: s.activities,
-    checkIns: s.checkIns,
-    flags: s.flags,
-    flagsState: s.flagsState,
-    kudos: s.kudos,
-    badges: s.badges,
-    badgeSeen: s.badgeSeen,
-    excuses: s.excuses,
-  })
-  return { ...copy, skippedCheckIns: [], activityNotes: {}, settings: defaultSettingsMap(), drafts: {}, prefs: {} }
 }
 
 /**
@@ -429,7 +408,7 @@ export const useLaree = create<LareeState>()(
         return r.added
       }
       return {
-        data: isLive ? emptyLiveData() : freshData(),
+        data: __LIVE__ ? emptyLiveData() : freshData(),
         anchor: runtimeStartEpochDay(),
         storageFailed: false,
         aiWithdrawalUnsaved: false,
@@ -638,7 +617,8 @@ export const useLaree = create<LareeState>()(
         dismissStorageBanner: () => set({ bannerDismissed: true }),
         reset: () => {
           unsavedWithdrawals.clear()
-          set({ data: freshData(), anchor: runtimeStartEpochDay(), undoStack: [], unreadable: false, aiWithdrawalUnsaved: false, aiUnsavedOwners: [] })
+          // The live app has no seed to go back to (and so does not carry the seed generator).
+          set({ data: __LIVE__ ? emptyLiveData() : freshData(), anchor: runtimeStartEpochDay(), undoStack: [], unreadable: false, aiWithdrawalUnsaved: false, aiUnsavedOwners: [] })
           // Reset clears every consent choice, the withdrawal note included (docs/spec/ai.md 4).
           // Only once the fresh data is saved: if that save failed, a reload brings the old copy
           // back, and the note must still be there to keep AI off.

@@ -8,7 +8,8 @@ export function AiTextPanel({ title, output: draft }: { title: string; output: A
   // Live: the rule-based text shows at once, then the AI wording replaces it when it arrives.
   const [polished, setPolished] = useState<{ from: typeof draft; to: typeof draft } | null>(null)
   useEffect(() => {
-    if (!isLive || draft.status !== 'ok') return
+    // A literal, so the demo build leaves the live AI code out.
+    if (!__LIVE__ || draft.status !== 'ok') return
     let gone = false
     void import('../../../live/aiText.ts')
       .then((m) => m.polish(draft))

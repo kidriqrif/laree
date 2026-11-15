@@ -12,3 +12,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+/**
+ * True in a build with both Supabase settings (the live app), false in the demo. vite.config.ts
+ * writes it in as a literal, so the bundler drops the other side's code.
+ */
+declare const __LIVE__: boolean

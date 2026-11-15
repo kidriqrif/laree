@@ -256,7 +256,7 @@ Each milestone ends with checks, then a commit, then a push. The checks run thro
 
 ### Keeping the athlete's first screen small
 
-The budget covers everything the Today route loads before it can draw: the entry script and every chunk Today imports statically. Sheets, dialogs and the toast region load later and do not count. Four rules keep it inside 160 KB:
+The budget covers everything the Today route loads before it can draw: the entry script and every chunk Today imports statically. In a live build that includes the live gate (`check:budget -- --live`). Sheets, dialogs and the toast region load later and do not count. Four rules keep it inside 160 KB:
 
 - **Modules have no side effects.** `package.json` lists the only files that do (`sideEffects`: stylesheets, `src/app/main.tsx` and `src/styles/fonts.ts`). This lets the build drop every unused export of an index file. A new module that must run just by being imported has to be added to that list, or the build removes it.
 - **No react-aria code on Today.** `Button` brings about 14 KB of press handling. Anything Today imports statically uses `PlainButton`, a native button with the same look.

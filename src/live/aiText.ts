@@ -41,6 +41,15 @@ function writeCache(key: string, value: Polished): void {
   }
 }
 
+/** Forget the AI wording kept on this device (on sign-out and account deletion). */
+export function clearPolishedCache(): void {
+  try {
+    localStorage.removeItem(CACHE_KEY)
+  } catch {
+    // No storage: nothing kept, nothing to clear.
+  }
+}
+
 const apply = <T extends TextOut>(out: T, p: Polished): T => ({
   ...out,
   headline: p.headline,

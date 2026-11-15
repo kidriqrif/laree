@@ -30,6 +30,15 @@ function CheckInSheetInner() {
   return <OpenSheet onClose={sheet.close} onOpenChange={sheet.onOpenChange} />
 }
 
+interface Fields {
+  sleep: number
+  soreness: number
+  mood: number
+  hr: number
+  hrv: number
+  note: string
+}
+
 function simulatedWatch(mean: number, day: DayOffset, salt: number, spread: number): number {
   // A small steady wobble, so the same day always shows the same reading.
   const wobble = ((day * 7 + salt * 13) % 5) - 2
@@ -49,14 +58,23 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
   const yesterday = mine.find((c) => c.day === day - 1)
   const stored = athlete?.baselines ?? { restingHr: 48, hrvMs: 72 }
 
-  const [sleep, setSleep] = useState<number>(existing?.sleepHours ?? yesterday?.sleepHours ?? 7)
-  const [soreness, setSoreness] = useState<number>(existing?.soreness ?? yesterday?.soreness ?? 2)
-  const [mood, setMood] = useState<number>(existing?.mood ?? yesterday?.mood ?? 3)
-  // The demo fills these from a simulated watch. The live app has no watch link: they start empty.
-  const [hr, setHr] = useState<number>(existing?.restingHr ?? (isLive ? Number.NaN : simulatedWatch(stored.restingHr, day, 1, 1)))
-  const [hrv, setHrv] = useState<number>(existing?.hrvMs ?? (isLive ? Number.NaN : simulatedWatch(stored.hrvMs, day, 2, 2)))
-  const [edited, setEdited] = useState(false)
-  const [note, setNote] = useState(existing?.note ?? '')
+  // What each field shows until the person changes it: today's check-in once it is here, else
+  // yesterday's answer or a start value. Today's check-in may arrive from a sync after the sheet
+  // opened, so this is worked out on every draw, not copied once into state.
+  const start: Fields = {
+    sleep: existing?.sleepHours ?? yesterday?.sleepHours ?? 7,
+    soreness: existing?.soreness ?? yesterday?.soreness ?? 2,
+    mood: existing?.mood ?? yesterday?.mood ?? 3,
+    // The demo fills these from a simulated watch. The live app has no watch link: they start empty.
+    hr: existing?.restingHr ?? (isLive ? Number.NaN : simulatedWatch(stored.restingHr, day, 1, 1)),
+    hrv: existing?.hrvMs ?? (isLive ? Number.NaN : simulatedWatch(stored.hrvMs, day, 2, 2)),
+    note: existing?.note ?? '',
+  }
+  // Only the fields the person changed. A field they emptied is in here too, so the clear is kept.
+  const [changed, setChanged] = useState<Partial<Fields>>({})
+  const { sleep, soreness, mood, hr, hrv, note } = { ...start, ...changed }
+  const change = <K extends keyof Fields>(field: K) => (value: Fields[K]) => setChanged((c) => ({ ...c, [field]: value }))
+  const edited = 'hr' in changed || 'hrv' in changed
   const [closed, setClosed] = useState(false)
 
   const history = mine.filter((c) => c.day !== day)
@@ -118,24 +136,21 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
             label="Sleep last night"
             unit="h"
             value={sleep}
-            onChange={setSleep}
+            onChange={change('sleep')}
             minValue={0}
             maxValue={16}
             step={0.25}
             formatOptions={{ maximumFractionDigits: 2 }}
           />
-          <Rating label="Soreness" value={soreness} onChange={setSoreness} valueNames={SORENESS_NAMES} showEnds />
-          <Rating label="Mood" value={mood} onChange={setMood} valueNames={MOOD_NAMES} showEnds />
+          <Rating label="Soreness" value={soreness} onChange={change('soreness')} valueNames={SORENESS_NAMES} showEnds />
+          <Rating label="Mood" value={mood} onChange={change('mood')} valueNames={MOOD_NAMES} showEnds />
           <div>
             <div className={styles.pair}>
               <NumberField
                 label={isLive ? 'Resting heart rate (optional)' : 'Resting heart rate'}
                 unit="bpm"
                 value={hr}
-                onChange={(v) => {
-                  setHr(v)
-                  setEdited(true)
-                }}
+                onChange={change('hr')}
                 minValue={30}
                 maxValue={120}
                 formatOptions={{ maximumFractionDigits: 0 }}
@@ -144,10 +159,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
                 label={isLive ? 'HRV (optional)' : 'HRV'}
                 unit="ms"
                 value={hrv}
-                onChange={(v) => {
-                  setHrv(v)
-                  setEdited(true)
-                }}
+                onChange={change('hrv')}
                 minValue={10}
                 maxValue={250}
                 formatOptions={{ maximumFractionDigits: 0 }}
@@ -163,7 +175,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
             {hrNote ? <p className={styles.usual}>{hrNote}</p> : null}
             {hrvNote ? <p className={styles.usual}>{hrvNote}</p> : null}
           </div>
-          <TextField label="Note (optional)" value={note} onChange={setNote} maxLength={200} />
+          <TextField label="Note (optional)" value={note} onChange={change('note')} maxLength={200} />
         </div>
       )}
     </Sheet>

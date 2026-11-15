@@ -2,14 +2,23 @@
  * The Today budget (docs/dev/tooling.md): the entry script and every chunk Today imports
  * statically, gzipped, must stay at or under 160 KB. Sheets, dialogs and toasts load later and
  * do not count. Reads the Vite manifest, so run it after `build`.
+ *
+ *   node scripts/check-budget.ts [dist] [--live]
+ *
+ * With --live, the live gate and its static imports count as well: a signed-in device draws
+ * Today inside it. Sign-in, onboarding and the Supabase client load after that and do not count.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
-const dist = process.argv[2] ?? 'dist'
+const args = process.argv.slice(2)
+/** A live build: the live gate wraps Today and loads before it can draw, so it counts too. */
+const live = args.includes('--live')
+const dist = args.find((a) => !a.startsWith('--')) ?? 'dist'
 const BUDGET_KB = 160
 const TODAY = 'src/features/athlete/today/TodayPage.tsx'
+const LIVE_GATE = 'src/live/LiveGate.tsx'
 
 interface Chunk {
   file: string
@@ -37,6 +46,7 @@ const entry = Object.entries(manifest).find(([, c]) => c.isEntry)?.[0]
 if (!entry) throw new Error('No entry chunk in the manifest')
 walk(entry)
 walk(TODAY)
+if (live) walk(LIVE_GATE)
 
 let total = 0
 const rows: [string, number][] = []
@@ -50,7 +60,7 @@ for (const key of seen) {
 rows.sort((a, b) => b[1] - a[1])
 for (const [file, size] of rows) console.log(`${(size / 1024).toFixed(1).padStart(7)} KB  ${file}`)
 const kb = total / 1024
-console.log(`Today: ${kb.toFixed(1)} KB gzipped, budget ${BUDGET_KB} KB`)
+console.log(`Today${live ? ' (live)' : ''}: ${kb.toFixed(1)} KB gzipped, budget ${BUDGET_KB} KB`)
 if (kb > BUDGET_KB) {
   console.error(`Over budget by ${(kb - BUDGET_KB).toFixed(1)} KB`)
   process.exit(1)

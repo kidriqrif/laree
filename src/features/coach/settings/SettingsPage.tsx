@@ -16,8 +16,10 @@ import styles from './SettingsPage.module.css'
 import { settingsOf } from '../../../domain/settings.ts'
 import { isLive } from '../../../app/mode.ts'
 
-const AccountPanel = lazy(() => import('../../../live/AccountPanel.tsx'))
-const CoachTeamPanel = lazy(() => import('../../../live/CoachTeamPanel.tsx'))
+// `__LIVE__` is a literal: in the demo build the import is dead code and the live app's
+// files are left out of the build.
+const AccountPanel = lazy(() => (__LIVE__ ? import('../../../live/AccountPanel.tsx') : Promise.reject(new Error('live build only'))))
+const CoachTeamPanel = lazy(() => (__LIVE__ ? import('../../../live/CoachTeamPanel.tsx') : Promise.reject(new Error('live build only'))))
 
 /** The consent dialog loads only when a coach opens it for an athlete. */
 const AiConsentDialog = lazy(() => import('./AiConsentDialog.tsx').then((m) => ({ default: m.AiConsentDialog })))

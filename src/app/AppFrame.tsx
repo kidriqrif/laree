@@ -26,7 +26,9 @@ export function useRouteTitle(): string | undefined {
 }
 
 /** The live app's sign-in, onboarding and route guards: its own chunk, never in the demo's path. */
-const LiveGate = lazy(() => import('../live/LiveGate.tsx'))
+// `__LIVE__` is a literal: in the demo build the import is dead code and the live app's
+// files are left out of the build.
+const LiveGate = lazy(() => (__LIVE__ ? import('../live/LiveGate.tsx') : Promise.reject(new Error('live build only'))))
 
 const COACH_PATH = /^\/coach(\/|$)/
 const ATHLETE_PATH = /^\/athlete(\/|$)/
@@ -93,7 +95,7 @@ export function AppFrame() {
       >
         Skip to content
       </button>
-      {isLive ? null : <RoleSwitcher />}
+      {__LIVE__ ? null : <RoleSwitcher />}
       <StorageBanner />
       <div className={styles.body}>
         {isLive ? (

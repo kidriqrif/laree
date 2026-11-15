@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useViewer } from '../app/viewer.ts'
 import type { Activity } from '../domain/types.ts'
 import { resetStorageStatus, STORE_KEY } from './persist.ts'
-import { freshData, useLaree } from './store.ts'
+import { freshData } from './freshData.ts'
+import { useLaree } from './store.ts'
 
 beforeEach(() => {
   localStorage.clear()

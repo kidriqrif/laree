@@ -208,8 +208,9 @@ create policy invitations_withdraw on public.invitations for delete to authentic
   using (coach_id = (select auth.uid()) and accepted_at is null);
 
 grant select on public.consents to authenticated;
--- Who and when are the server's: only the answer itself is written by the person.
-grant insert (purpose, granted, text_version) on public.consents to authenticated;
+-- When is the server's. The person may name themself (the policy below refuses anyone else), so a
+-- client can bind a row to the account that made the choice even if the session changes meanwhile.
+grant insert (user_id, purpose, granted, text_version) on public.consents to authenticated;
 create policy consents_read on public.consents for select to authenticated
   using (user_id = (select auth.uid()) or public.is_coach_of(user_id));
 create policy consents_add on public.consents for insert to authenticated
@@ -406,9 +407,10 @@ create table public.ai_runs (
   user_id uuid not null references public.profiles (id) on delete cascade,
   athlete_id uuid not null references public.profiles (id) on delete cascade,
   feature text not null check (feature in ('recap', 'checkin', 'suggest')),
+  -- Empty while the request holds its place and no provider has answered yet.
   provider text not null check (char_length(provider) <= 40),
   model text not null check (char_length(model) <= 120),
-  status text not null check (status in ('ok', 'declined', 'invalid', 'failed')),
+  status text not null check (status in ('reserved', 'ok', 'declined', 'invalid', 'unavailable', 'failed')),
   input_tokens integer,
   output_tokens integer,
   created_at timestamptz not null default now()
@@ -418,6 +420,28 @@ alter table public.ai_runs enable row level security;
 grant select on public.ai_runs to authenticated;
 -- Written only by the ai Edge Function with the service role. People read their own runs.
 create policy ai_runs_read on public.ai_runs for select to authenticated using (user_id = (select auth.uid()));
+
+-- One AI request's place in the person's allowance for the last 24 hours. The ai Edge Function
+-- calls this before it calls any provider, and fills the row in afterwards. Null: no place left.
+-- The lock makes "count, then insert" one step per person, so two requests cannot both take the
+-- last place. A request counts whether or not a provider answered it.
+create function public.reserve_ai_run(p_user uuid, p_athlete uuid, p_feature text, p_limit integer) returns bigint
+language plpgsql security definer set search_path = '' as $$
+declare
+  run_id bigint;
+begin
+  perform pg_advisory_xact_lock(hashtextextended('laree.ai_runs:' || p_user::text, 0));
+  if (
+    select count(*) from public.ai_runs r
+    where r.user_id = p_user and r.created_at > clock_timestamp() - interval '24 hours'
+  ) >= p_limit then
+    return null;
+  end if;
+  insert into public.ai_runs (user_id, athlete_id, feature, provider, model, status, created_at)
+  values (p_user, p_athlete, p_feature, '', '', 'reserved', clock_timestamp())
+  returning id into run_id;
+  return run_id;
+end $$;
 
 create table public.client_errors (
   id bigint generated always as identity primary key,
@@ -467,7 +491,20 @@ end $$;
 -- The daily keep-alive (.github/workflows/keepalive.yml) calls this: a free project pauses after
 -- a week without requests. It reads nothing.
 create function public.ping() returns integer language sql immutable as $$ select 1 $$;
+
+-- ---------------------------------------------------------------------------------------------
+-- Who may call which function
+-- ---------------------------------------------------------------------------------------------
+-- PostgreSQL lets everyone (PUBLIC) execute a new function, and default privileges set for one
+-- schema cannot take that away. So it is taken away here, from every function made above, and
+-- each role gets back exactly what it needs. A new migration that adds a function must do the same.
+revoke execute on all functions in schema public from public, anon, authenticated;
+grant execute on function public.is_coach_of(uuid), public.has_active_coach(uuid), public.can_read_athlete(uuid),
+  public.can_plan_for(uuid), public.has_consent(uuid, text), public.ai_allowed(uuid),
+  public.accept_invitation(uuid), public.my_invitations() to authenticated;
 grant execute on function public.ping() to anon, authenticated;
+-- The server side only: a person must not hand out or use up places in anyone's allowance.
+grant execute on function public.reserve_ai_run(uuid, uuid, text, integer) to service_role;
 
 -- ---------------------------------------------------------------------------------------------
 -- Activity files: a private bucket, one folder per athlete ({athlete_id}/{activity_id}.{ext}).
@@ -489,12 +526,15 @@ begin
     execute $p$
       create policy activity_files_add on storage.objects for insert to authenticated with check (
         bucket_id = 'activity-files' and (storage.foldername(name))[1] = (select auth.uid())::text
+        -- {athlete id}/{file name}, nothing else: the backup and restore scripts rely on this shape.
+        and name ~ '^[0-9a-f-]{36}/[A-Za-z0-9._-]{1,80}$'
       )$p$;
     execute $p$
       create policy activity_files_replace on storage.objects for update to authenticated using (
         bucket_id = 'activity-files' and (storage.foldername(name))[1] = (select auth.uid())::text
       ) with check (
         bucket_id = 'activity-files' and (storage.foldername(name))[1] = (select auth.uid())::text
+        and name ~ '^[0-9a-f-]{36}/[A-Za-z0-9._-]{1,80}$'
       )$p$;
     execute $p$
       create policy activity_files_remove on storage.objects for delete to authenticated using (

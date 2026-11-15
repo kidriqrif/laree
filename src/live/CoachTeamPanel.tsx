@@ -21,7 +21,6 @@ async function openInvitations(): Promise<Sent[] | null> {
     .from('invitations')
     .select('id, email, expires_at')
     .is('accepted_at', null)
-    .gt('expires_at', new Date().toISOString())
     .order('created_at')
   return error ? null : ((data ?? []) as Sent[])
 }
@@ -37,11 +36,15 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
 
   const [version, setVersion] = useState(0)
   const load = useCallback(() => setVersion((v) => v + 1), [])
+  /** The time of the last load: "expired" is judged against it, so rendering reads no clock. */
+  const [loadedAt, setLoadedAt] = useState(0)
 
   useEffect(() => {
     let gone = false
     void openInvitations().then((rows) => {
-      if (!gone && rows) setSent(rows)
+      if (gone || !rows) return
+      setSent(rows)
+      setLoadedAt(Date.now())
     })
     return () => {
       gone = true
@@ -58,7 +61,9 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
     const { error } = await supabase().from('invitations').insert({ coach_id: account.uid, email: address })
     setBusy(false)
     if (error) {
-      return setMessage(error.code === '23505' ? `${address} is already invited.` : `Could not invite: ${error.message}`)
+      return setMessage(
+        error.code === '23505' ? `${address} is already invited. Withdraw that invitation to send a new one.` : `Could not invite: ${error.message}`,
+      )
     }
     setEmail('')
     setMessage(`Invited ${address}. Ask them to open ${location.origin} and sign in with that email.`)
@@ -101,14 +106,18 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
       </form>
       {sent.length > 0 ? (
         <div className={styles.card}>
-          <h3>Waiting to accept</h3>
+          <h3>Invitations not accepted yet</h3>
           <ul className={styles.list}>
             {sent.map((s) => (
               <li key={s.id} className={styles.listRow}>
                 <span>
                   {s.email}
                   <br />
-                  <span className={styles.small}>Open until {dateFmt.format(new Date(s.expires_at))}</span>
+                  <span className={styles.small}>
+                    {Date.parse(s.expires_at) > loadedAt
+                      ? `Open until ${dateFmt.format(new Date(s.expires_at))}`
+                      : 'Expired. Withdraw it to invite this email again.'}
+                  </span>
                 </span>
                 <button type="button" className={styles.link} onClick={() => void withdraw(s.id)}>
                   Withdraw

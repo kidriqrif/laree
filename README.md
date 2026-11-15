@@ -133,11 +133,20 @@ Start with these:
 
 ## Data and privacy
 
+**The demo** (GitHub Pages, no sign-in):
+
 - Every person, race and number in the demo is fictional.
-- Nothing you enter leaves the device. There is no backend and no account. The site is static files on GitHub Pages, and the browser fetches only those files and app updates.
+- Nothing you enter leaves the device. The demo has no backend and no account. It is static files, and the browser fetches only those files and app updates.
 - The data lives in this browser's storage, under keys that start with `laree:`. Most of it is in localStorage. A few small notes go in sessionStorage.
-- AI is off by default. The prototype never calls a model: it shows only simulated output, made on the device and labelled "Simulated AI - prototype".
+- AI is off by default. The demo never calls a model: it shows only simulated output, made on the device and labelled "Simulated AI - prototype".
 - `#/reset` puts the seeded demo back and clears every change, AI consent included.
+
+**The live app** (sign-in with an email code):
+
+- What you enter is stored in a database in Singapore (Supabase) and is kept on your device too, so the app works offline. Your coach, if you have one, can read your training and check-ins. Nobody else's account can.
+- Original activity files you import are kept in private storage.
+- AI is off by default and is a premium feature. When it is on, a short rule-based summary, with no name, note or GPS track, goes to a third-party AI provider that may be outside Malaysia.
+- You can download your data and delete your account in the app. The in-app privacy page (`#/privacy`) has the details.
 
 ## Licence
 

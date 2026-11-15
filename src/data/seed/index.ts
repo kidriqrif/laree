@@ -42,6 +42,7 @@ import {
   PLAN_LAST_WEEK,
   RACES,
   seedOf,
+  START_FORM,
   THRESHOLDS,
   weekFirstDay,
 } from './people.ts';
@@ -50,14 +51,8 @@ import { TEMPLATES } from './templates.ts';
 
 export type { ActivityStream } from './streams.ts';
 export type { SeedCheckIn } from './checkins.ts';
-export { ATHLETE_IDS, COACH, PLAN_LAST_WEEK, HISTORY_LAST_WEEK, CURRENT_WEEK } from './people.ts';
+export { ATHLETE_IDS, COACH, PLAN_LAST_WEEK, HISTORY_LAST_WEEK, CURRENT_WEEK, START_FORM } from './people.ts';
 
-/** Fitness and Fatigue on the day before day 0, so early weeks do not start from nothing. */
-export const START_FORM: Record<AthleteId, { fitness: number; fatigue: number }> = {
-  amir: { fitness: 48, fatigue: 48 },
-  danial: { fitness: 44, fatigue: 44 },
-  irfan: { fitness: 46, fatigue: 46 },
-};
 
 export interface Seed {
   /** The day the seed was generated for. Activities and check-ins stop here. */

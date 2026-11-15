@@ -63,6 +63,8 @@ export const useAccount = create<AccountState>(() => ({ status: 'loading', accou
 export const CONSENT_VERSION = '2026-11'
 
 const CACHE_KEY = 'laree:live:account'
+/** Where the auth client keeps its session (session.ts passes it as storageKey). */
+export const AUTH_KEY = 'laree:auth'
 const PROFILE_COLUMNS = 'id, role, plan, display_name, focus, sports, weight_kg, baselines, onboarded_at'
 
 export async function loadAccount(client: SupabaseClient, uid: string, email: string): Promise<Account> {
@@ -153,6 +155,31 @@ export function applyAccount(a: Account): void {
     coachAthleteId,
     chosen: true,
   })
+}
+
+/** The signed-in user id from the session the auth client saved, read without loading the client. */
+export function savedSessionUid(): string | null {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY)
+    if (!raw) return null
+    const saved = JSON.parse(raw) as { user?: { id?: unknown }; currentSession?: { user?: { id?: unknown } } }
+    const id = saved.user?.id ?? saved.currentSession?.user?.id
+    return typeof id === 'string' ? id : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Open on the device's copy before any network: with a saved session and a cached account, the
+ * app draws at once (also offline) and the auth client checks the session in the background.
+ */
+export function openFromCache(): void {
+  const uid = savedSessionUid()
+  const cached = uid ? readCachedAccount(uid) : null
+  if (!cached) return
+  applyAccount(cached)
+  useAccount.setState({ status: 'ready', account: cached, error: null })
 }
 
 export function readCachedAccount(uid: string): Account | null {

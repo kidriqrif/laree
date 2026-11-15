@@ -4,10 +4,11 @@ import { Link } from 'react-router'
 import { isSelfCoached, useAccount } from './account.ts'
 import { deleteMyAccount, exportMyData, saveBlob } from './privacy.ts'
 import { pendingWrites, signOut, syncNow } from './session.ts'
-import { useSyncStatus } from './sync/engine.ts'
+import { useSyncStatus } from './sync/syncStatus.ts'
 import styles from './live.module.css'
 
 const timeFmt = new Intl.DateTimeFormat('en-MY', { hour: 'numeric', minute: '2-digit' })
+const changes = (n: number): string => `${n} ${n === 1 ? 'change' : 'changes'}`
 
 /** Account, sync and sign-out, in Me (athletes) and Settings (coaches). Live app only. */
 export default function AccountPanel({ headingId = 'account-h' }: { headingId?: string }) {
@@ -33,18 +34,31 @@ export default function AccountPanel({ headingId = 'account-h' }: { headingId?: 
 
   const remove = async () => {
     setBusy(true)
-    const error = await deleteMyAccount()
-    setBusy(false)
-    if (error) setNote(error)
+    try {
+      const error = await deleteMyAccount()
+      if (error) setNote(error)
+    } catch {
+      setNote('Your account may be deleted, but this device could not finish. Reload the page.')
+    } finally {
+      setBusy(false)
+    }
   }
   const selfCoached = isSelfCoached(account)
 
-  const leave = () => {
+  const leave = async () => {
     if (pendingWrites() > 0 && !confirming) {
       setConfirming(true)
       return
     }
-    void signOut()
+    setBusy(true)
+    try {
+      const error = await signOut()
+      if (error) setNote(error)
+    } catch {
+      setNote('Signing out failed. Check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -76,7 +90,10 @@ export default function AccountPanel({ headingId = 'account-h' }: { headingId?: 
           {sync.syncing
             ? 'Syncing…'
             : sync.pending > 0
-              ? `${sync.pending} ${sync.pending === 1 ? 'change' : 'changes'} saved on this device. ${sync.offline ? 'They send when you are online.' : 'Sending…'}`
+              ? sync.unsaved
+                ? // Never claim a change is kept on the device when the save failed.
+                  `${changes(sync.pending)} could not be saved on this device. Keep Laree open until ${sync.pending === 1 ? 'it is' : 'they are'} sent.`
+                : `${changes(sync.pending)} saved on this device. ${sync.offline ? `${sync.pending === 1 ? 'It sends' : 'They send'} when you are online.` : 'Sending…'}`
               : sync.lastSyncedAt
                 ? `Up to date at ${timeFmt.format(sync.lastSyncedAt)}.`
                 : 'Not synced yet.'}
@@ -129,11 +146,14 @@ export default function AccountPanel({ headingId = 'account-h' }: { headingId?: 
       </div>
       {confirming ? (
         <p role="status" className={styles.message}>
-          {sync.pending} {sync.pending === 1 ? 'change has' : 'changes have'} not reached the server yet. Signing out now
-          keeps {sync.pending === 1 ? 'it' : 'them'} on this device until you sign in again. Sign out anyway?
+          {changes(sync.pending)} {sync.pending === 1 ? 'has' : 'have'} not reached the server yet.{' '}
+          {sync.unsaved
+            ? `Signing out now loses ${sync.pending === 1 ? 'it' : 'them'}: ${sync.pending === 1 ? 'it' : 'they'} could not be saved on this device.`
+            : `Signing out now keeps ${sync.pending === 1 ? 'it' : 'them'} on this device until you sign in again.`}{' '}
+          Sign out anyway?
         </p>
       ) : null}
-      <button type="button" className={styles.primary} onClick={leave}>
+      <button type="button" className={styles.primary} disabled={busy} onClick={() => void leave()}>
         {confirming ? 'Sign out anyway' : 'Sign out'}
       </button>
     </section>

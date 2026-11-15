@@ -8,9 +8,12 @@ import { opKey } from './diff.ts'
 import type { Op } from './diff.ts'
 import { canWrite, SPECS } from './docs.ts'
 import type { Scope, SyncContext } from './docs.ts'
-import { startSync } from './engine.ts'
+import { QUEUE_UNREADABLE, startSync, useSyncStatus } from './engine.ts'
 import type { Backend, PulledRow, SyncHandle } from './engine.ts'
 import { memoryOutboxStore, Outbox } from './outbox.ts'
+import type { OutboxStore } from './outbox.ts'
+import { afterFilter, overlapStart, readPages } from './supabaseBackend.ts'
+import type { DbRow, PageEnd } from './supabaseBackend.ts'
 
 const COACH = '00000000-0000-4000-a000-00000000000a'
 const ATHLETE = '00000000-0000-4000-a000-0000000000a1'
@@ -18,6 +21,7 @@ const OTHER = '00000000-0000-4000-a000-0000000000b1'
 
 const athleteCtx: SyncContext = { uid: ATHLETE, role: 'athlete', selfCoached: false, athleteIds: [ATHLETE] }
 const coachCtx: SyncContext = { uid: COACH, role: 'coach', selfCoached: false, athleteIds: [ATHLETE] }
+const coachOfTwoCtx: SyncContext = { uid: COACH, role: 'coach', selfCoached: false, athleteIds: [ATHLETE, OTHER] }
 
 const person: Athlete = {
   id: ATHLETE,
@@ -34,10 +38,11 @@ function fakeServer() {
   let clock = 0
   let down = false
   const writes: string[] = []
-  const hooks: { beforePull?: (table: string) => void } = {}
+  const hooks: { beforePull?: (table: string) => void; beforeSend?: (table: string) => void } = {}
   const as = (ctx: SyncContext): Backend => ({
     async send(table, _scope, ops) {
       if (down) throw new TypeError('Failed to fetch')
+      hooks.beforeSend?.(table)
       const spec = SPECS.find((s) => s.table === table)
       if (!spec) throw new Error(`no table ${table}`)
       if (ops.some((o) => !canWrite(spec.writer, o.key, ctx)))
@@ -90,9 +95,9 @@ function signOut() {
   for (const s of sessions.splice(0)) s.stop()
 }
 
-const checkIn = (day: number): CheckIn => ({
+const checkIn = (day: number, athleteId = ATHLETE): CheckIn => ({
   id: crypto.randomUUID(),
-  athleteId: ATHLETE,
+  athleteId,
   day,
   sleepHours: 7,
   soreness: 2,
@@ -224,10 +229,15 @@ describe('sync', () => {
     expect(result.stalled).toBe(false)
   })
 
-  it('a pull does not undo a write made while it runs', async () => {
+  it('a pull that rebuilds a table keeps a write made while it runs', async () => {
     const server = fakeServer()
     const a = signIn(server, athleteCtx)
     await a.handle.syncNow()
+    // Another device adds a check-in, so this pull rebuilds the check-ins from the server's rows.
+    const fromServer = checkIn(today() - 1)
+    await server.as(athleteCtx).send('check_ins', 'athlete', [
+      { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: fromServer.id, day: null, body: { ...fromServer } },
+    ])
     const c = checkIn(today())
     // The check-in is saved while the pull is reading: it is queued, not yet sent.
     server.hooks.beforePull = (table) => {
@@ -236,7 +246,7 @@ describe('sync', () => {
     await a.handle.syncNow()
     server.hooks.beforePull = undefined
     expect(a.outbox.has('check_ins', ATHLETE, c.id)).toBe(true)
-    expect(useLaree.getState().data.checkIns.some((x) => x.id === c.id)).toBe(true)
+    expect(useLaree.getState().data.checkIns.map((x) => x.id).sort()).toEqual([c.id, fromServer.id].sort())
   })
 
   it('sends the good writes of a batch that holds one refused write', async () => {
@@ -295,5 +305,271 @@ describe('sync', () => {
     const c = signIn(server, coachCtx)
     await c.handle.syncNow()
     expect(useLaree.getState().data.checkIns.map((x) => x.athleteId)).toEqual([ATHLETE])
+  })
+
+  it('marks kudos seen only for the athlete who saw them, when two athletes share a kudos id', async () => {
+    setRoster({ id: 'coach', name: 'Coach', blurb: '' }, [person, { ...person, id: OTHER, name: 'Other Athlete' }])
+    const server = fakeServer()
+    const kudos = (athleteId: string): Op => ({
+      table: 'kudos',
+      scope: 'athlete',
+      key: athleteId,
+      id: 'k-1',
+      day: null,
+      body: { id: 'k-1', athleteId, day: today(), message: 'Well done', seenByAthlete: false },
+    })
+    await server.as(coachOfTwoCtx).send('kudos', 'athlete', [kudos(ATHLETE), kudos(OTHER)])
+    await server.as(athleteCtx).send('kudos_seen', 'athlete', [
+      { table: 'kudos_seen', scope: 'athlete', key: ATHLETE, id: 'seen', day: null, body: { ids: ['k-1'] } },
+    ])
+    const c = signIn(server, coachOfTwoCtx)
+    await c.handle.syncNow()
+    const seen = Object.fromEntries(useLaree.getState().data.kudos.map((k) => [k.athleteId, k.seenByAthlete]))
+    expect(seen).toEqual({ [ATHLETE]: true, [OTHER]: false })
+  })
+})
+
+/** An outbox store whose first read waits until the test lets it finish. */
+function slowStore(saved: Op[]) {
+  let release: () => void = () => undefined
+  const gate = new Promise<void>((resolve) => (release = resolve))
+  const saves: Op[][] = []
+  const store: OutboxStore = {
+    load: async () => {
+      await gate
+      return [...saved]
+    },
+    save: async (ops) => {
+      saves.push([...ops])
+    },
+  }
+  return { store, saves, release }
+}
+
+describe('the saved queue', () => {
+  it('keeps both the saved writes and an edit made before they were read', async () => {
+    const server = fakeServer()
+    const savedCheckIn = checkIn(today() - 1)
+    const saved: Op = { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: savedCheckIn.id, day: null, body: { ...savedCheckIn } }
+    const slow = slowStore([saved])
+    const a = signIn(server, athleteCtx, new Outbox(slow.store))
+    const edit = checkIn(today())
+    useLaree.getState().saveCheckIn(edit)
+    // Nothing is saved or sent before the saved queue is read: a partial queue must not replace it.
+    await Promise.resolve()
+    expect(slow.saves).toEqual([])
+    expect(server.writes).toEqual([])
+    slow.release()
+    await a.handle.syncNow()
+    // The first save holds the merged queue: the saved write first, then the edit.
+    expect(slow.saves[0]?.[0]?.id).toBe(saved.id)
+    expect(slow.saves[0]?.map((o) => o.id)).toContain(edit.id)
+    expect([...(server.tables.get('check_ins')?.keys() ?? [])].sort()).toEqual([`${ATHLETE}/${saved.id}`, `${ATHLETE}/${edit.id}`].sort())
+    expect(useLaree.getState().data.checkIns.map((x) => x.id).sort()).toEqual([saved.id, edit.id].sort())
+  })
+
+  it('does not sync while the saved queue cannot be read, and tries again', async () => {
+    const server = fakeServer()
+    let pulls = 0
+    server.hooks.beforePull = () => void pulls++
+    let broken = true
+    const inner = memoryOutboxStore()
+    const store: OutboxStore = {
+      load: async () => {
+        if (broken) throw new Error('blocked')
+        return inner.load()
+      },
+      save: inner.save,
+    }
+    const a = signIn(server, athleteCtx, new Outbox(store))
+    await a.handle.syncNow()
+    expect(pulls).toBe(0)
+    expect(useSyncStatus.getState()).toMatchObject({ unsaved: true, problem: QUEUE_UNREADABLE })
+    broken = false
+    await a.handle.syncNow()
+    expect(pulls).toBeGreaterThan(0)
+    expect(useSyncStatus.getState()).toMatchObject({ unsaved: false, problem: null })
+  })
+
+  it('says so when a write could not be kept on the device', async () => {
+    const server = fakeServer()
+    server.setDown(true)
+    let full = false
+    const inner = memoryOutboxStore()
+    const store: OutboxStore = {
+      load: inner.load,
+      save: async (ops) => {
+        if (full && ops.length > 0) throw new Error('quota')
+        return inner.save(ops)
+      },
+    }
+    const a = signIn(server, athleteCtx, new Outbox(store))
+    await a.handle.syncNow()
+    full = true
+    useLaree.getState().saveCheckIn(checkIn(today()))
+    await a.handle.syncNow()
+    expect(useSyncStatus.getState()).toMatchObject({ unsaved: true, pending: 1 })
+    full = false
+    server.setDown(false)
+    await a.handle.syncNow()
+    expect(useSyncStatus.getState().unsaved).toBe(false)
+    expect(server.tables.get('check_ins')?.size).toBe(1)
+  })
+})
+
+describe('a rebuild that fails', () => {
+  it('rebuilds the same tables on the next pull', async () => {
+    const server = fakeServer()
+    const a = signIn(server, athleteCtx)
+    await a.handle.syncNow()
+    // Another device adds a check-in, and a damaged row makes this rebuild fail.
+    const c = checkIn(today())
+    await server.as(athleteCtx).send('check_ins', 'athlete', [
+      { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: c.id, day: null, body: { ...c } },
+    ])
+    const damaged: Op = { table: 'kudos_seen', scope: 'athlete', key: ATHLETE, id: 'seen', day: null, body: {} }
+    await server.as(athleteCtx).send('kudos_seen', 'athlete', [damaged])
+    server.tables.get('kudos_seen')!.get(`${ATHLETE}/seen`)!.body = null as never
+    await a.handle.syncNow()
+    expect(useLaree.getState().data.checkIns).toEqual([])
+    expect(useSyncStatus.getState().problem).not.toBeNull()
+    // The row is repaired. The check-in did not change again, but it is still due.
+    await server.as(athleteCtx).send('kudos_seen', 'athlete', [damaged])
+    await a.handle.syncNow()
+    expect(useLaree.getState().data.checkIns.map((x) => x.id)).toEqual([c.id])
+    expect(useSyncStatus.getState().problem).toBeNull()
+  })
+})
+
+describe('stopping', () => {
+  it('sends nothing more once the sync is stopped', async () => {
+    const server = fakeServer()
+    const c = signIn(server, coachCtx)
+    await c.handle.syncNow()
+    server.setDown(true)
+    useLaree.getState().applyPlanChanges([{ kind: 'add', workout: workout(today() + 1) }], 'Add')
+    useLaree.getState().sendKudos({ athleteId: ATHLETE, message: 'Great week' })
+    await c.handle.syncNow()
+    expect(new Set(c.outbox.pending.map((o) => o.table)).size).toBeGreaterThan(1)
+    server.setDown(false)
+    // Signing out lands while the first table is being sent.
+    const sentTables: string[] = []
+    server.hooks.beforeSend = (table) => {
+      sentTables.push(table)
+      c.handle.stop()
+    }
+    await c.handle.syncNow()
+    expect(sentTables).toHaveLength(1)
+    expect(c.outbox.pending.length).toBeGreaterThan(0)
+    expect(c.outbox.pending.every((o) => o.table !== sentTables[0])).toBe(true)
+  })
+
+  it('a sync stopped during a pull reads no further table and leaves the store alone', async () => {
+    const server = fakeServer()
+    const a = signIn(server, athleteCtx)
+    await a.handle.syncNow()
+    const c = checkIn(today() - 1)
+    await server.as(athleteCtx).send('check_ins', 'athlete', [
+      { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: c.id, day: null, body: { ...c } },
+    ])
+    const pulled: string[] = []
+    server.hooks.beforePull = (table) => {
+      pulled.push(table)
+      a.handle.stop()
+    }
+    await a.handle.syncNow()
+    expect(pulled).toHaveLength(1)
+    expect(useLaree.getState().data.checkIns).toEqual([])
+  })
+})
+
+describe('paged pulls', () => {
+  const row = (at: string, owner: string, id: string): DbRow => ({ athlete_id: owner, id, day: null, body: {}, updated_at: at, deleted_at: null })
+  const position = (r: DbRow): [string, string, string] => [r.updated_at, String(r.athlete_id), r.id]
+  const isAfter = (r: DbRow, end: PageEnd): boolean => {
+    const [at, key, id] = position(r)
+    return at > end.at || (at === end.at && (key > end.key || (key === end.key && id > end.id)))
+  }
+  const serve = (rows: DbRow[]) => {
+    const sorted = [...rows].sort((a, b) => (position(a) < position(b) ? -1 : 1))
+    const calls: (PageEnd | null)[] = []
+    const fetchPage = async (after: PageEnd | null, limit: number) => {
+      calls.push(after)
+      return sorted.filter((r) => !after || isAfter(r, after)).slice(0, limit)
+    }
+    return { fetchPage, calls }
+  }
+
+  it('reads two rows with the same time and id on either side of a page boundary', async () => {
+    const t = '2026-11-11T02:00:00.000000+00:00'
+    // One batch stamps every row with the same time, and two athletes may use the same id.
+    const rows = [row(t, ATHLETE, 'seen'), row(t, OTHER, 'seen'), row(t, OTHER, 'state')]
+    const { fetchPage, calls } = serve(rows)
+    const out = await readPages('athlete_id', fetchPage, () => false, 1)
+    expect(out.map((r) => `${r.key}/${r.id}`)).toEqual([`${ATHLETE}/seen`, `${OTHER}/seen`, `${OTHER}/state`])
+    expect(calls[1]).toEqual({ at: t, key: ATHLETE, id: 'seen' })
+  })
+
+  it('stops between pages when the sync is stopped', async () => {
+    const t = '2026-11-11T02:00:00+00:00'
+    const { fetchPage, calls } = serve([row(t, ATHLETE, 'a'), row(t, ATHLETE, 'b'), row(t, ATHLETE, 'c')])
+    let stopped = false
+    const page = async (after: PageEnd | null, limit: number) => {
+      const rows = await fetchPage(after, limit)
+      stopped = true
+      return rows
+    }
+    await expect(readPages('athlete_id', page, () => stopped, 1)).rejects.toThrow('Sync stopped')
+    expect(calls).toHaveLength(1)
+  })
+
+  it('quotes the cursor values in the filter', () => {
+    const filter = afterFilter('athlete_id', { at: '2026-11-11T02:00:00+00:00', key: ATHLETE, id: 'a,b"c\\d)' })
+    expect(filter).toBe(
+      [
+        'updated_at.gt."2026-11-11T02:00:00+00:00"',
+        `and(updated_at.eq."2026-11-11T02:00:00+00:00",athlete_id.gt."${ATHLETE}")`,
+        `and(updated_at.eq."2026-11-11T02:00:00+00:00",athlete_id.eq."${ATHLETE}",id.gt."a,b\\"c\\\\d)")`,
+      ].join(','),
+    )
+  })
+
+  it('starts an incremental pull a little before its cursor', () => {
+    // A write that began before the newest row can commit after it was read.
+    expect(overlapStart('2026-11-11T02:00:30.000Z')).toBe('2026-11-11T02:00:00.000Z')
+  })
+})
+
+describe('a late commit', () => {
+  it('is picked up although it is stamped earlier than a row already pulled', async () => {
+    const server = fakeServer()
+    const backend = server.as(athleteCtx)
+    // Like the real backend, every incremental pull reads again from before its cursor.
+    const overlapping: Backend = {
+      ...backend,
+      pull: (table, scope, since, cancelled) => backend.pull(table, scope, since === null ? null : '', cancelled),
+    }
+    useLaree.setState({ data: emptyLiveData(), undoStack: [] })
+    const handle = startSync({ backend: overlapping, outbox: new Outbox(memoryOutboxStore()), ctx: athleteCtx, intervalMs: 3_600_000 })
+    sessions.push(handle)
+    await handle.syncNow()
+    const late = checkIn(today())
+    await backend.send('check_ins', 'athlete', [
+      { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: late.id, day: null, body: { ...late } },
+    ])
+    await handle.syncNow()
+    // A write that began before `late` commits only now: its stamp is behind the cursor.
+    const early = checkIn(today() - 1)
+    await backend.send('check_ins', 'athlete', [
+      { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: early.id, day: null, body: { ...early } },
+    ])
+    server.tables.get('check_ins')!.get(`${ATHLETE}/${early.id}`)!.updatedAt = '0000000000'
+    await handle.syncNow()
+    expect(useLaree.getState().data.checkIns.map((x) => x.id).sort()).toEqual([early.id, late.id].sort())
+    // Rows read again unchanged are skipped: once settled, a sync leaves the store untouched.
+    for (let i = 0; i < 3; i++) await handle.syncNow()
+    const settled = useLaree.getState().data
+    await handle.syncNow()
+    expect(useLaree.getState().data).toBe(settled)
   })
 })

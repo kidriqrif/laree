@@ -43,10 +43,11 @@ Retention: `ai_runs` 90 days, `client_errors` 30 days, `audit_log` 1 year, purge
 
 ## The live app
 
-The live code is in `src/live/` and loads as its own chunk after the first paint, so the demo and the Today budget never carry the Supabase client.
+The live code is in `src/live/`. `vite.config.ts` writes `__LIVE__` into the build as a literal, so a demo build leaves the live code out and a live build leaves out the seed data and the role switcher. The live gate is small and draws from the copy kept on the device. Sign-in, onboarding and the Supabase client load after it. `npm run check:budget -- --live` (run in CI) counts the gate in the Today budget.
 
 - **Sign-in** (`SignInPage.tsx`): a 6-digit code sent by email, typed into the app. A link would open the browser instead of an installed PWA. The same code creates a new account.
 - **Onboarding** (`Onboarding.tsx`): the person's name and two consents, health data and storage in Singapore, written to `consents`. Invitations show here too; accepting an athlete invitation also records `coach_sharing`.
+- **Opening** (`LiveGate.tsx`, `account.ts`): with a saved session and a cached account, the app opens at once, also offline, and the session is checked in the background. A sign-out in one tab stops the sync and clears the data in every tab.
 - **Guards** (`LiveGate.tsx`): a coach stays on coach pages, a coached athlete on athlete pages. A self-coached athlete opens both, so they can plan their own training. The role picker, `#/brand`, `#/kit` and `#/reset` redirect to the person's home page.
 - **Day 0** (`src/app/liveEpoch.ts`): the live app fixes day 0 to Monday 27 July 2026. Day offsets saved in a body never move, so records are stored as the app holds them.
 
@@ -55,11 +56,13 @@ The live code is in `src/live/` and loads as its own chunk after the first paint
 `src/live/sync/` keeps the store and the database in step. The store stays the only source for screens.
 
 1. **Diff** (`diff.ts`, `docs.ts`): every store change is compared with the last known state, record by record. Each changed record the person may write becomes an upsert. Each removed one becomes a tombstone (`deleted_at`).
-2. **Outbox** (`outbox.ts`, `idbOutbox.ts`): writes wait in IndexedDB, one queue per account. A newer write to a row replaces the older one. Writes are upserts keyed on the record's own id, so sending one twice is harmless.
-3. **Send and pull** (`engine.ts`): a sync sends the queue in order, then pulls. The first pull of a visit reads every row. Later pulls read only rows changed since. A queued write wins over the server's copy of its row. Syncs run after a change, on `online`, when the app comes back into view, and every 60 seconds. After a failure they back off up to 5 minutes.
+2. **Outbox** (`outbox.ts`, `idbOutbox.ts`): writes wait in IndexedDB, one queue per account. A newer write to a row replaces the older one. Writes are upserts keyed on the record's own id, so sending one twice is harmless. Nothing is saved, sent or pulled until the saved queue has been read, so an early write never replaces it and a pull never hides an unsent change. If the queue cannot be read or saved, the app says the changes are not safe on this device (`syncStatus.ts`, `unsaved`).
+3. **Send and pull** (`engine.ts`, `supabaseBackend.ts`): a sync sends the queue in order, then pulls. The first pull of a visit reads every row. Later pulls read rows changed since the newest row seen, less 30 seconds: `updated_at` is the time a write began, so a write that began earlier can commit later, and the overlap picks it up. Rows read again unchanged are skipped. Pages follow the full key `(updated_at, owner, id)`. A queued write wins over the server's copy of its row. A sync that is stopped (sign-out, another account) sends and reads nothing more. Syncs run after a change, on `online`, when the app comes back into view, and every 60 seconds. After a failure they back off up to 5 minutes.
 4. **Derived data**: after a pull, matches, flags and badges are worked out again for the athletes whose rows changed. Each person then sends only what they own. For example, a coach's device steps the flag rules and sends `flag_states`.
 
-A write the access rules refuse is dropped and reported. The next pull restores the server's copy. Original activity files wait in IndexedDB until they reach the bucket (`files.ts`).
+A write the access rules refuse is dropped and reported, and the others in its batch are still sent. The next pull restores the server's copy. Original activity files wait in IndexedDB until they reach the bucket (`files.ts`). Only the signed-in account's files are sent, and a file imported again during an upload replaces the old one instead of being lost.
+
+An athlete's AI switch is also written to `consents` (`aiConsent.ts`): one account's changes go one after another, each row names its account, and a change that failed is tried again when the device is back online.
 
 ## AI
 
@@ -68,11 +71,11 @@ Rules decide what a summary says, and a model only rewrites the wording. The wee
 The `ai` function (`supabase/functions/ai/`):
 
 1. Checks the caller's token and `ai_allowed(athlete)`.
-2. Allows at most 40 requests per person per day.
+2. Takes a place in the person's allowance of 40 requests per 24 hours before it calls any provider (`reserve_ai_run`, one step under a lock, so two requests cannot share the last place). A request counts whether or not a provider answers.
 3. Sends only the draft headline and lines: no names, notes, files or raw check-ins.
-4. Tries each provider in `AI_PROVIDERS` in turn, moving on after a rate limit, an error or a 20-second timeout.
-5. Refuses any reply that is not the expected JSON, or that writes a number the draft does not contain, and tries the next provider.
-6. Logs the provider, model, outcome and token counts, never the text, to `ai_runs`.
+4. Tries each provider in `AI_PROVIDERS` in turn, moving on after a rate limit, an error or a 20-second timeout. A provider whose address is not HTTPS is skipped, so a key never travels in the clear.
+5. Refuses any reply that is not the expected JSON, or that writes a number the draft does not contain with the same unit (`check.ts`: "60 km" is refused when the draft says "12 km" and "60 minutes"), and tries the next provider.
+6. Records the provider, model, outcome and token counts, never the text, in the request's `ai_runs` row.
 
 Providers are any OpenAI-compatible API. The default chain uses free tiers listed in [awesome-free-llm-apis](https://github.com/mnfst/awesome-free-llm-apis): OpenRouter, then Groq, then Google Gemini. Each provider needs its own key, from that provider's own site. Set the chain without a deploy:
 
@@ -85,6 +88,8 @@ npx supabase secrets set AI_PROVIDERS='[{"name":"OpenRouter","baseUrl":"https://
 ```
 
 Free models come and go. If one stops answering, change its `model`. A provider without a key is skipped. With no keys at all, the app keeps the rule-based text.
+
+For a mock provider on your own machine only, `AI_ALLOW_LOCAL_HTTP=1` lets a `http://localhost` address through. Never set it on a hosted project.
 
 ## Privacy
 
@@ -105,4 +110,4 @@ Needs Docker.
 
 For a live build against the local stack, copy `.env.example` to `.env.local` and fill in the local URL and publishable key.
 
-Every migration change needs a matching test in `supabase/tests/database/`. The key test signs in as a second coach and checks that every table returns zero rows of the first coach's athletes.
+Every migration change needs a matching test in `supabase/tests/database/`. A migration that adds a function in `public` must revoke `execute` from `public`, `anon` and `authenticated` and grant it back to the roles that need it: PostgreSQL lets everyone call a new function. The tests list the functions each role can call. The key test signs in as a second coach and checks that every table returns zero rows of the first coach's athletes.

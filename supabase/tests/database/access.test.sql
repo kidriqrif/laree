@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(62);
+select plan(75);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -127,6 +127,17 @@ update kudos set body = '{"message": "changed"}' where id = 'row-1';
 select is((select body from kudos where id = 'row-1'), '{"x": 1}'::jsonb, 'an athlete cannot change a coach''s kudos');
 select lives_ok(
   $$update kudos_seen set body = '{"ids": ["row-1"]}' where id = 'row-1'$$, 'A1 marks kudos seen in their own record');
+-- lives_ok alone also passes when the access rules filter the row out and nothing changes.
+select is((select body from kudos_seen where id = 'row-1'), '{"ids": ["row-1"]}'::jsonb, 'the kudos-seen record did change');
+select lives_ok(
+  $$insert into consents (user_id, purpose, granted, text_version) values ('00000000-0000-4000-a000-0000000000a1', 'ai', false, '2026-11')$$,
+  'A1 may name themself in a consent row');
+select throws_ok(
+  $$insert into consents (user_id, purpose, granted, text_version) values ('00000000-0000-4000-a000-0000000000b1', 'ai', true, '2026-11')$$,
+  '42501', null, 'nobody records a consent for someone else');
+select throws_ok(
+  $$select public.reserve_ai_run('00000000-0000-4000-a000-0000000000a1', '00000000-0000-4000-a000-0000000000a1', 'recap', 40)$$,
+  '42501', null, 'a signed-in person cannot take places in an AI allowance');
 select throws_ok(
   $$insert into consents (purpose, granted, text_version, at) values ('ai', true, '2026-11', now() + interval '1 day')$$,
   '42501', null, 'the consent time is the server''s');
@@ -195,6 +206,37 @@ reset role;
 set local role anon;
 select throws_ok($$select count(*) from activities$$, '42501', null, 'anon cannot read synced tables');
 reset role;
+
+-- ---- Who may call which function: the privileges as they are, not as the migration means them. ----
+reset role;
+select is(
+  (select coalesce(string_agg(p.oid::regprocedure::text, ', ' order by p.oid::regprocedure::text), '')
+   from pg_proc p where p.pronamespace = 'public'::regnamespace and has_function_privilege('anon', p.oid, 'execute')),
+  'ping()', 'a signed-out visitor can call ping and nothing else');
+select is(
+  (select coalesce(string_agg(p.oid::regprocedure::text, ', ' order by p.oid::regprocedure::text), '')
+   from pg_proc p where p.pronamespace = 'public'::regnamespace and has_function_privilege('authenticated', p.oid, 'execute')),
+  'accept_invitation(uuid), ai_allowed(uuid), can_plan_for(uuid), can_read_athlete(uuid), has_active_coach(uuid), has_consent(uuid,text), is_coach_of(uuid), my_invitations(), ping()',
+  'a signed-in person can call exactly the functions granted to them');
+select ok(has_function_privilege('service_role', 'public.reserve_ai_run(uuid, uuid, text, integer)', 'execute'),
+  'the server can take a place in an AI allowance');
+select is(
+  (select count(*)::int from pg_proc p where p.pronamespace = 'private'::regnamespace
+     and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))
+     and has_schema_privilege('authenticated', 'private', 'usage')),
+  0, 'nothing in the private schema is reachable');
+
+-- ---- The AI allowance: a place is taken before any provider is called, and never over the limit. ----
+select isnt(public.reserve_ai_run('00000000-0000-4000-a000-0000000000c2', '00000000-0000-4000-a000-0000000000c2', 'recap', 2),
+  null, 'the first request takes a place');
+select isnt(public.reserve_ai_run('00000000-0000-4000-a000-0000000000c2', '00000000-0000-4000-a000-0000000000c2', 'recap', 2),
+  null, 'the second request takes the last place');
+select is(public.reserve_ai_run('00000000-0000-4000-a000-0000000000c2', '00000000-0000-4000-a000-0000000000c2', 'recap', 2),
+  null, 'the third request is refused');
+select is((select count(*)::int from ai_runs where user_id = '00000000-0000-4000-a000-0000000000c2' and status = 'reserved'),
+  2, 'each place is a row, whether or not a provider answers');
+select isnt(public.reserve_ai_run('00000000-0000-4000-a000-0000000000c1', '00000000-0000-4000-a000-0000000000c1', 'recap', 2),
+  null, 'one person''s allowance does not use up another''s');
 
 select * from finish();
 rollback;

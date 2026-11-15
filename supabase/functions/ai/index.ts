@@ -2,6 +2,7 @@
 // rewrites the wording. The request carries the rule-based draft, never raw health data, names or
 // notes. Providers are any OpenAI-compatible APIs, tried in order (secret AI_PROVIDERS).
 import { asCaller, asService, cors, reply } from '../_shared/http.ts'
+import { checkOutput, safeBaseUrl } from './check.ts'
 
 interface Provider {
   name: string
@@ -31,13 +32,24 @@ const DEFAULT_PROVIDERS: Provider[] = [
 function providers(): Provider[] {
   const raw = Deno.env.get('AI_PROVIDERS')
   if (!raw) return DEFAULT_PROVIDERS
+  let list: Provider[]
   try {
-    const list = JSON.parse(raw) as Provider[]
-    return list.filter((p) => p && typeof p.baseUrl === 'string' && typeof p.model === 'string' && typeof p.keyEnv === 'string')
+    list = JSON.parse(raw) as Provider[]
   } catch {
     console.error('AI_PROVIDERS is not valid JSON; using the default providers')
     return DEFAULT_PROVIDERS
   }
+  if (!Array.isArray(list)) {
+    console.error('AI_PROVIDERS is not a list; using the default providers')
+    return DEFAULT_PROVIDERS
+  }
+  const allowLocalHttp = Deno.env.get('AI_ALLOW_LOCAL_HTTP') === '1'
+  return list.filter((p) => {
+    if (!p || typeof p.name !== 'string' || typeof p.baseUrl !== 'string' || typeof p.model !== 'string' || typeof p.keyEnv !== 'string') return false
+    if (safeBaseUrl(p.baseUrl, allowLocalHttp)) return true
+    console.error(`AI provider ${p.name} is skipped: its address is not HTTPS`)
+    return false
+  })
 }
 
 function parseDraft(body: unknown): Draft | null {
@@ -61,26 +73,6 @@ const SYSTEM = (feature: Draft['feature']) =>
     'Plain, warm British English. Short sentences.',
     'Reply with JSON only: {"headline": string of at most 90 characters, "lines": array of 1 to 4 strings of at most 200 characters each}.',
   ].join(' ')
-
-const numbers = (text: string): string[] => text.match(/\d+(?:[.,]\d+)?/g) ?? []
-
-/** The model may reword, never invent: every number it writes must be in the draft. */
-function checkOutput(raw: string, draft: Draft): { headline: string; lines: string[] } | null {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g, ''))
-  } catch {
-    return null
-  }
-  const o = parsed as { headline?: unknown; lines?: unknown }
-  if (typeof o.headline !== 'string' || o.headline.length === 0 || o.headline.length > 120) return null
-  if (!Array.isArray(o.lines) || o.lines.length < 1 || o.lines.length > 4) return null
-  if (!o.lines.every((l) => typeof l === 'string' && l.length > 0 && l.length <= 240)) return null
-  const allowed = new Set(numbers([draft.headline, ...draft.lines].join(' ')))
-  const written = numbers([o.headline, ...(o.lines as string[])].join(' '))
-  if (written.some((n) => !allowed.has(n))) return null
-  return { headline: o.headline, lines: o.lines as string[] }
-}
 
 type Outcome =
   | { kind: 'ok'; headline: string; lines: string[]; tokensIn: number | null; tokensOut: number | null }
@@ -136,36 +128,56 @@ Deno.serve(async (req) => {
   const { data: allowed, error } = await caller.rpc('ai_allowed', { athlete: draft.athleteId })
   if (error || allowed !== true) return reply(403, { ok: false, reason: 'not-allowed' })
 
-  const service = asService()
-  const since = new Date(Date.now() - 86_400_000).toISOString()
-  const { count } = await service
-    .from('ai_runs')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', who.user.id)
-    .gte('created_at', since)
-  if ((count ?? 0) >= DAILY_LIMIT) return reply(429, { ok: false, reason: 'daily-limit' })
-
-  const log = (p: Provider, status: string, tokensIn: number | null, tokensOut: number | null) =>
-    service.from('ai_runs').insert({
-      user_id: who.user.id,
-      athlete_id: draft.athleteId,
-      feature: draft.feature,
-      provider: p.name.slice(0, 40),
-      model: p.model.slice(0, 120),
-      status,
-      input_tokens: tokensIn,
-      output_tokens: tokensOut,
-    })
-
-  let tried = false
-  for (const p of providers()) {
+  // Nothing to call: say so without using up a place.
+  const chain = providers().flatMap((p) => {
     const key = Deno.env.get(p.keyEnv)
-    if (!key) continue
-    tried = true
+    return key ? [{ p, key }] : []
+  })
+  if (chain.length === 0) return reply(503, { ok: false, reason: 'not-configured' })
+
+  // Take a place in the daily allowance before any provider is called: two requests at once
+  // cannot both take the last one, and a request counts even when no provider answers.
+  const service = asService()
+  const { data: runId, error: reserveError } = await service.rpc('reserve_ai_run', {
+    p_user: who.user.id,
+    p_athlete: draft.athleteId,
+    p_feature: draft.feature,
+    p_limit: DAILY_LIMIT,
+  })
+  if (reserveError) return reply(503, { ok: false, reason: 'unavailable' })
+  if (runId === null) return reply(429, { ok: false, reason: 'daily-limit' })
+
+  const record = async (p: Provider | null, status: string, tokensIn: number | null, tokensOut: number | null) => {
+    const { error: recordError } = await service
+      .from('ai_runs')
+      .update({
+        provider: (p?.name ?? '').slice(0, 40),
+        model: (p?.model ?? '').slice(0, 120),
+        status,
+        input_tokens: tokensIn,
+        output_tokens: tokensOut,
+      })
+      .eq('id', runId)
+    if (recordError) console.error(`ai_runs ${runId} could not be updated: ${recordError.message}`)
+  }
+
+  let last: Provider | null = null
+  let lastStatus = 'unavailable'
+  let tokensIn: number | null = null
+  let tokensOut: number | null = null
+  const add = (sum: number | null, n: number | null) => (n === null ? sum : (sum ?? 0) + n)
+  for (const { p, key } of chain) {
     const out = await ask(p, key, draft)
     if (out.kind === 'unavailable') continue
-    await log(p, out.kind === 'ok' ? 'ok' : 'invalid', out.tokensIn, out.tokensOut)
-    if (out.kind === 'ok') return reply(200, { ok: true, headline: out.headline, lines: out.lines, provider: p.name, model: p.model })
+    last = p
+    lastStatus = out.kind
+    tokensIn = add(tokensIn, out.tokensIn)
+    tokensOut = add(tokensOut, out.tokensOut)
+    if (out.kind === 'ok') {
+      await record(p, 'ok', tokensIn, tokensOut)
+      return reply(200, { ok: true, headline: out.headline, lines: out.lines, provider: p.name, model: p.model })
+    }
   }
-  return reply(tried ? 502 : 503, { ok: false, reason: tried ? 'unavailable' : 'not-configured' })
+  await record(last, lastStatus, tokensIn, tokensOut)
+  return reply(502, { ok: false, reason: 'unavailable' })
 })

@@ -182,3 +182,10 @@ export const RACES: Race[] = [
   },
 ];
 
+
+/** Fitness and Fatigue on the day before day 0, so early weeks do not start from nothing. */
+export const START_FORM: Record<AthleteId, { fitness: number; fatigue: number }> = {
+  amir: { fitness: 48, fatigue: 48 },
+  danial: { fitness: 44, fatigue: 44 },
+  irfan: { fitness: 46, fatigue: 46 },
+};

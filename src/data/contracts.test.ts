@@ -15,7 +15,8 @@ import {
   selectUnseenBadges,
   selectUnseenKudos,
 } from './selectors.ts'
-import { freshData, useLaree } from './store.ts'
+import { freshData } from './freshData.ts'
+import { useLaree } from './store.ts'
 
 beforeEach(() => {
   localStorage.clear()

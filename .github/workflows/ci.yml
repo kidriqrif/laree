@@ -31,7 +31,7 @@ jobs:
       - run: npm run check:budget
       # The live build must also stay inside the Today budget.
       - name: Live build budget
-        run: npx vite build --outDir dist-live && node scripts/check-budget.ts dist-live
+        run: npx vite build --outDir dist-live && node scripts/check-budget.ts dist-live --live
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci

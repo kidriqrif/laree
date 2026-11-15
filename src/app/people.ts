@@ -42,9 +42,10 @@ export const DEMO_ATHLETES: readonly Athlete[] = SEED_ATHLETES.map((a) => ({
   blurb: DEMO_COPY[a.id]?.blurb ?? '',
 }))
 
+// The live app starts with nobody: its roster comes from the signed-in account.
 export let COACH: Person = DEMO_COACH
-export let ATHLETES: readonly Athlete[] = DEMO_ATHLETES
-export let ATHLETE_IDS: readonly AthleteId[] = DEMO_ATHLETES.map((a) => a.id)
+export let ATHLETES: readonly Athlete[] = __LIVE__ ? [] : DEMO_ATHLETES
+export let ATHLETE_IDS: readonly AthleteId[] = ATHLETES.map((a) => a.id)
 /** Switcher order: Coach first, then the athletes. */
 export let PEOPLE: readonly Person[] = [COACH, ...ATHLETES]
 
