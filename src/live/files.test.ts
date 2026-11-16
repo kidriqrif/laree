@@ -124,4 +124,23 @@ describe('activity files', () => {
     }
     expect(await files.drop(UID)).toBe(false)
   })
+
+  it("waits for a file that is still being kept before it drops the account's files", async () => {
+    const queue = memoryFileQueue()
+    let release: () => void = () => undefined
+    const put = queue.put
+    queue.put = async (w) => {
+      await new Promise<void>((resolve) => (release = resolve))
+      return put(w)
+    }
+    const files = fileSender(queue, async () => false)
+    // The import is still writing its file to the device when the account is deleted.
+    const kept = files.keep(UID, 'act-1', file('a'))
+    const dropped = files.drop(UID)
+    await settle()
+    release()
+    expect(await dropped).toBe(true)
+    await kept
+    expect(queue.files.size).toBe(0)
+  })
 })

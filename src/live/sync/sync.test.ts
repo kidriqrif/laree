@@ -396,11 +396,12 @@ describe('the saved queue', () => {
     const a = signIn(server, athleteCtx, new Outbox(store))
     await a.handle.syncNow()
     expect(pulls).toBe(0)
-    expect(useSyncStatus.getState()).toMatchObject({ unsaved: true, problem: QUEUE_UNREADABLE })
+    // Not ready: "nothing is waiting" cannot be said while the saved queue is unread.
+    expect(useSyncStatus.getState()).toMatchObject({ ready: false, unsaved: true, problem: QUEUE_UNREADABLE })
     broken = false
     await a.handle.syncNow()
     expect(pulls).toBeGreaterThan(0)
-    expect(useSyncStatus.getState()).toMatchObject({ unsaved: false, problem: null })
+    expect(useSyncStatus.getState()).toMatchObject({ ready: true, unsaved: false, problem: null })
   })
 
   it('says so when a write could not be kept on the device', async () => {
@@ -492,6 +493,58 @@ describe('stopping', () => {
     await a.handle.syncNow()
     expect(pulled).toHaveLength(1)
     expect(useLaree.getState().data.checkIns).toEqual([])
+  })
+})
+
+describe('replacing a sync', () => {
+  it('reads the saved queue only after the sync before it has saved for the last time', async () => {
+    const server = fakeServer()
+    const inner = memoryOutboxStore()
+    const events: string[] = []
+    const store: OutboxStore = {
+      load: async () => (events.push('load'), inner.load()),
+      save: async (ops) => (events.push(`save:${ops.length}`), inner.save(ops)),
+    }
+    let hold: Promise<void> = Promise.resolve()
+    const backend = server.as(athleteCtx)
+    let begun: () => void = () => undefined
+    const slow: Backend = {
+      ...backend,
+      send: (table, scope, ops) => {
+        begun()
+        return hold.then(() => backend.send(table, scope, ops))
+      },
+    }
+    useLaree.setState({ data: emptyLiveData(), undoStack: [] })
+    const first = startSync({ backend: slow, outbox: new Outbox(store), ctx: athleteCtx, intervalMs: 3_600_000 })
+    sessions.push(first)
+    await first.syncNow()
+
+    // A check-in is on its way to the server when the account is loaded again.
+    let release: () => void = () => undefined
+    hold = new Promise((resolve) => (release = resolve))
+    const c = checkIn(today())
+    useLaree.getState().saveCheckIn(c)
+    const inFlight = new Promise<void>((resolve) => (begun = resolve))
+    const sending = first.syncNow()
+    await inFlight
+    const ended = first.stop()
+    const atStop = events.length
+    const second = startSync({ backend, outbox: new Outbox(store), ctx: athleteCtx, intervalMs: 3_600_000, after: ended })
+    sessions.push(second)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    // The replacement has not touched the saved queue yet.
+    expect(events.slice(atStop)).not.toContain('load')
+
+    release()
+    await sending
+    await second.syncNow()
+    const secondLoad = events.indexOf('load', atStop)
+    expect(secondLoad).toBeGreaterThan(-1)
+    // The first sync's last save (the check-in taken off the queue) came before that read.
+    expect(events.slice(atStop, secondLoad)).toContain('save:0')
+    expect(server.writes.filter((w) => w === `check_ins/${ATHLETE}/${c.id}`)).toHaveLength(1)
+    expect(inner.saved).toEqual([])
   })
 })
 

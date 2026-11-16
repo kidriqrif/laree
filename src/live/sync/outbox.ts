@@ -97,6 +97,11 @@ export class Outbox {
     return this.saving
   }
 
+  /** Resolves when every save asked for so far has ended. */
+  settled(): Promise<void> {
+    return this.saving
+  }
+
   /**
    * Forget the queue for good (the account was deleted). Nothing is saved after this, and the
    * saved queue is removed once a save already on its way has ended. Rejects when the queue could

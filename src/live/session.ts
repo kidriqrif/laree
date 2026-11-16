@@ -31,6 +31,22 @@ export function supabase(): SupabaseClient {
 
 let sync: SyncHandle | null = null
 let syncedFor = ''
+/** The account the running sync belongs to. */
+let syncUid = ''
+/** The end of the sync that ran before: its last save of the queue has landed, or it took too long. */
+let lastStopped: Promise<void> = Promise.resolve()
+const STOP_WAIT_MS = 15_000
+
+/** Stop the running sync, if any, and remember when it has really ended. */
+function stopSync(): void {
+  if (!sync) return
+  const ended = sync.stop()
+  // A request that never answers must not hold up the next account for ever.
+  lastStopped = Promise.race([ended, new Promise<void>((resolve) => setTimeout(resolve, STOP_WAIT_MS))])
+  sync = null
+  syncedFor = ''
+  syncUid = ''
+}
 let booted = false
 let stopAiConsent: (() => void) | null = null
 let aiConsentFor = ''
@@ -45,13 +61,16 @@ function onRejected(): void {
 function startSyncFor(a: Account): void {
   const key = `${a.uid}:${a.profile.role}:${a.coach?.id ?? ''}:${a.athletes.map((p) => p.id).join(',')}`
   if (sync && syncedFor === key) return
-  sync?.stop()
+  stopSync()
   syncedFor = key
+  syncUid = a.uid
   sync = startSync({
     backend: supabaseBackend(supabase()),
     outbox: new Outbox(idbOutboxStore(a.uid)),
     ctx: syncContext(a),
     onRejected,
+    // The sync before this one may still be saving its queue, which can be this account's too.
+    after: lastStopped,
   })
 }
 
@@ -91,9 +110,7 @@ function teardown(): void {
   stopAiConsent?.()
   stopAiConsent = null
   aiConsentFor = ''
-  sync?.stop()
-  sync = null
-  syncedFor = ''
+  stopSync()
   useLaree.setState({ data: emptyLiveData(), undoStack: [] })
 }
 
@@ -187,11 +204,17 @@ export async function signOut(): Promise<string | null> {
  * Rejects when the queue could not be removed.
  */
 export async function discardUnsent(uid: string): Promise<void> {
-  const running = sync
-  sync = null
-  syncedFor = ''
-  if (running) await running.discard()
-  else await idbOutboxStore(uid).save([])
+  // Only this account's sync is stopped. Another account's sync and queue are not touched.
+  if (sync && syncUid === uid) {
+    const running = sync
+    sync = null
+    syncedFor = ''
+    syncUid = ''
+    await running.discard()
+    return
+  }
+  await lastStopped
+  await idbOutboxStore(uid).save([])
 }
 
 /** Send and pull now, for "Sync now" and after a big change. */

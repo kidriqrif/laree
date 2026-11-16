@@ -2,6 +2,11 @@
 import { create } from 'zustand'
 
 export interface SyncStatus {
+  /**
+   * The saved queue has been read. Until then `pending` counts only this visit's writes, so
+   * "nothing is waiting" cannot be said yet.
+   */
+  ready: boolean
   /** Writes waiting on this device. */
   pending: number
   syncing: boolean
@@ -19,6 +24,7 @@ export interface SyncStatus {
 }
 
 export const useSyncStatus = create<SyncStatus>(() => ({
+  ready: false,
   pending: 0,
   syncing: false,
   offline: false,

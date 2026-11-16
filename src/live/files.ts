@@ -35,6 +35,8 @@ export function fileSender(queue: FileQueue, upload: Upload) {
   const runs = new Map<string, Promise<void>>()
   /** Accounts whose queue changed while their run was going: it runs once more. */
   const again = new Set<string>()
+  /** Keeps still on their way, per account: a drop waits for them, so it cannot miss their file. */
+  const keeping = new Map<string, Set<Promise<unknown>>>()
 
   /** This account's files. Another account's files on a shared device are left alone. */
   const waitingFor = async (uid: string): Promise<Waiting[]> => (await queue.list()).filter((w) => w.path.startsWith(`${uid}/`))
@@ -79,16 +81,23 @@ export function fileSender(queue: FileQueue, upload: Upload) {
 
   return {
     /** Keep a log's original file. False when it could neither wait on the device nor be uploaded. */
-    async keep(athleteId: string, activityId: string, file: File): Promise<boolean> {
+    keep(athleteId: string, activityId: string, file: File): Promise<boolean> {
       const w: Waiting = { path: `${athleteId}/${activityId}.${extension(file.name)}`, blob: file, version: crypto.randomUUID() }
-      try {
-        await queue.put(w)
-      } catch {
-        // No storage on the device: try the upload once, without a copy kept for later.
-        return upload(w).catch(() => false)
-      }
-      await send(athleteId)
-      return true
+      const work = (async () => {
+        try {
+          await queue.put(w)
+        } catch {
+          // No storage on the device: try the upload once, without a copy kept for later.
+          return upload(w).catch(() => false)
+        }
+        await send(athleteId)
+        return true
+      })()
+      const mine = keeping.get(athleteId) ?? new Set()
+      keeping.set(athleteId, mine)
+      mine.add(work)
+      void work.finally(() => mine.delete(work))
+      return work
     },
     send,
     /**
@@ -97,6 +106,9 @@ export function fileSender(queue: FileQueue, upload: Upload) {
      */
     async drop(uid: string): Promise<boolean> {
       try {
+        // A file being kept right now is not on the queue yet, or is on its way up: wait for it.
+        for (let mine = keeping.get(uid); mine && mine.size > 0; mine = keeping.get(uid)) await Promise.allSettled(mine)
+        await runs.get(uid)
         for (const w of await waitingFor(uid)) await queue.removeVersion(w.path, w.version)
         return (await waitingFor(uid)).length === 0
       } catch {

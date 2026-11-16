@@ -31,11 +31,20 @@ list() {
     -c "select name from storage.objects where bucket_id = '$bucket' order by name"
 }
 
+# Is every file named in the list on disk, and not empty-handed?
+all_present() {
+  while IFS= read -r name; do
+    [ -z "$name" ] || [ -f "$dir/files/$name" ] || return 1
+  done < "$1"
+}
+
 mkdir -p "$dir/files"
 : > "$dir/files.txt"
 for pass in 1 2 3 4 5; do
   list > "$dir/files.new"
-  if [ "$pass" -gt 1 ] && cmp -s "$dir/files.new" "$dir/files.txt"; then
+  # Done only when the listing did not change and every listed file is here. A fetch that failed
+  # leaves its file missing, so the pass below tries it again.
+  if [ "$pass" -gt 1 ] && cmp -s "$dir/files.new" "$dir/files.txt" && all_present "$dir/files.txt"; then
     rm "$dir/files.new"
     echo "Backed up $(grep -c . "$dir/files.txt" || true) activity files"
     exit 0

@@ -45,12 +45,21 @@ export interface SyncOptions {
   onRejected?: (ops: readonly Op[], message: string | undefined) => void
   /** Milliseconds between background syncs. */
   intervalMs?: number
+  /**
+   * Wait for this before reading the saved queue: the end of the sync this one replaces. Its last
+   * save of the queue must land first, or it could overwrite what this sync saves.
+   */
+  after?: Promise<void>
 }
 
 export interface SyncHandle {
   /** Send and pull now. Resolves when this round is done. */
   syncNow(): Promise<void>
-  stop(): void
+  /**
+   * Stop. Nothing more is sent or read from now on. The promise resolves once a round already on
+   * its way has ended and its last save of the queue has landed.
+   */
+  stop(): Promise<void>
   /**
    * Stop, and forget this account's queue for good (the account was deleted). Rejects when the
    * saved queue could not be removed from the device.
@@ -95,7 +104,7 @@ export function startSync(opts: SyncOptions): SyncHandle {
     useSyncStatus.setState({ ...change, pending: outbox.pending.length })
   }
   // Fresh status for this account: nothing carries over from the one before.
-  useSyncStatus.setState({ pending: 0, syncing: false, offline: false, unsaved: false, lastSyncedAt: null, problem: null })
+  useSyncStatus.setState({ ready: false, pending: 0, syncing: false, offline: false, unsaved: false, lastSyncedAt: null, problem: null })
   outbox.onSaveState = (saved) => setStatus({ unsaved: !saved })
 
   const unsubscribe = useLaree.subscribe((state) => {
@@ -191,6 +200,7 @@ export function startSync(opts: SyncOptions): SyncHandle {
     if (outbox.ready) return true
     try {
       await outbox.load()
+      setStatus({ ready: true })
       return true
     } catch {
       setStatus({ syncing: false, unsaved: true, problem: QUEUE_UNREADABLE })
@@ -198,8 +208,11 @@ export function startSync(opts: SyncOptions): SyncHandle {
     }
   }
 
+  const predecessorDone = (opts.after ?? Promise.resolve()).catch(() => undefined)
+
   async function round(): Promise<void> {
-    if (!(await queueRead()) || stopped) return
+    await predecessorDone
+    if (stopped || !(await queueRead()) || stopped) return
     setStatus({ syncing: true })
     try {
       const sent = await outbox.flush(backend.send, isStopped)
@@ -256,7 +269,7 @@ export function startSync(opts: SyncOptions): SyncHandle {
 
   const first = syncNow()
 
-  function stop() {
+  function stop(): Promise<void> {
     stopped = true
     outbox.onSaveState = null
     clearTimeout(debounce)
@@ -264,13 +277,14 @@ export function startSync(opts: SyncOptions): SyncHandle {
     unsubscribe()
     globalThis.removeEventListener?.('online', onOnline)
     globalThis.document?.removeEventListener('visibilitychange', onVisible)
+    return (running ?? Promise.resolve()).then(() => outbox.settled())
   }
 
   return {
     syncNow: () => first.then(syncNow),
     stop,
     discard() {
-      stop()
+      void stop()
       return outbox.destroy()
     },
   }
