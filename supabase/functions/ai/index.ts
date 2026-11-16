@@ -69,9 +69,10 @@ const SYSTEM = (feature: Draft['feature']) =>
     feature === 'recap'
       ? 'The reader is the athlete. Write to them as "you".'
       : 'The reader is the coach. Write about "the athlete".',
-    'Keep every fact and every number exactly as given. Add no new facts, numbers, dates, advice, diagnosis or medical claims.',
+    'Keep every fact and every number exactly as given, written as digits with its unit and its sign. Add no new facts, numbers, dates, advice, diagnosis or medical claims.',
     'Plain, warm British English. Short sentences.',
-    'Reply with JSON only: {"headline": string of at most 90 characters, "lines": array of 1 to 4 strings of at most 200 characters each}.',
+    'Return the same number of lines, in the same order. Each line rewrites the line at the same position and keeps all of that line\'s numbers. If a line gives two values of the same kind, return that line unchanged.',
+    'Reply with JSON only: {"headline": string of at most 90 characters, "lines": array of strings of at most 200 characters each}.',
   ].join(' ')
 
 type Outcome =
@@ -86,6 +87,9 @@ async function ask(p: Provider, key: string, draft: Draft): Promise<Outcome> {
     const res = await fetch(`${p.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       signal: ctrl.signal,
+      // A redirect could send the draft on to another address, in the clear too: refuse them all.
+      // Each provider is set up with its final address.
+      redirect: 'error',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: p.model,

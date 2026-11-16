@@ -28,6 +28,8 @@ export interface PulledRow extends Row {
 
 export interface Backend {
   send: SendBatch
+  /** The server's clock, as a timestamp comparable with a row's `updatedAt`. */
+  now(): Promise<string>
   /**
    * Rows of one table changed after `since` (every row when null), deleted ones included. It may
    * return rows the caller has seen before. `cancelled` is asked before each further request.
@@ -49,6 +51,11 @@ export interface SyncHandle {
   /** Send and pull now. Resolves when this round is done. */
   syncNow(): Promise<void>
   stop(): void
+  /**
+   * Stop, and forget this account's queue for good (the account was deleted). Rejects when the
+   * saved queue could not be removed from the device.
+   */
+  discard(): Promise<void>
 }
 
 export const QUEUE_UNREADABLE =
@@ -60,7 +67,12 @@ const MAX_BACKOFF_MS = 5 * 60_000
 export function startSync(opts: SyncOptions): SyncHandle {
   const { backend, outbox, ctx } = opts
   const mirror = new Map<string, Map<string, PulledRow>>()
-  const cursor = new Map<string, string>()
+  /**
+   * Where the next incremental pull starts: the server's time when the last pull began. Never the
+   * newest row seen: a row stamped earlier can become visible after a later one was read, during a
+   * long pull too, and a cursor on the newest row would step over it for good.
+   */
+  let cursor: string | null = null
   let baseline: LareeData = useLaree.getState().data
   let applying = false
   let hydrated = false
@@ -134,13 +146,16 @@ export function startSync(opts: SyncOptions): SyncHandle {
 
   async function pull(): Promise<Set<string>> {
     const full = !hydrated
-    // Read every table first. The mirror and cursors change only once all reads succeed, so a
+    const startedAt = await backend.now()
+    if (stopped) return new Set()
+    // Read every table first. The mirror and the cursor change only once all reads succeed, so a
     // failed read leaves nothing half-applied and the next try reads the same rows again.
     const read: [string, PulledRow[]][] = []
     for (const spec of SPECS) {
-      read.push([spec.table, await backend.pull(spec.table, spec.scope, full ? null : (cursor.get(spec.table) ?? null), isStopped)])
+      read.push([spec.table, await backend.pull(spec.table, spec.scope, full ? null : cursor, isStopped)])
       if (stopped) return new Set()
     }
+    cursor = startedAt
     const touched = new Set<string>()
     const tables = new Set<string>(forced)
     for (const [table, rows] of read) {
@@ -153,7 +168,6 @@ export function startSync(opts: SyncOptions): SyncHandle {
         m.set(rowKey(r), r)
         touched.add(r.key)
         changed = true
-        if (r.updatedAt > (cursor.get(table) ?? '')) cursor.set(table, r.updatedAt)
       }
       if (full || changed) tables.add(table)
     }
@@ -242,16 +256,22 @@ export function startSync(opts: SyncOptions): SyncHandle {
 
   const first = syncNow()
 
+  function stop() {
+    stopped = true
+    outbox.onSaveState = null
+    clearTimeout(debounce)
+    clearInterval(timer)
+    unsubscribe()
+    globalThis.removeEventListener?.('online', onOnline)
+    globalThis.document?.removeEventListener('visibilitychange', onVisible)
+  }
+
   return {
     syncNow: () => first.then(syncNow),
-    stop() {
-      stopped = true
-      outbox.onSaveState = null
-      clearTimeout(debounce)
-      clearInterval(timer)
-      unsubscribe()
-      globalThis.removeEventListener?.('online', onOnline)
-      globalThis.document?.removeEventListener('visibilitychange', onVisible)
+    stop,
+    discard() {
+      stop()
+      return outbox.destroy()
     },
   }
 }

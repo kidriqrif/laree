@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Logo } from '../ui/brand/Logo.tsx'
+import { useAccount } from './account.ts'
 import { sendCode, verifyCode } from './session.ts'
 import styles from './live.module.css'
 
@@ -17,6 +18,7 @@ export function SignInPage() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [wait, setWait] = useState(0)
+  const notice = useAccount((s) => s.notice)
 
   useEffect(() => {
     if (wait <= 0) return
@@ -32,6 +34,8 @@ export function SignInPage() {
       return
     }
     setBusy(true)
+    // A note left by the last account (e.g. "your account is deleted") has been read by now.
+    useAccount.setState({ notice: null })
     const error = await sendCode(address)
     setBusy(false)
     if (error) {
@@ -120,7 +124,7 @@ export function SignInPage() {
         </form>
       )}
       <p role="status" className={styles.message}>
-        {message}
+        {message || notice}
       </p>
       <p className={styles.small}>
         <Link to="/privacy">How Laree uses your data</Link>

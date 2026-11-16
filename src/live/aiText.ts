@@ -41,8 +41,12 @@ function writeCache(key: string, value: Polished): void {
   }
 }
 
+/** Bumped whenever the cache is cleared: an answer asked for before that must not be kept or shown. */
+let generation = 0
+
 /** Forget the AI wording kept on this device (on sign-out and account deletion). */
 export function clearPolishedCache(): void {
+  generation++
   try {
     localStorage.removeItem(CACHE_KEY)
   } catch {
@@ -64,11 +68,14 @@ export async function polish<T extends TextOut>(out: T): Promise<T | null> {
   const key = `${out.feature}:${out.athleteId}:${hash([out.headline, ...out.lines].join('\n'))}`
   const cached = readCache()[key]
   if (cached) return apply(out, cached)
+  const asked = generation
   const { data, error } = await supabase().functions.invoke('ai', {
     body: { feature: out.feature, athleteId: out.athleteId, headline: out.headline, lines: out.lines },
   })
   const body = data as ({ ok: true } & Polished) | { ok: false } | null
   if (error || !body?.ok) return null
+  // Signed out or deleted while the request was on its way: the answer belongs to nobody here.
+  if (asked !== generation) return null
   const p: Polished = { headline: body.headline, lines: body.lines, provider: body.provider, model: body.model }
   writeCache(key, p)
   return apply(out, p)

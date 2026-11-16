@@ -1,39 +1,71 @@
 import { describe, expect, it } from 'vitest'
-import { checkOutput, facts, safeBaseUrl } from './check.ts'
+import { checkOutput, facts, safeBaseUrl, sameFacts } from './check.ts'
 
 const draft = { headline: 'A steady week', lines: ['You ran 12 km in 60 minutes.', 'Sleep was 7.5 h on 3 of 4 nights.'] }
 const answer = (headline: string, ...lines: string[]) => JSON.stringify({ headline, lines })
 
 describe('the check on a provider answer', () => {
-  it('accepts a rewording that keeps every number with its unit', () => {
-    expect(checkOutput(answer('Steady week', 'A 12 km run took you 60 min.', 'You slept 7.5 hours on 3 of 4 nights.'), draft)).not.toBeNull()
+  it('accepts a rewording that keeps every line\'s numbers with their units', () => {
+    expect(checkOutput(answer('Steady week', 'A 12 km run took you 60 min.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).not.toBeNull()
+  })
+
+  it('wants "3 of 4" back word for word: two plain counts could be swapped unseen', () => {
+    expect(checkOutput(answer('Steady week', 'You ran 12 km in 60 minutes.', 'You slept 7.5 hours on 3 of 4 nights.'), draft)).toBeNull()
+    expect(checkOutput(answer('Steady week', 'You ran 12 km in 60 minutes.', 'Sleep was 7.5 h on 4 of 3 nights.'), draft)).toBeNull()
   })
 
   it('refuses numbers swapped between facts', () => {
-    // Both numbers are in the draft, but not with these units.
-    expect(checkOutput(answer('Steady week', 'You ran 60 km in 12 minutes.'), draft)).toBeNull()
+    // Both numbers are in the draft's line, but not with these units.
+    expect(checkOutput(answer('Steady week', 'You ran 60 km in 12 minutes.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).toBeNull()
   })
 
-  it('refuses a number that is not in the draft', () => {
-    expect(checkOutput(answer('Steady week', 'You ran 13 km.'), draft)).toBeNull()
+  it('refuses a number that is not in the draft, and one that was dropped', () => {
+    expect(checkOutput(answer('Steady week', 'You ran 13 km in 60 minutes.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).toBeNull()
+    expect(checkOutput(answer('Steady week', 'You ran 12 km.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).toBeNull()
+  })
+
+  it('refuses a number moved to another line, and a different number of lines', () => {
+    expect(checkOutput(answer('Steady week', 'Sleep was 7.5 h on 3 of 4 nights.', 'You ran 12 km in 60 minutes.'), draft)).toBeNull()
+    expect(checkOutput(answer('Steady week', 'You ran 12 km in 60 minutes. Sleep was 7.5 h on 3 of 4 nights.'), draft)).toBeNull()
   })
 
   it('refuses a unit put on a plain count, and a count made from a measurement', () => {
-    expect(checkOutput(answer('Steady week', 'You slept well for 3 hours.'), draft)).toBeNull()
-    expect(checkOutput(answer('Steady week', 'You had 12 good moments.'), draft)).toBeNull()
+    expect(checkOutput(answer('Steady week', 'You ran 12 km in 60 minutes.', 'Sleep was 7.5 h for 3 hours of 4 nights.'), draft)).toBeNull()
+    expect(checkOutput(answer('Steady week', 'You ran 12 good km in 60 minutes.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).toBeNull()
+  })
+
+  it('wants a line with two values of the same kind back word for word', () => {
+    const hr = { headline: 'Heart rate', lines: ['Resting heart rate was 60 bpm and maximum heart rate was 180 bpm.'] }
+    // The swapped line holds the same numbers with the same units: only the wording gives it away.
+    expect(checkOutput(answer('Heart rate', 'Maximum heart rate was 60 bpm and resting heart rate was 180 bpm.'), hr)).toBeNull()
+    expect(checkOutput(answer('Heart rate', 'Your resting heart rate was 60 bpm; your maximum was 180 bpm.'), hr)).toBeNull()
+    expect(checkOutput(answer('Your heart rate', hr.lines[0] as string), hr)).not.toBeNull()
+    // The same value twice is not two values.
+    expect(sameFacts('You ran 5 km on Monday and 5 km on Friday.', 'Monday and Friday: 5 km and 5 km.')).toBe(true)
+  })
+
+  it('keeps the sign of a number', () => {
+    const load = { headline: 'Load', lines: ['Load changed by -12%.'] }
+    expect(checkOutput(answer('Load', 'Your load changed by +12%.'), load)).toBeNull()
+    expect(checkOutput(answer('Load', 'Your load changed by 12%.'), load)).toBeNull()
+    expect(checkOutput(answer('Load', 'Your load went to \u221212% this week.'), load)).not.toBeNull()
+    // A hyphen inside a range is not a sign.
+    expect(facts('Zones 10-12 and Z2')).toEqual(['10|', '12|', '2|'])
+    expect(facts('-12% and +3 km')).toEqual(['-12|%', '3|km'])
   })
 
   it('reads a decimal comma and a time as one number', () => {
     expect(facts('7,5 h at 5:30 pace')).toEqual(['7.5|h', '5:30|'])
-    expect(checkOutput(answer('Steady week', 'Sleep was 7,5 h.'), draft)).not.toBeNull()
+    expect(sameFacts('Sleep was 7.5 h.', 'You slept 7,5 hours.')).toBe(true)
   })
 
   it('refuses anything that is not the asked-for shape', () => {
-    expect(checkOutput('not json', draft)).toBeNull()
-    expect(checkOutput('null', draft)).toBeNull()
-    expect(checkOutput(answer('', 'A line.'), draft)).toBeNull()
-    expect(checkOutput(JSON.stringify({ headline: 'Fine', lines: [] }), draft)).toBeNull()
-    expect(checkOutput('```json\n' + answer('Steady week', 'You ran 12 km.') + '\n```', draft)).not.toBeNull()
+    const one = { headline: 'Steady week', lines: ['You ran 12 km.'] }
+    expect(checkOutput('not json', one)).toBeNull()
+    expect(checkOutput('null', one)).toBeNull()
+    expect(checkOutput(answer('', 'You ran 12 km.'), one)).toBeNull()
+    expect(checkOutput(JSON.stringify({ headline: 'Fine', lines: [] }), one)).toBeNull()
+    expect(checkOutput('```json\n' + answer('A steady week', 'A 12 km run.') + '\n```', one)).not.toBeNull()
   })
 })
 

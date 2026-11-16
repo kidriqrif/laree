@@ -32,6 +32,9 @@ export class Outbox {
   private ops: Op[] = []
   private loaded = false
   private saving: Promise<void> = Promise.resolve()
+  /** Counts the saves asked for: only the newest one speaks for the whole queue. */
+  private revision = 0
+  private closed = false
   private readonly store: OutboxStore
   /** Told after every save: true when the queue is safely on the device, false when the save failed. */
   onSaveState: ((saved: boolean) => void) | null = null
@@ -79,14 +82,31 @@ export class Outbox {
   }
 
   private persist(): Promise<void> {
+    if (this.closed) return this.saving
     const snapshot = [...this.ops]
+    const revision = ++this.revision
     this.saving = this.saving
-      .then(() => this.store.save(snapshot))
+      .then(() => (this.closed ? undefined : this.store.save(snapshot)))
       .then(
-        () => this.onSaveState?.(true),
+        () => {
+          // An older save that worked says nothing about writes queued after it.
+          if (revision === this.revision) this.onSaveState?.(true)
+        },
         () => this.onSaveState?.(false),
       )
     return this.saving
+  }
+
+  /**
+   * Forget the queue for good (the account was deleted). Nothing is saved after this, and the
+   * saved queue is removed once a save already on its way has ended. Rejects when the queue could
+   * not be removed from the device.
+   */
+  async destroy(): Promise<void> {
+    this.closed = true
+    this.ops = []
+    await this.saving
+    await this.store.save([])
   }
 
   /**

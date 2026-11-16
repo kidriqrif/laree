@@ -492,6 +492,14 @@ end $$;
 -- a week without requests. It reads nothing.
 create function public.ping() returns integer language sql immutable as $$ select 1 $$;
 
+-- The sync's clock (src/live/sync). A device asks for the server's time when a pull begins and
+-- starts its next pull 30 seconds before that time. updated_at is the time a write began, so the
+-- 30 seconds must stay above the longest a write can take. Writes from the app are one statement
+-- each: this timeout is that bound. A long hand-made transaction in the SQL editor that changes
+-- synced rows is outside it; devices pick such rows up on their next visit, which reads everything.
+create function public.server_now() returns timestamptz language sql volatile as $$ select clock_timestamp() $$;
+alter role authenticated set statement_timeout = '8s';
+
 -- ---------------------------------------------------------------------------------------------
 -- Who may call which function
 -- ---------------------------------------------------------------------------------------------
@@ -501,7 +509,7 @@ create function public.ping() returns integer language sql immutable as $$ selec
 revoke execute on all functions in schema public from public, anon, authenticated;
 grant execute on function public.is_coach_of(uuid), public.has_active_coach(uuid), public.can_read_athlete(uuid),
   public.can_plan_for(uuid), public.has_consent(uuid, text), public.ai_allowed(uuid),
-  public.accept_invitation(uuid), public.my_invitations() to authenticated;
+  public.accept_invitation(uuid), public.my_invitations(), public.server_now() to authenticated;
 grant execute on function public.ping() to anon, authenticated;
 -- The server side only: a person must not hand out or use up places in anyone's allowance.
 grant execute on function public.reserve_ai_run(uuid, uuid, text, integer) to service_role;

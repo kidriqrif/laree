@@ -2,9 +2,9 @@
 import type { Account } from './account.ts'
 import { clearPolishedCache } from './aiText.ts'
 import { dropWaitingFiles } from './files.ts'
-import { signOut, supabase } from './session.ts'
+import { useAccount } from './account.ts'
+import { discardUnsent, signOut, supabase } from './session.ts'
 import { SPECS } from './sync/docs.ts'
-import { idbOutboxStore } from './sync/idbOutbox.ts'
 import { supabaseBackend } from './sync/supabaseBackend.ts'
 
 const BUCKET = 'activity-files'
@@ -66,7 +66,7 @@ export function saveBlob(blob: Blob, fileName: string): void {
 /**
  * Delete the account on the server, then clear this device: the AI wording, the unsent queue and
  * the waiting files of this account. Returns an error message, or null. A failed deletion keeps
- * everything as it was.
+ * everything as it was. If something could not be removed from the device, the person is told.
  */
 export async function deleteMyAccount(): Promise<string | null> {
   const { data: who } = await supabase().auth.getSession()
@@ -74,10 +74,21 @@ export async function deleteMyAccount(): Promise<string | null> {
   const { data, error } = await supabase().functions.invoke('delete-account', { body: { confirm: 'DELETE' } })
   if (error || !(data as { ok?: boolean } | null)?.ok) return 'Your account could not be deleted. Try again, or contact the owner.'
   clearPolishedCache()
+  let left = false
   if (uid) {
-    await idbOutboxStore(uid).save([]).catch(() => undefined)
-    await dropWaitingFiles(uid)
+    // The sync stops first: a send on its way must not save the queue again after it is removed.
+    await discardUnsent(uid).catch(() => {
+      left = true
+    })
+    if (!(await dropWaitingFiles(uid))) left = true
   }
   const signOutError = await signOut()
-  return signOutError ? `Your account was deleted, but this device could not sign out. Reload the page. (${signOutError})` : null
+  if (signOutError) return `Your account was deleted, but this device could not sign out. Reload the page. (${signOutError})`
+  // This screen closes with the sign-out, so the sign-in screen carries the message.
+  useAccount.setState({
+    notice: left
+      ? 'Your account is deleted. Some unsent data could not be removed from this device: clear this site\'s data in your browser settings.'
+      : 'Your account and your data are deleted.',
+  })
+  return null
 }

@@ -112,4 +112,16 @@ describe('activity files', () => {
     expect(await fileSender(queue, async () => false).keep(UID, 'act-1', file('a'))).toBe(false)
     expect(await fileSender(queue, async () => true).keep(UID, 'act-1', file('a'))).toBe(true)
   })
+
+  it('says so when waiting files could not be removed', async () => {
+    const queue = memoryFileQueue()
+    const files = fileSender(queue, async () => false)
+    await files.keep(UID, 'act-1', file('a'))
+    expect(await files.drop(UID)).toBe(true)
+    await files.keep(UID, 'act-2', file('b'))
+    queue.removeVersion = async () => {
+      throw new Error('blocked')
+    }
+    expect(await files.drop(UID)).toBe(false)
+  })
 })

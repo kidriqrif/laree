@@ -125,6 +125,11 @@ export function boot(): void {
   void navigator.storage?.persist?.().catch(() => false)
   void import('./errors.ts').then((m) => m.watchErrors())
   const auth = supabase().auth
+  // Files that could not be uploaded offline go up as soon as the device is back online.
+  globalThis.addEventListener?.('online', () => {
+    const uid = useAccount.getState().account?.uid
+    if (uid) void sendWaitingFiles(uid)
+  })
   auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_OUT' || !session) {
       teardown()
@@ -174,6 +179,19 @@ export async function signOut(): Promise<string | null> {
     // Nothing kept, nothing to clear.
   }
   return null
+}
+
+/**
+ * Stop the sync and remove this account's unsent changes from the device, for good (the account
+ * was deleted). The sync is stopped first, so a send on its way cannot save the queue again.
+ * Rejects when the queue could not be removed.
+ */
+export async function discardUnsent(uid: string): Promise<void> {
+  const running = sync
+  sync = null
+  syncedFor = ''
+  if (running) await running.discard()
+  else await idbOutboxStore(uid).save([])
 }
 
 /** Send and pull now, for "Sync now" and after a big change. */

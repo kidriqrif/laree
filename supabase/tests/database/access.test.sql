@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(75);
+select plan(76);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -216,7 +216,7 @@ select is(
 select is(
   (select coalesce(string_agg(p.oid::regprocedure::text, ', ' order by p.oid::regprocedure::text), '')
    from pg_proc p where p.pronamespace = 'public'::regnamespace and has_function_privilege('authenticated', p.oid, 'execute')),
-  'accept_invitation(uuid), ai_allowed(uuid), can_plan_for(uuid), can_read_athlete(uuid), has_active_coach(uuid), has_consent(uuid,text), is_coach_of(uuid), my_invitations(), ping()',
+  'accept_invitation(uuid), ai_allowed(uuid), can_plan_for(uuid), can_read_athlete(uuid), has_active_coach(uuid), has_consent(uuid,text), is_coach_of(uuid), my_invitations(), ping(), server_now()',
   'a signed-in person can call exactly the functions granted to them');
 select ok(has_function_privilege('service_role', 'public.reserve_ai_run(uuid, uuid, text, integer)', 'execute'),
   'the server can take a place in an AI allowance');
@@ -225,6 +225,11 @@ select is(
      and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute'))
      and has_schema_privilege('authenticated', 'private', 'usage')),
   0, 'nothing in the private schema is reachable');
+
+-- The sync re-reads 30 seconds before its cursor: no write through the API may stay open that long.
+select is(
+  (select c from pg_roles r, unnest(r.rolconfig) c where r.rolname = 'authenticated' and c like 'statement_timeout=%'),
+  'statement_timeout=8s', 'a write through the API is bounded well below the sync''s overlap window');
 
 -- ---- The AI allowance: a place is taken before any provider is called, and never over the limit. ----
 select isnt(public.reserve_ai_run('00000000-0000-4000-a000-0000000000c2', '00000000-0000-4000-a000-0000000000c2', 'recap', 2),

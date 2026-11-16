@@ -12,7 +12,7 @@ import { QUEUE_UNREADABLE, startSync, useSyncStatus } from './engine.ts'
 import type { Backend, PulledRow, SyncHandle } from './engine.ts'
 import { memoryOutboxStore, Outbox } from './outbox.ts'
 import type { OutboxStore } from './outbox.ts'
-import { afterFilter, overlapStart, readPages } from './supabaseBackend.ts'
+import { afterFilter, overlapStart, OVERLAP_MS, readPages, supabaseBackend } from './supabaseBackend.ts'
 import type { DbRow, PageEnd } from './supabaseBackend.ts'
 
 const COACH = '00000000-0000-4000-a000-00000000000a'
@@ -32,14 +32,25 @@ const person: Athlete = {
   baselines: { restingHr: 50, hrvMs: 70 },
 }
 
-/** An in-memory server with the same write rules as the database. */
+const T0 = Date.UTC(2026, 10, 11, 2)
+const stamp = (ms: number): string => new Date(ms).toISOString()
+
+/**
+ * An in-memory server with the same write rules as the database, and the same reading rule as the
+ * real backend: an incremental pull starts a fixed window before its cursor. Each write is stamped
+ * one second after the one before; a test can move the clock and restamp a row.
+ */
 function fakeServer() {
   const tables = new Map<string, Map<string, PulledRow>>()
-  let clock = 0
+  const clock = { ms: T0 }
   let down = false
   const writes: string[] = []
   const hooks: { beforePull?: (table: string) => void; beforeSend?: (table: string) => void } = {}
   const as = (ctx: SyncContext): Backend => ({
+    async now() {
+      if (down) throw new TypeError('Failed to fetch')
+      return stamp(clock.ms)
+    },
     async send(table, _scope, ops) {
       if (down) throw new TypeError('Failed to fetch')
       hooks.beforeSend?.(table)
@@ -57,7 +68,7 @@ function fakeServer() {
           day: o.day,
           body: structuredClone(o.body ?? {}),
           deleted: o.body === null,
-          updatedAt: String(++clock).padStart(10, '0'),
+          updatedAt: stamp((clock.ms += 1000)),
         })
       }
       return { ok: true }
@@ -67,7 +78,7 @@ function fakeServer() {
       hooks.beforePull?.(table)
       const readable = (key: string) => key === ctx.uid || ctx.athleteIds.includes(key)
       return [...(tables.get(table)?.values() ?? [])]
-        .filter((r) => readable(r.key) && (since === null || r.updatedAt > since))
+        .filter((r) => readable(r.key) && (since === null || r.updatedAt > overlapStart(since)))
         .map((r) => structuredClone(r))
     },
   })
@@ -76,6 +87,7 @@ function fakeServer() {
     tables,
     writes,
     hooks,
+    clock,
     setDown: (v: boolean) => {
       down = v
     },
@@ -541,35 +553,176 @@ describe('paged pulls', () => {
 })
 
 describe('a late commit', () => {
-  it('is picked up although it is stamped earlier than a row already pulled', async () => {
+  const row = (c: CheckIn): Op => ({ table: 'check_ins', scope: 'athlete', key: ATHLETE, id: c.id, day: null, body: { ...c } })
+  const ids = () => useLaree.getState().data.checkIns.map((x) => x.id).sort()
+
+  it('is picked up when it is stamped inside the window before the cursor', async () => {
     const server = fakeServer()
-    const backend = server.as(athleteCtx)
-    // Like the real backend, every incremental pull reads again from before its cursor.
-    const overlapping: Backend = {
-      ...backend,
-      pull: (table, scope, since, cancelled) => backend.pull(table, scope, since === null ? null : '', cancelled),
-    }
-    useLaree.setState({ data: emptyLiveData(), undoStack: [] })
-    const handle = startSync({ backend: overlapping, outbox: new Outbox(memoryOutboxStore()), ctx: athleteCtx, intervalMs: 3_600_000 })
-    sessions.push(handle)
-    await handle.syncNow()
+    const a = signIn(server, athleteCtx)
+    await a.handle.syncNow()
     const late = checkIn(today())
-    await backend.send('check_ins', 'athlete', [
-      { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: late.id, day: null, body: { ...late } },
-    ])
-    await handle.syncNow()
-    // A write that began before `late` commits only now: its stamp is behind the cursor.
+    await server.as(athleteCtx).send('check_ins', 'athlete', [row(late)])
+    await a.handle.syncNow()
+    // A write that began 10 seconds before the last pull becomes visible only now.
     const early = checkIn(today() - 1)
-    await backend.send('check_ins', 'athlete', [
-      { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: early.id, day: null, body: { ...early } },
-    ])
-    server.tables.get('check_ins')!.get(`${ATHLETE}/${early.id}`)!.updatedAt = '0000000000'
-    await handle.syncNow()
-    expect(useLaree.getState().data.checkIns.map((x) => x.id).sort()).toEqual([early.id, late.id].sort())
-    // Rows read again unchanged are skipped: once settled, a sync leaves the store untouched.
-    for (let i = 0; i < 3; i++) await handle.syncNow()
+    await server.as(athleteCtx).send('check_ins', 'athlete', [row(early)])
+    server.tables.get('check_ins')!.get(`${ATHLETE}/${early.id}`)!.updatedAt = stamp(server.clock.ms - 10_000)
+    await a.handle.syncNow()
+    expect(ids()).toEqual([early.id, late.id].sort())
+  })
+
+  it('is picked up after a long paged pull that read much newer rows', async () => {
+    const server = fakeServer()
+    const a = signIn(server, athleteCtx)
+    await a.handle.syncNow()
+    const scanStart = server.clock.ms
+    // Write A began just before this pull and commits while the pull is reading its later pages.
+    // The same pull also reads C, written 40 seconds in: longer than the overlap window.
+    const lateA = checkIn(today() - 2)
+    const c = checkIn(today())
+    server.hooks.beforePull = (table) => {
+      if (table !== 'check_ins') return
+      server.hooks.beforePull = undefined
+      server.clock.ms = scanStart + 40_000
+      server.tables.set('check_ins', new Map([[`${ATHLETE}/${c.id}`, { key: ATHLETE, id: c.id, day: null, body: { ...c }, deleted: false, updatedAt: stamp(scanStart + 40_000) }]]))
+    }
+    await a.handle.syncNow()
+    expect(ids()).toEqual([c.id])
+    server.tables.get('check_ins')!.set(`${ATHLETE}/${lateA.id}`, {
+      key: ATHLETE, id: lateA.id, day: null, body: { ...lateA }, deleted: false, updatedAt: stamp(scanStart - 1000),
+    })
+    // The cursor is the time that pull began, not C's stamp, so the next pull still reaches A.
+    await a.handle.syncNow()
+    expect(ids()).toEqual([c.id, lateA.id].sort())
+  })
+
+  it('does not read again what lies before the window', async () => {
+    const server = fakeServer()
+    const a = signIn(server, athleteCtx)
+    await a.handle.syncNow()
+    const old = checkIn(today() - 3)
+    await server.as(athleteCtx).send('check_ins', 'athlete', [row(old)])
+    // Stamped well before the window: an incremental pull must not return it. This pins the lower
+    // bound; such a row is read on the next visit, which reads everything.
+    server.tables.get('check_ins')!.get(`${ATHLETE}/${old.id}`)!.updatedAt = stamp(server.clock.ms - OVERLAP_MS - 5000)
+    await a.handle.syncNow()
+    expect(ids()).toEqual([])
+    signOut()
+    const again = signIn(server, athleteCtx)
+    await again.handle.syncNow()
+    expect(ids()).toEqual([old.id])
+  })
+
+  it('leaves the store untouched when a pull brings only rows it already has', async () => {
+    const server = fakeServer()
+    const a = signIn(server, athleteCtx)
+    await a.handle.syncNow()
+    await server.as(athleteCtx).send('check_ins', 'athlete', [row(checkIn(today()))])
+    for (let i = 0; i < 4; i++) await a.handle.syncNow()
     const settled = useLaree.getState().data
-    await handle.syncNow()
+    await a.handle.syncNow()
     expect(useLaree.getState().data).toBe(settled)
+  })
+})
+
+/** What the backend uses of a Supabase query: a promise of the answer that also takes filters. */
+type Query = Promise<{ data: DbRow[]; error: null }> & {
+  select(): Query
+  order(column: string): Query
+  limit(n: number): Query
+  gt(column: string, value: string): Query
+  or(filter: string): Query
+}
+
+describe('the Supabase backend', () => {
+  /** A query builder that records what was asked and answers with the given rows. */
+  function stubClient(rows: DbRow[], serverNow = '2026-11-11T02:00:40.123456+00:00') {
+    const calls: { table: string; filters: string[] }[] = []
+    const client = {
+      rpc: async (name: string) => (name === 'server_now' ? { data: serverNow, error: null } : { data: null, error: { message: 'no such function' } }),
+      from(table: string) {
+        const call = { table, filters: [] as string[] }
+        calls.push(call)
+        // Like the real builder: a promise of the answer that also takes further filters.
+        const q: Query = Object.assign(
+          Promise.resolve({ data: rows, error: null }),
+          {
+            select: () => q,
+            order: (column: string) => (call.filters.push(`order:${column}`), q),
+            limit: (n: number) => (call.filters.push(`limit:${n}`), q),
+            gt: (column: string, value: string) => (call.filters.push(`gt:${column}:${value}`), q),
+            or: (filter: string) => (call.filters.push(`or:${filter}`), q),
+          },
+        )
+        return q
+      },
+    }
+    return { client: client as never, calls }
+  }
+
+  it('asks for rows from the overlap window before the cursor, in key order', async () => {
+    const { client, calls } = stubClient([])
+    await supabaseBackend(client).pull('check_ins', 'athlete', '2026-11-11T02:00:30.000Z')
+    expect(calls[0]?.filters).toEqual(['order:updated_at', 'order:athlete_id', 'order:id', 'limit:1000', 'gt:updated_at:2026-11-11T02:00:00.000Z'])
+  })
+
+  it('reads everything on a full pull', async () => {
+    const { client, calls } = stubClient([])
+    await supabaseBackend(client).pull('workout_templates', 'owner', null)
+    expect(calls[0]?.filters).toEqual(['order:updated_at', 'order:owner_id', 'order:id', 'limit:1000'])
+  })
+
+  it("gives the server's time", async () => {
+    const { client } = stubClient([])
+    expect(await supabaseBackend(client).now()).toBe('2026-11-11T02:00:40.123456+00:00')
+  })
+})
+
+describe('forgetting the queue', () => {
+  const op: Op = { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: 'c-1', day: null, body: { id: 'c-1' } }
+
+  it('removes the saved queue and saves nothing afterwards, also when a send was on its way', async () => {
+    const store = memoryOutboxStore([op])
+    const box = new Outbox(store)
+    await box.load()
+    let release: () => void = () => undefined
+    const sending = box.flush(() => new Promise((resolve) => (release = () => resolve({ ok: false, denied: false, message: 'offline' }))))
+    const gone = box.destroy()
+    release()
+    await Promise.all([sending, gone])
+    expect(store.saved).toEqual([])
+    await box.add([op])
+    expect(store.saved).toEqual([])
+  })
+
+  it('says so when the saved queue could not be removed', async () => {
+    const inner = memoryOutboxStore([op])
+    const box = new Outbox({ load: inner.load, save: async () => Promise.reject(new Error('blocked')) })
+    await box.load()
+    await expect(box.destroy()).rejects.toThrow('blocked')
+  })
+
+  it('reports a save as done only when it covers the newest write', async () => {
+    const finish: (() => void)[] = []
+    const states: boolean[] = []
+    const box = new Outbox({ load: async () => [], save: () => new Promise<void>((resolve) => finish.push(resolve)) })
+    box.onSaveState = (saved) => states.push(saved)
+    const loaded = box.load()
+    await Promise.resolve()
+    await Promise.resolve()
+    finish.shift()?.()
+    await loaded
+    states.length = 0
+    const first = box.add([op])
+    const second = box.add([{ ...op, id: 'c-2' }])
+    await Promise.resolve()
+    finish.shift()?.()
+    await first
+    // The first save worked, but the second write is not on the device yet.
+    expect(states).toEqual([])
+    await Promise.resolve()
+    finish.shift()?.()
+    await second
+    expect(states).toEqual([true])
   })
 })

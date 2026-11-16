@@ -5,12 +5,20 @@ import type { Backend, PulledRow } from './engine.ts'
 
 const PAGE = 1000
 /**
- * `updated_at` is the time a write's transaction began, not when it committed. A write that began
- * before the newest row we hold can commit after we read it. So every incremental pull re-reads a
- * short window before its cursor; the engine skips the rows it already has. The window is well
- * above the API's statement timeout, the longest a write can stay open.
+ * `updated_at` is the time a write's transaction began, not when it committed, so a write can
+ * become visible after rows stamped later than it were read. Two things together make sure it is
+ * still read:
+ *
+ * - The engine's cursor is the server's time when its last pull began, not the newest row seen.
+ * - Every incremental pull starts this long before that cursor. The engine skips the rows it
+ *   already has.
+ *
+ * A write that was not visible to the last pull committed after that pull began, so it began less
+ * than one transaction's length before it. The window is well above the longest a write made
+ * through the API can stay open: the migration sets the `authenticated` role's statement timeout
+ * to 8 seconds. Keep this window above that timeout.
  */
-const OVERLAP_MS = 30_000
+export const OVERLAP_MS = 30_000
 
 export const ownerColumn = (scope: Scope): 'athlete_id' | 'owner_id' => (scope === 'athlete' ? 'athlete_id' : 'owner_id')
 
@@ -87,6 +95,12 @@ export async function readPages(
 
 export function supabaseBackend(client: SupabaseClient): Backend {
   return {
+    async now() {
+      const { data, error } = await client.rpc('server_now')
+      if (error || typeof data !== 'string') throw new Error(error?.message ?? 'The server did not give its time')
+      return data
+    },
+
     async send(table, scope, ops) {
       const owner = ownerColumn(scope)
       const now = new Date().toISOString()

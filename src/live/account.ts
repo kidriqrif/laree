@@ -55,9 +55,11 @@ interface AccountState {
   account: Account | null
   invitations: Invitation[]
   error: string | null
+  /** Something the person must be told on the next screen, e.g. after their account was deleted. */
+  notice: string | null
 }
 
-export const useAccount = create<AccountState>(() => ({ status: 'loading', account: null, invitations: [], error: null }))
+export const useAccount = create<AccountState>(() => ({ status: 'loading', account: null, invitations: [], error: null, notice: null }))
 
 /** The version of the consent wording. A new wording gets a new version and asks again. */
 export const CONSENT_VERSION = '2026-11'

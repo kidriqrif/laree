@@ -10,6 +10,16 @@ dir="${1:?usage: restore-files.sh <dir>}"
 bucket=activity-files
 shape='^[0-9a-f-]{36}/[A-Za-z0-9._-]{1,80}$'
 
+# The secret key goes out in a header: HTTPS only. Plain HTTP is for a stack on this machine,
+# and only when ALLOW_LOCAL_HTTP=1 says so.
+case "$SUPABASE_URL" in
+  https://*) proto='=https' ;;
+  http://127.0.0.1:* | http://localhost:*)
+    [ "${ALLOW_LOCAL_HTTP:-}" = 1 ] || { echo "SUPABASE_URL is plain HTTP. Set ALLOW_LOCAL_HTTP=1 for a local stack." >&2; exit 1; }
+    proto='=http' ;;
+  *) echo "SUPABASE_URL must start with https://" >&2; exit 1 ;;
+esac
+
 count=0
 while IFS= read -r name; do
   [ -n "$name" ] || continue
@@ -18,7 +28,7 @@ while IFS= read -r name; do
     exit 1
   fi
   # x-upsert: running the restore twice is harmless.
-  curl -fsS --retry 3 -o /dev/null -X POST \
+  curl -fsS --proto "$proto" --retry 3 -o /dev/null -X POST \
     -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" \
     -H "Content-Type: application/octet-stream" -H "x-upsert: true" \
     --data-binary "@$dir/files/$name" \

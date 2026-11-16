@@ -1,5 +1,5 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- status regions for the loading screen and the offline note */
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { isSelfCoached, openFromCache, useAccount } from './account.ts'
@@ -42,12 +42,37 @@ export default function LiveGate({ children }: { children: ReactNode }) {
   const invitations = useAccount((s) => s.invitations)
   const error = useAccount((s) => s.error)
   const [laterInvites, setLaterInvites] = useState(false)
+  /** The code that signs in and syncs could not be loaded (offline before it was ever cached). */
+  const [startFailed, setStartFailed] = useState(false)
 
-  useEffect(() => {
-    void session().then((m) => m.boot())
+  const start = useCallback(() => {
+    void session()
+      .then((m) => {
+        m.boot()
+        setStartFailed(false)
+      })
+      .catch(() => setStartFailed(true))
   }, [])
 
+  useEffect(() => {
+    start()
+    // Back online: try again without being asked. boot() itself runs only once.
+    globalThis.addEventListener('online', start)
+    return () => globalThis.removeEventListener('online', start)
+  }, [start])
+
   if (PUBLIC_PATH.test(pathname)) return children
+  if (status === 'loading' && startFailed) {
+    return (
+      <div className={styles.page}>
+        <h1 className={styles.title}>Laree could not start</h1>
+        <p className={styles.lede}>Check your connection and try again.</p>
+        <button type="button" className={styles.primary} onClick={start}>
+          Try again
+        </button>
+      </div>
+    )
+  }
   if (status === 'loading') return <Loading />
   if (status === 'error') {
     return (

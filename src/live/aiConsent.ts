@@ -47,10 +47,22 @@ const tails = new Map<string, Promise<void>>()
 
 /** Follow the signed-in athlete's AI switch. Returns a stop function. */
 export function followAiConsent(uid: string, server: ConsentServer = supabaseConsents, retryMs = 30_000): () => void {
-  const switchOn = () => useLaree.getState().data.settings[uid]?.aiConsent === true
+  /**
+   * The switch, or null while this account's settings are not on the device yet. On a new device
+   * they arrive with the first sync. Until then nothing is recorded: "not here yet" is not a
+   * withdrawal, and must not put one in the consent history.
+   */
+  const switchOn = (): boolean | null => {
+    const saved = useLaree.getState().data.settings[uid]
+    return saved ? saved.aiConsent === true : null
+  }
   let stopped = false
   let wanted = switchOn()
-  /** The answer the server is known to hold. Null until one round has succeeded. */
+  /**
+   * The answer the server is known to hold. Null when that is not known: before the first round,
+   * and after any request that failed. A failed request may still have reached the server, so
+   * the next round reads the server again before it decides.
+   */
   let recorded: boolean | null = null
   let queued = false
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -58,7 +70,7 @@ export function followAiConsent(uid: string, server: ConsentServer = supabaseCon
   async function round(): Promise<void> {
     queued = false
     // The switch may change while a request is on its way: go round until the server agrees.
-    while (!stopped && recorded !== wanted) {
+    while (!stopped && wanted !== null && recorded !== wanted) {
       const target = wanted
       const latest = await server.latest(uid)
       if (stopped) return
@@ -68,12 +80,13 @@ export function followAiConsent(uid: string, server: ConsentServer = supabaseCon
   }
 
   function reconcile(): void {
-    if (stopped || queued) return
+    if (stopped || queued || wanted === null) return
     queued = true
     clearTimeout(timer)
     const run = (tails.get(uid) ?? Promise.resolve()).then(round).catch(() => {
-      // Not recorded: the change stays due.
+      // Not recorded, as far as we know: the change stays due, and the server is read again.
       queued = false
+      recorded = null
       if (!stopped) timer = setTimeout(reconcile, retryMs)
     })
     tails.set(uid, run)
@@ -84,7 +97,7 @@ export function followAiConsent(uid: string, server: ConsentServer = supabaseCon
 
   const unsubscribe = useLaree.subscribe(() => {
     const now = switchOn()
-    if (now === wanted) return
+    if (now === null || now === wanted) return
     wanted = now
     reconcile()
   })

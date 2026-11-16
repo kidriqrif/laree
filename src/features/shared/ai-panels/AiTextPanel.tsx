@@ -12,7 +12,8 @@ export function AiTextPanel({ title, output: draft }: { title: string; output: A
     if (!__LIVE__ || draft.status !== 'ok') return
     let gone = false
     void import('../../../live/aiText.ts')
-      .then((m) => m.polish(draft))
+      // Left the page, or AI was turned off, before the code loaded: send nothing.
+      .then((m) => (gone ? null : m.polish(draft)))
       .then((to) => {
         if (!gone && to) setPolished({ from: draft, to })
       })

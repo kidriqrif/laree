@@ -106,11 +106,15 @@ export default function AccountPanel({ headingId = 'account-h' }: { headingId?: 
       <div className={styles.card}>
         <h3>Your data</h3>
         <div className={styles.row}>
-          <button type="button" className={styles.link} disabled={busy} onClick={() => void download()}>
+          {/* The file holds what the server has: wait until this device's changes are there too. */}
+          <button type="button" className={styles.link} disabled={busy || sync.pending > 0} onClick={() => void download()}>
             Download my data
           </button>
           <Link to="/privacy">How Laree uses your data</Link>
         </div>
+        {sync.pending > 0 ? (
+          <p className={styles.small}>You can download your data once the changes above have been sent.</p>
+        ) : null}
         {deleting ? (
           <div className={styles.form}>
             <p>

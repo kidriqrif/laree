@@ -171,4 +171,45 @@ describe('the AI consent record', () => {
     await settle()
     expect(seen).toEqual([UID])
   })
+
+  it('records nothing while the settings have not arrived, and no withdrawal when they do', async () => {
+    const c = fakeConsents()
+    c.rows.push(true)
+    // A new device: the store is empty until the first sync brings the settings.
+    follow(c.server)
+    await settle()
+    expect(c.rows).toEqual([true])
+    setSwitch(true)
+    await settle()
+    expect(c.rows).toEqual([true])
+    setSwitch(false)
+    await settle()
+    expect(c.rows).toEqual([true, false])
+  })
+
+  it('reads the server again after a request that failed but was recorded', async () => {
+    const c = fakeConsents()
+    setSwitch(false)
+    let lost = true
+    // The grant reaches the server, but its answer is lost on the way back.
+    const flaky: ConsentServer = {
+      latest: c.server.latest,
+      add: async (uid, granted) => {
+        await c.server.add(uid, granted)
+        if (lost) {
+          lost = false
+          throw new TypeError('Failed to fetch')
+        }
+      },
+    }
+    follow(flaky)
+    await settle()
+    setSwitch(true)
+    await settle()
+    expect(c.rows).toEqual([true])
+    // The person withdraws before any retry. The server holds a grant the device never saw confirmed.
+    setSwitch(false)
+    await settle()
+    expect(c.rows).toEqual([true, false])
+  })
 })

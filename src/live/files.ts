@@ -91,12 +91,16 @@ export function fileSender(queue: FileQueue, upload: Upload) {
       return true
     },
     send,
-    /** Forget this account's waiting files on this device (after the account is deleted). */
-    async drop(uid: string): Promise<void> {
+    /**
+     * Forget this account's waiting files on this device (after the account is deleted). False
+     * when they could not be removed, so the caller can say that something is left.
+     */
+    async drop(uid: string): Promise<boolean> {
       try {
         for (const w of await waitingFor(uid)) await queue.removeVersion(w.path, w.version)
+        return (await waitingFor(uid)).length === 0
       } catch {
-        // Nothing could be read, so nothing is kept to drop.
+        return false
       }
     },
   }

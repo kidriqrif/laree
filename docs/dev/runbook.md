@@ -80,7 +80,7 @@ A backup holds the rows (`dump/data.sql`: the app's tables and the accounts) and
    psql "NEW_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -f dump/data.sql
    ```
 
-7. **Upload the files.** `SUPABASE_URL=https://NEW_REF.supabase.co SUPABASE_SECRET_KEY=… scripts/restore-files.sh dump`
+7. **Upload the files.** `SUPABASE_URL=https://NEW_REF.supabase.co SUPABASE_SECRET_KEY=… scripts/restore-files.sh dump`. The scripts send the secret key over HTTPS only.
 8. **Check it.** In the SQL editor: `select count(*) from auth.users`, `select count(*) from public.profiles` (the two match) and `select count(*) from storage.objects where bucket_id = 'activity-files'` (it matches `wc -l dump/files.txt`).
 9. **Point GitHub at the new project**, or the next deploy and the next backup still use the old one: `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `SUPABASE_DB_URL`, `SUPABASE_SECRET_KEY`, `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
 10. **Switch the app.** Set Vercel's `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` to the new project and redeploy. Everyone signs in again: sessions belong to the old project.

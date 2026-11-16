@@ -32,21 +32,50 @@ const UNITS: Record<string, string> = {
 }
 
 /**
- * The measured facts in a text: each number with the unit that follows it ("12|km", "60|min"),
- * or alone ("3|") when no unit does. A time such as 5:30 is one number.
+ * The measured facts in a text: each number with its sign and the unit that follows it
+ * ("12|km", "-12|%"), or alone ("3|") when no unit does. A time such as 5:30 is one number.
+ * A minus counts as a sign only at the start of a number, not inside a range such as 10-12.
  */
 export function facts(text: string): string[] {
   const out: string[] = []
-  for (const m of text.matchAll(/(\d+(?:[.,:]\d+)*)\s*(%|\p{L}+)?/gu)) {
-    const unit = m[2] ? (UNITS[m[2].toLowerCase()] ?? '') : ''
-    out.push(`${(m[1] as string).replace(',', '.')}|${unit}`)
+  for (const m of text.matchAll(/(?:(?<![\p{L}\p{N}])([-\u2212+]))?(\d+(?:[.,:]\d+)*)\s*(%|\p{L}+)?/gu)) {
+    const sign = m[1] === '-' || m[1] === '\u2212' ? '-' : ''
+    const unit = m[3] ? (UNITS[m[3].toLowerCase()] ?? '') : ''
+    out.push(`${sign}${(m[2] as string).replace(',', '.')}|${unit}`)
   }
   return out
 }
 
+/** Two different values of the same kind in one line: which is which cannot be checked from the numbers. */
+function ambiguous(lineFacts: readonly string[]): boolean {
+  const byUnit = new Map<string, string>()
+  for (const f of lineFacts) {
+    const unit = f.slice(f.indexOf('|'))
+    const seen = byUnit.get(unit)
+    if (seen !== undefined && seen !== f) return true
+    byUnit.set(unit, f)
+  }
+  return false
+}
+
 /**
- * The model may reword, never invent or swap: every number it writes must be in the draft with
- * the same unit. "60 km" is refused when the draft says "12 km" and "60 minutes".
+ * May `to` stand in for `from`? It must state exactly the same facts: every number with its sign
+ * and unit, none added, none dropped. Where a line holds two different values of the same kind
+ * ("resting 60 bpm, maximum 180 bpm"), a rewording could swap them unseen, so that line must come
+ * back word for word.
+ */
+export function sameFacts(from: string, to: string): boolean {
+  const a = facts(from).sort()
+  const b = facts(to).sort()
+  if (a.length !== b.length || a.some((f, i) => f !== b[i])) return false
+  return !ambiguous(a) || from.trim() === to.trim()
+}
+
+/**
+ * The model may reword, never invent, drop or swap. Its answer must have the draft's shape, line
+ * for line, and each line must state the same facts as the draft's line at that position. So a
+ * number cannot move to another line, and "60 km" is refused when the draft says "12 km" and
+ * "60 minutes". Anything that cannot be verified is refused: the rule-based draft then stays.
  */
 export function checkOutput(raw: string, draft: { headline: string; lines: string[] }): { headline: string; lines: string[] } | null {
   let parsed: unknown
@@ -58,10 +87,10 @@ export function checkOutput(raw: string, draft: { headline: string; lines: strin
   if (typeof parsed !== 'object' || parsed === null) return null
   const o = parsed as { headline?: unknown; lines?: unknown }
   if (typeof o.headline !== 'string' || o.headline.length === 0 || o.headline.length > 120) return null
-  if (!Array.isArray(o.lines) || o.lines.length < 1 || o.lines.length > 4) return null
+  if (!Array.isArray(o.lines) || o.lines.length !== draft.lines.length) return null
   if (!o.lines.every((l) => typeof l === 'string' && l.length > 0 && l.length <= 240)) return null
-  const allowed = new Set(facts([draft.headline, ...draft.lines].join(' \n ')))
-  const written = facts([o.headline, ...(o.lines as string[])].join(' \n '))
-  if (written.some((f) => !allowed.has(f))) return null
-  return { headline: o.headline, lines: o.lines as string[] }
+  const lines = o.lines as string[]
+  if (!sameFacts(draft.headline, o.headline)) return null
+  if (!draft.lines.every((line, i) => sameFacts(line, lines[i] as string))) return null
+  return { headline: o.headline, lines }
 }
