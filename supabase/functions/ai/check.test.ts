@@ -6,7 +6,7 @@ const answer = (headline: string, ...lines: string[]) => JSON.stringify({ headli
 
 describe('the check on a provider answer', () => {
   it('accepts a rewording that keeps every line\'s numbers with their units', () => {
-    expect(checkOutput(answer('Steady week', 'In 60 min you ran 12 km.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).not.toBeNull()
+    expect(checkOutput(answer('Steady week', 'Your run: 12 km in 60 min.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).not.toBeNull()
   })
 
   it('wants "3 of 4" back word for word: two plain counts could be swapped unseen', () => {
@@ -86,8 +86,15 @@ describe('the check on a provider answer', () => {
     expect(sameFacts('5 km on Monday; Friday: 30 min.', 'You did 5 km on Monday; Friday: 30 min.')).toBe(true)
     // Two days and one value each side: a day cannot move to the other value.
     expect(sameFacts('5 km on Monday and 8 km on Friday.', '5 km on Friday and 8 km on Monday.')).toBe(false)
-    // One describing word cannot be swapped with anything: the order may change.
-    expect(sameFacts('You ran 12 km in 60 minutes.', 'In 60 minutes you ran 12 km.')).toBe(true)
+    // With two numbers, even one describing word could move from one to the other.
+    expect(sameFacts('5 km on Monday; 30 min.', '5 km; Monday: 30 min.')).toBe(false)
+    expect(sameFacts('5 km on Monday; 30 min.', 'You did 5 km on Monday; 30 min.')).toBe(true)
+    expect(sameFacts('You ran 12 km in 60 minutes.', 'In 60 minutes you ran 12 km.')).toBe(false)
+    expect(sameFacts('You ran 12 km in 60 minutes.', 'Your run: 12 km in 60 min.')).toBe(true)
+    // One number and one describing word: the word can go before it or after it.
+    expect(sameFacts('Sleep was 7 h.', '7 h of sleep.')).toBe(true)
+    // Without describing words the units tell the numbers apart.
+    expect(sameFacts('12 km in 60 min.', 'In 60 min, 12 km.')).toBe(true)
   })
 
   it('refuses a word the draft does not have unless it is neutral', () => {

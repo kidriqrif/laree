@@ -73,7 +73,7 @@ const SYSTEM = (feature: Draft['feature']) =>
     'Keep the words that say what each number measures (such as resting, maximum, baseline, sleep, load, fitness, form, HRV), the sport, the day, the week (this, next, last) and any direction (up, down, missed, no) next to the same number. Do not add such words.',
     'Use only the words of the line you rewrite, plus small grammar words (the, a, you, your, was, is, in, on, and). Add no verbs, adjectives, adverbs, times, bounds (over, about) or advice of your own. Where a line has words between two numbers, keep that part exactly as it is. Return every sentence with no, not or never exactly as it is.',
     'Plain, warm British English. Short sentences.',
-    'Return the same number of lines, in the same order. Each line rewrites the line at the same position and keeps all of that line\'s numbers. If a line gives two values of the same kind, return that line unchanged.',
+    'Return the same number of lines, in the same order. Each line rewrites the line at the same position and keeps all of that line\'s numbers, in the order given. If a line gives two values of the same kind, return that line unchanged.',
     'Reply with JSON only: {"headline": string of at most 90 characters, "lines": array of strings of at most 200 characters each}.',
   ].join(' ')
 

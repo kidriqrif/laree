@@ -240,8 +240,9 @@ function betweenNumbers(text: string): string[] {
  * "resting heart rate 60 bpm" cannot become "maximum heart rate 60 bpm" nor "resting HR exceeded
  * 60 bpm". Where a line holds two different values of the same kind ("resting 60 bpm, maximum 180
  * bpm"), a rewording could swap them unseen, so that line must come back word for word. Which
- * describing word goes with which number is known only from where it stands, so the numbers keep
- * their order and each word its stretch. Words between two numbers could go with either, so the
+ * describing word goes with which number is known only from where it stands, so where a line has
+ * a describing word and two numbers, or two describing words, the numbers keep their order and
+ * each word its stretch. Words between two numbers could go with either, so the
  * text between them must stay exactly as it is. Whatever cannot be verified is refused.
  */
 export function sameFacts(from: string, to: string): boolean {
@@ -255,7 +256,9 @@ export function sameFacts(from: string, to: string): boolean {
   if (!negationsKept(from, to)) return false
   const words = a.filter((m) => !isFact(m))
   if (!sameItems(words, b.filter((m) => !isFact(m)))) return false
-  if (words.length < 2 || fa.length === 0) return true
+  // One number and one describing word: the word can only go with that number. With two numbers,
+  // even a single word could move from one to the other ("5 km on Monday; 30 min").
+  if (words.length === 0 || fa.length === 0 || (fa.length === 1 && words.length === 1)) return true
   if (fa.some((f, i) => f !== fb[i])) return false
   const sa = stretches(a)
   const sb = stretches(b)
