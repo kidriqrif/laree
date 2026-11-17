@@ -11,12 +11,12 @@ permissions: {}
 jobs:
   ping:
     runs-on: ubuntu-latest
-    if: ${{ vars.SUPABASE_URL != '' }}
     steps:
       - name: Call ping()
         run: |
           curl --fail --silent --show-error -X POST "$SUPABASE_URL/rest/v1/rpc/ping" \
             -H "apikey: $SUPABASE_PUBLISHABLE_KEY" -H "Content-Type: application/json" -d '{}'
         env:
-          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          # Both are public: the app ships them. Repository variables override them.
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://lqxvjonypveaxsmcgbql.supabase.co' }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_epuJ5T4ZJRv0aD_zY-5aPg_bMqmazBE' }}

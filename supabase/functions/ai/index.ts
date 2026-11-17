@@ -2,7 +2,7 @@
 // rewrites the wording. The request carries the rule-based draft, never raw health data, names or
 // notes. Providers are any OpenAI-compatible APIs, tried in order (secret AI_PROVIDERS).
 import { asCaller, asService, cors, reply } from '../_shared/http.ts'
-import { checkOutput, safeBaseUrl } from './check.ts'
+import { checkOutput, freeOnly, safeBaseUrl } from './check.ts'
 
 interface Provider {
   name: string
@@ -10,6 +10,8 @@ interface Provider {
   model: string
   /** Name of the secret that holds this provider's key. */
   keyEnv: string
+  /** Request options only this provider knows, sent as they are; the fields set below win. */
+  extra?: Record<string, unknown>
 }
 
 interface Draft {
@@ -23,8 +25,13 @@ const DAILY_LIMIT = 40
 const TIMEOUT_MS = 20_000
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+// Free OpenRouter models, tried in turn: a busy free model answers 429 and the next one is asked.
+// Thinking is switched off where a model has it: it would spend the whole answer on thinking.
+const OPENROUTER = { baseUrl: 'https://openrouter.ai/api/v1', keyEnv: 'OPENROUTER_API_KEY' }
 const DEFAULT_PROVIDERS: Provider[] = [
-  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1', model: 'meta-llama/llama-3.3-70b-instruct:free', keyEnv: 'OPENROUTER_API_KEY' },
+  { name: 'OpenRouter', ...OPENROUTER, model: 'nvidia/nemotron-3-ultra-550b-a55b:free', extra: { reasoning: { enabled: false } } },
+  { name: 'OpenRouter', ...OPENROUTER, model: 'google/gemma-4-31b-it:free' },
+  { name: 'OpenRouter', ...OPENROUTER, model: 'google/gemma-4-26b-a4b-it:free' },
   { name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile', keyEnv: 'GROQ_API_KEY' },
   { name: 'Google', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-2.0-flash', keyEnv: 'GEMINI_API_KEY' },
 ]
@@ -46,6 +53,7 @@ function providers(): Provider[] {
   const allowLocalHttp = Deno.env.get('AI_ALLOW_LOCAL_HTTP') === '1'
   return list.filter((p) => {
     if (!p || typeof p.name !== 'string' || typeof p.baseUrl !== 'string' || typeof p.model !== 'string' || typeof p.keyEnv !== 'string') return false
+    if (p.extra !== undefined && (typeof p.extra !== 'object' || p.extra === null || Array.isArray(p.extra))) return false
     if (safeBaseUrl(p.baseUrl, allowLocalHttp)) return true
     console.error(`AI provider ${p.name} is skipped: its address is not HTTPS`)
     return false
@@ -94,6 +102,7 @@ async function ask(p: Provider, key: string, draft: Draft): Promise<Outcome> {
       redirect: 'error',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        ...p.extra,
         model: p.model,
         temperature: 0.2,
         max_tokens: 400,
@@ -136,6 +145,10 @@ Deno.serve(async (req) => {
 
   // Nothing to call: say so without using up a place.
   const chain = providers().flatMap((p) => {
+    if (!freeOnly(p)) {
+      console.error(`AI provider ${p.name} is skipped: ${p.model} or one of its fallbacks is not a free model`)
+      return []
+    }
     const key = Deno.env.get(p.keyEnv)
     return key ? [{ p, key }] : []
   })

@@ -25,7 +25,7 @@ export interface ExportInput {
   athlete: ExportAthlete;
   thresholds: LoadThresholds;
   workout: ExportWorkout;
-  /** Local date in Asia/Kuala_Lumpur as yyyy-mm-dd for a planned session. Omit for a library template. */
+  /** Local date (the time zone of domain/time.ts) as yyyy-mm-dd for a planned session. Omit for a library template. */
   date?: string;
 }
 

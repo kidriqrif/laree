@@ -8,14 +8,23 @@ import type { LareeData } from '../../../data/store.ts'
 import { DEFAULT_INTENSITY, sessionLoad } from '../../../domain/metrics/load.ts'
 import type { LoadInput, LoadThresholds } from '../../../domain/metrics/load.ts'
 import { streamDigest } from '../../../domain/metrics/streamDigest.ts'
-import { dateToDay, dayToDate, KL_OFFSET_MS } from '../../../domain/time.ts'
+import {
+  dateToDay,
+  dayToDate,
+  DEFAULT_TIME_ZONE,
+  instantOfLocal,
+  KL_OFFSET_MIN,
+  minuteOfDay,
+  offsetAt,
+  offsetMinutesAtLocal,
+  timeZone,
+} from '../../../domain/time.ts'
 import type { Activity, ActivitySummary, AthleteId, DayOffset, LoadResult, PlannedWorkout, Sport } from '../../../domain/types.ts'
 import type { ParsedActivity } from '../../../io/import/types.ts'
 import { sessionName } from '../../shared/activity/format.ts'
 import { newId } from '../../../data/ids.ts'
 
 export const NOT_PLANNED = 'none'
-const DAY_MS = 86_400_000
 export const LOG_BACK_DAYS = 7
 
 export const SPORT_NAMES: Record<Sport, string> = {
@@ -192,6 +201,22 @@ export interface QuickBuild extends QuickInput {
   matchedWorkoutId?: string
 }
 
+/**
+ * Note the zone's offset on an activity recorded outside Kuala Lumpur, so the instant it names can be
+ * known later from another zone (types.ts, Activity.utcOffsetMin). Kuala Lumpur leaves it absent.
+ */
+function noteOffset(a: Activity, ms?: number): Activity {
+  if (timeZone() !== DEFAULT_TIME_ZONE) {
+    a.utcOffsetMin = ms === undefined ? offsetMinutesAtLocal(a.day, a.startMinute) : Math.round(offsetAt(ms) / 60_000)
+  }
+  return a
+}
+
+/** The UTC instant an activity started at. */
+export function activityInstant(a: Activity): number {
+  return instantOfLocal(a.day, a.startMinute, a.utcOffsetMin ?? KL_OFFSET_MIN)
+}
+
 export function buildQuickActivity(b: QuickBuild): Activity {
   const { load, summary } = quickLoad(b)
   const a: Activity = {
@@ -209,7 +234,7 @@ export function buildQuickActivity(b: QuickBuild): Activity {
   const note = b.note.trim()
   if (note) a.notes = note
   if (b.matchedWorkoutId) a.matchedWorkoutId = b.matchedWorkoutId
-  return a
+  return noteOffset(a)
 }
 
 // ------------------------------------------------------------------ simulated sync
@@ -289,15 +314,14 @@ export function buildSyncedActivity(b: SyncBuild): Activity {
   }
   if (b.sport === 'strength' || b.sport === 'other') a.rpe = 6
   if (b.workout) a.matchedWorkoutId = b.workout.id
-  return a
+  return noteOffset(a)
 }
 
 // ------------------------------------------------------------------ imported file
 
 export function startOf(p: ParsedActivity): { day: DayOffset; startMinute: number } {
   const ms = Date.parse(p.startUtc)
-  const local = ms + KL_OFFSET_MS
-  return { day: dateToDay(new Date(ms)), startMinute: Math.floor((((local % DAY_MS) + DAY_MS) % DAY_MS) / 60_000) }
+  return { day: dateToDay(new Date(ms)), startMinute: minuteOfDay(ms) }
 }
 
 const finiteOrNull = (n: number | null | undefined): number | undefined =>
@@ -378,7 +402,7 @@ export function buildImportedActivity(b: ImportBuild): Activity {
     s ? { powerW: s.power, hrBpm: s.hr, speedMps: s.speed, distanceM: s.distance } : {},
     b.thresholds,
   )
-  return a
+  return noteOffset(a, Date.parse(p.startUtc))
 }
 
 export type ImportIssue =
@@ -395,7 +419,7 @@ export function importIssue(
   today: DayOffset,
   ignoreId?: string,
 ): ImportIssue | null {
-  const { day, startMinute } = startOf(p)
+  const { day } = startOf(p)
   if (day > today) {
     return {
       kind: 'future',
@@ -408,8 +432,14 @@ export function importIssue(
       text: `This session is from ${dayTextYear(day)}. The prototype keeps 16 weeks, from ${dayTextYear(0)}, so it can't place it.`,
     }
   }
+  // Compare instants, not local values: a saved session may have been recorded in another zone.
+  const minute = Math.floor(Date.parse(p.startUtc) / 60_000)
   const dup = data.activities.find(
-    (a) => a.athleteId === athleteId && a.id !== ignoreId && a.sport === sport && a.day === day && Math.abs(a.startMinute - startMinute) <= 1,
+    (a) =>
+      a.athleteId === athleteId &&
+      a.id !== ignoreId &&
+      a.sport === sport &&
+      Math.abs(Math.floor(activityInstant(a) / 60_000) - minute) <= 1,
   )
   if (dup) {
     return {

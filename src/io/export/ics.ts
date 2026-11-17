@@ -6,7 +6,7 @@
  */
 import { formatLoad, roundHalfAway } from '../../domain/metrics/fitness.ts';
 import type { LoadThresholds } from '../../domain/metrics/load.ts';
-import { runtimeStartEpochDay } from '../../domain/time.ts';
+import { runtimeStartEpochDay, timeZone } from '../../domain/time.ts';
 import type {
   DayOffset,
   PlainStep,
@@ -66,6 +66,13 @@ const SPORT_BASIS: Partial<Record<Sport, StepTargetKind>> = {
   run: 'pctThresholdPace',
   swim: 'pctCss',
 };
+
+/**
+ * Timed events carry the Kuala Lumpur zone when days are read there (the demo). In any other zone
+ * they are written as local ("floating") times, which a calendar reads in its own zone, daylight
+ * saving included: a 07:00 run stays at 07:00 for the person.
+ */
+const inKualaLumpur = (): boolean => timeZone() === TZID;
 
 /** Time-zone block for Asia/Kuala_Lumpur: UTC+8 all year, no daylight saving (io.md 7.4). */
 const TIMEZONE_BLOCK: string[] = [
@@ -293,6 +300,13 @@ function isoOf(day: DayOffset, startEpoch: number): string {
 
 const compactOf = (day: DayOffset, startEpoch: number): string => isoOf(day, startEpoch).replace(/-/g, '');
 
+/** An elapsed duration in minutes as RFC 5545 writes it: 69 becomes PT1H9M. */
+function elapsed(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `PT${h > 0 ? `${h}H` : ''}${m > 0 || h === 0 ? `${m}M` : ''}`;
+}
+
 /** 390 becomes 063000. */
 const clockDigits = (minute: number): string => `${pad2(Math.floor(minute / 60))}${pad2(minute % 60)}00`;
 
@@ -317,10 +331,17 @@ function sessionEvent(
   } else {
     const endMinute = session.startMinute + Math.ceil(session.plannedDurationS / 60);
     const endDay = day + Math.floor(endMinute / MINUTES_PER_DAY);
-    dates.push(`DTSTART;TZID=${TZID}:${compactOf(day, stamp.startEpoch)}T${clockDigits(session.startMinute)}`);
-    dates.push(
-      `DTEND;TZID=${TZID}:${compactOf(endDay, stamp.startEpoch)}T${clockDigits(endMinute % MINUTES_PER_DAY)}`,
-    );
+    if (inKualaLumpur()) {
+      dates.push(`DTSTART;TZID=${TZID}:${compactOf(day, stamp.startEpoch)}T${clockDigits(session.startMinute)}`);
+      dates.push(
+        `DTEND;TZID=${TZID}:${compactOf(endDay, stamp.startEpoch)}T${clockDigits(endMinute % MINUTES_PER_DAY)}`,
+      );
+    } else {
+      // A floating end would be read as a wall-clock time and gain or lose an hour across a clock
+      // change; an elapsed DURATION keeps the session as long as it is.
+      dates.push(`DTSTART:${compactOf(day, stamp.startEpoch)}T${clockDigits(session.startMinute)}`);
+      dates.push(`DURATION:${elapsed(endMinute - session.startMinute)}`);
+    }
   }
   const summary = `${SPORT_LABEL[session.sport]} · ${session.title} · ${durationLabel(session.plannedDurationS)}`;
   const description = [...summaryLines(session.steps, thresholds, session.sport === 'bike'), totalsLine(session, thresholds)];
@@ -369,7 +390,7 @@ function calendarText(calendarName: string, events: string[][], anyTimed: boolea
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeText(calendarName)}`,
   ];
-  const zone = anyTimed ? TIMEZONE_BLOCK : [];
+  const zone = anyTimed && inKualaLumpur() ? TIMEZONE_BLOCK : [];
   const lines = [...header, ...zone, ...events.flat(), 'END:VCALENDAR'].map(foldLine);
   return crlf(lines);
 }

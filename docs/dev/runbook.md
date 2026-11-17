@@ -25,8 +25,8 @@ Day-to-day running of the live app. How it works: [backend.md](backend.md).
 | `SUPABASE_DB_PASSWORD` | secret | `supabase-deploy.yml` |
 | `SUPABASE_DB_URL` | secret, the session pooler connection string | `backup.yml` |
 | `SUPABASE_SECRET_KEY` | secret, the project's secret (service role) key | `backup.yml`, to read the private file bucket |
-| `SUPABASE_PROJECT_REF` | variable | `supabase-deploy.yml` |
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | variables | `keepalive.yml`; `backup.yml` uses the URL |
+| `SUPABASE_PROJECT_REF` | variable, optional: the workflows default to `lqxvjonypveaxsmcgbql` | `supabase-deploy.yml` |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | variables. `keepalive.yml` defaults to this project's public values: set both or neither. `backup.yml` has no default and needs `SUPABASE_URL` of the same project as `SUPABASE_DB_URL` | `keepalive.yml`; `backup.yml` uses the URL |
 | `BACKUP_AGE_RECIPIENT` | variable, your age public key (`age1…`) | `backup.yml` |
 
 The deploy and backup jobs use a GitHub environment named `production`. Add the secrets there, or at repository level.
@@ -35,17 +35,17 @@ The deploy and backup jobs use a GitHub environment named `production`. Add the 
 
 | Name | What |
 |---|---|
-| `APP_ORIGIN` | The Vercel URL, so functions answer only the app (CORS) |
+| `APP_ORIGIN` | The production address, `https://laree-pi.vercel.app`, so functions answer only the app (CORS). Preview addresses are refused. |
 | `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY` | AI provider keys. Any subset works. |
 | `AI_PROVIDERS` | Optional: the provider chain as JSON (backend.md, "AI") |
 
-**Supabase, Authentication:** the site URL is `https://laree.vercel.app`; the redirect URLs are that address and the preview addresses (`https://laree-*-kidriqrifs-projects.vercel.app/**`). The email templates "Magic link" and "Confirm signup" carry `{{ .Token }}` (copy `supabase/templates/sign-in.html`, subject "Your Laree sign-in code"). OTP expiry is 600 seconds. On the free plan, Supabase allows custom templates only with custom SMTP: until then the email holds a link, not a code, and the app's code screen cannot be used.
+**Supabase, Authentication:** the site URL is `https://laree-pi.vercel.app`, the project's production domain on Vercel (`laree.vercel.app` belongs to another project); the redirect URLs are that address and the preview addresses (`https://laree-*-kidriqrifs-projects.vercel.app/**`). A project first set up with `laree.vercel.app` must change three hosted settings to `https://laree-pi.vercel.app`: the site URL, the redirect list (Authentication, URL Configuration) and the `APP_ORIGIN` function secret. Until then, sign-in links lead to the other project's site and the functions refuse the app. The email templates "Magic link" and "Confirm signup" carry `{{ .Token }}` (copy `supabase/templates/sign-in.html`, subject "Your Laree sign-in code"). OTP expiry is 600 seconds. On the free plan, Supabase allows custom templates only with custom SMTP: until then the email holds a link, not a code, and the app's code screen cannot be used.
 
-**Email:** Supabase's built-in email sends only to the project's team members, a few per hour. Before inviting anyone else, add custom SMTP under Authentication, SMTP settings. A free tier of an email service is enough for a small team. Brevo, for example, allows 300 emails a day. Use a sender address you own.
+**Email:** Supabase's built-in email sends only to the project's team members, a few per hour. Before inviting anyone else, add custom SMTP under Authentication, SMTP settings. A free tier of an email service is enough for a small team. This project uses Gmail with an app password (host `smtp.gmail.com`, port 465, about 500 emails a day). Brevo allows 300 a day. Resend needs a domain you have verified with them: it refuses a gmail.com sender.
 
 ## Common jobs
 
-**Make someone a coach.** In the SQL editor:
+**Make someone a premium coach.** Anyone may choose to coach when they start, on the free plan. To start someone as a premium coach instead, in the SQL editor:
 
 ```sql
 insert into public.invitations (email, role) values ('coach@example.com', 'coach');
@@ -53,11 +53,13 @@ insert into public.invitations (email, role) values ('coach@example.com', 'coach
 
 They sign in, then accept the invitation on the screen that follows.
 
-**Change a plan.** Coaches are always premium. For a self-coached athlete:
+**Change a plan.** Premium lifts a coach's 3-athlete limit and gives AI to their athletes; for a self-coached athlete it gives AI. For either:
 
 ```sql
-update public.profiles set plan = 'premium' where id = (select id from auth.users where email = 'athlete@example.com');
+update public.profiles set plan = 'premium' where id = (select id from auth.users where email = 'someone@example.com');
 ```
+
+**See who coaches on the free plan.** `select p.display_name, u.email, (select count(*) from public.coach_athletes l where l.coach_id = p.id and l.status = 'active') as athletes from public.profiles p join auth.users u on u.id = p.id where p.role = 'coach' and p.plan = 'free';`
 
 **See what broke.** `select * from public.client_errors order by at desc limit 50;`
 

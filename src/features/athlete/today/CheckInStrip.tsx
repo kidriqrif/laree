@@ -26,7 +26,7 @@ function Strip({ athleteId, day }: CheckInStripProps) {
   const mine = checkIns.filter((c) => c.athleteId === athleteId)
   const existing = mine.find((c) => c.day === day)
   const wasSkipped = skipped.some((s) => s.athleteId === athleteId && s.day === day)
-  // The window closes at midnight Malaysia time, when today's day offset rolls on.
+  // The window closes at local midnight, when today's day offset rolls on.
   const editable = day === currentDay()
 
   if (existing) {

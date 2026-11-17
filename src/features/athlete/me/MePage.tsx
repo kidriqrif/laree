@@ -5,7 +5,7 @@ import { isLive } from '../../../app/mode.ts'
 import { useViewer } from '../../../app/viewer.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
-import { now } from '../../../domain/time.ts'
+import { now, timeZone } from '../../../domain/time.ts'
 import type { ThemePreference } from '../../../domain/types.ts'
 import { Button, Card, SPORT_LABEL } from '../../../ui/core/index.ts'
 import { SegmentedControl } from '../../../ui/form/index.ts'
@@ -33,13 +33,14 @@ const SECTIONS = [
   isLive ? ['account', 'Account'] : ['prototype', 'Prototype'],
 ] as const
 
+/** The last sync, in the time zone days are read in (domain/time.ts). */
 const timeFmt = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
   day: 'numeric',
   month: 'short',
   hour: '2-digit',
   minute: '2-digit',
-  timeZone: 'Asia/Kuala_Lumpur',
+  timeZone: timeZone(),
 })
 
 function jump(id: string) {

@@ -88,6 +88,58 @@
     accent-color: var(--color-action);
   }
 
+  .choices {
+    display: grid;
+    gap: var(--space-3);
+    padding: 0;
+    border: 0;
+  }
+
+  .choices legend {
+    margin-block-end: var(--space-3);
+    padding: 0;
+  }
+
+  /* A whole card is the target for its radio button. */
+  .choice {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-3);
+    align-items: start;
+    padding: var(--space-4);
+    border: 1px solid var(--color-control-border);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    cursor: pointer;
+  }
+
+  .choice > span {
+    display: grid;
+    gap: var(--space-1);
+    font-weight: 600;
+  }
+
+  .choice > span > span {
+    font-weight: 400;
+  }
+
+  .choice:has(input:checked) {
+    border-color: var(--color-action);
+    box-shadow: inset 0 0 0 1px var(--color-action);
+  }
+
+  .choice input {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    margin-block-start: 0.15rem;
+    accent-color: var(--color-action);
+  }
+
+  .choice input:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
   .primary {
     justify-self: start;
     min-block-size: var(--target-min);

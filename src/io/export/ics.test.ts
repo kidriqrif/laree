@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { setTimeZone } from '../../domain/time.ts';
 import type { LoadThresholds } from '../../domain/metrics/load.ts';
 import type { PlannedWorkout, Race } from '../../domain/types.ts';
 import { escapeText, durationLabel, foldLine, sessionIcs, weekIcs } from './ics.ts';
@@ -173,6 +174,27 @@ describe('sessionIcs', () => {
     expect(lines).toContain('DTEND;TZID=Asia/Kuala_Lumpur:20261110T073900');
     expect(lines).toContain('TRANSP:OPAQUE');
     expect(text).toMatchSnapshot();
+  });
+
+  it('writes local (floating) times outside Kuala Lumpur, with no TZID or VTIMEZONE', () => {
+    setTimeZone('Europe/London');
+    try {
+      const file = sessionIcs({
+        athlete: ATHLETE,
+        session: thresholdSession({ startMinute: 390 }),
+        thresholds: THRESHOLDS,
+        now: NOW,
+      });
+      const lines = unfold(new TextDecoder().decode(file.bytes));
+      expect(lines).not.toContain('BEGIN:VTIMEZONE');
+      expect(lines.some((l) => l.includes('TZID'))).toBe(false);
+      expect(lines.find((l) => l.startsWith('DTSTART'))).toMatch(/^DTSTART:\d{8}T063000$/);
+      // An elapsed duration, so a clock change on the day cannot stretch or shrink the session.
+      expect(lines).toContain('DURATION:PT1H9M');
+      expect(lines.some((l) => l.startsWith('DTEND'))).toBe(false);
+    } finally {
+      setTimeZone(null);
+    }
   });
 
   it('writes the step summary, totals and coach note into DESCRIPTION, escaped and unfolded', () => {

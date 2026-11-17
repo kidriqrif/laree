@@ -73,7 +73,7 @@ describe('check-in sheet and strip', () => {
     expect(screen.getByText('No check-in today.')).toBeTruthy()
   })
 
-  it('allows editing today and closes the window at midnight Malaysia time', () => {
+  it('allows editing today and closes the window at local midnight', () => {
     const { rerender } = mount()
     act(() => {
       useLaree.getState().saveCheckIn({ id: 'x', athleteId: ME, day: currentDay(), sleepHours: 7, soreness: 2, mood: 4 })
