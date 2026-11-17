@@ -57,21 +57,24 @@ function epoch(): string | null {
 
 /**
  * Forget the AI wording kept on this device (on sign-out and account deletion). A request still
- * on its way, in this tab or another, then neither keeps nor shows its answer.
+ * on its way, in this tab or another, then neither keeps nor shows its answer. False when the
+ * wording could not be removed.
+ *
+ * The mark goes first, then the removal, each tried on its own: a request that writes after the
+ * removal sees the new mark when it checks again (`polish`), and removes its write.
  */
-export function clearPolishedCache(): void {
+export function clearPolishedCache(): boolean {
   generation++
-  // The cache goes first and on its own: a full storage can refuse the mark below, but never
-  // keeps the removal from being tried.
-  try {
-    localStorage.removeItem(CACHE_KEY)
-  } catch {
-    // No storage: nothing kept, nothing to clear.
-  }
   try {
     localStorage.setItem(EPOCH_KEY, crypto.randomUUID())
   } catch {
-    // Without the mark, other tabs are not told; this tab's own requests still see `generation`.
+    // A full storage: other tabs are not told. The removal below is still tried.
+  }
+  try {
+    localStorage.removeItem(CACHE_KEY)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -98,8 +101,19 @@ export async function polish<T extends TextOut>(out: T): Promise<T | null> {
   if (error || !body?.ok) return null
   // Signed out or deleted while the request was on its way: the answer belongs to nobody here.
   // Storage is shared between tabs, so this also sees a sign-out made in another tab.
-  if (asked !== generation || askedEpoch !== epoch()) return null
+  const stale = () => asked !== generation || askedEpoch !== epoch()
+  if (stale()) return null
   const p: Polished = { headline: body.headline, lines: body.lines, provider: body.provider, model: body.model }
   writeCache(key, p)
+  // Another tab can clear between the check above and the write. It sets its mark before it
+  // removes, so the mark has changed by now if it did: take the write back.
+  if (stale()) {
+    try {
+      localStorage.removeItem(CACHE_KEY)
+    } catch {
+      // Nothing more can be done here; the clearing tab removes it too.
+    }
+    return null
+  }
   return apply(out, p)
 }

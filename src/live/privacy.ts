@@ -35,6 +35,8 @@ export const CONSENT_NOT_RECORDED = 'Your latest AI choice has not reached the s
 export async function exportMyData(account: Account): Promise<Blob> {
   if (!(await aiConsentRecorded(account.uid))) throw new Error(CONSENT_NOT_RECORDED)
   await sendWaitingFiles(account.uid)
+  // Rejects when the device's file queue cannot be read: the file must not say nothing is waiting.
+  const waiting = await waitingFileNames(account.uid)
   const db = supabase()
   const backend = supabaseBackend(db)
   const records: Record<string, unknown[]> = {}
@@ -43,11 +45,10 @@ export async function exportMyData(account: Account): Promise<Blob> {
     const mine = rows.filter((r) => r.key === account.uid && !r.deleted).map((r) => ({ id: r.id, day: r.day, ...r.body }))
     if (mine.length > 0) records[spec.table] = [...(records[spec.table] ?? []), ...mine]
   }
-  const [consents, links, files, waiting] = await Promise.all([
+  const [consents, links, files] = await Promise.all([
     db.from('consents').select('purpose, granted, text_version, at').eq('user_id', account.uid).order('at'),
     db.from('coach_athletes').select('coach_id, athlete_id, status, ai_access, started_at, ended_at'),
     fileNames(account.uid),
-    waitingFileNames(account.uid),
   ])
   for (const r of [consents, links]) if (r.error) throw new Error(r.error.message)
   const doc = {
@@ -87,8 +88,7 @@ export async function deleteMyAccount(): Promise<string | null> {
   const uid = who.session?.user.id
   const { data, error } = await supabase().functions.invoke('delete-account', { body: { confirm: 'DELETE' } })
   if (error || !(data as { ok?: boolean } | null)?.ok) return 'Your account could not be deleted. Try again, or contact the owner.'
-  clearPolishedCache()
-  let left = false
+  let left = !clearPolishedCache()
   if (uid) {
     // The sync stops first: a send on its way must not save the queue again after it is removed.
     await discardUnsent(uid).catch(() => {

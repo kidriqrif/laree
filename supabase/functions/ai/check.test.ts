@@ -41,7 +41,7 @@ describe('the check on a provider answer', () => {
     expect(checkOutput(answer('Heart rate', 'Your resting heart rate was 60 bpm; your maximum was 180 bpm.'), hr)).toBeNull()
     expect(checkOutput(answer('Your heart rate', hr.lines[0] as string), hr)).not.toBeNull()
     // The same value twice is not two values.
-    expect(sameFacts('You ran 5 km on Monday and 5 km on Friday.', 'On Monday and Friday you ran 5 km and 5 km.')).toBe(true)
+    expect(sameFacts('You ran 5 km on Monday and 5 km on Friday.', 'You ran 5 km on Monday, and 5 km on Friday as well.')).toBe(true)
   })
 
   it('keeps what a number measures', () => {
@@ -64,6 +64,21 @@ describe('the check on a provider answer', () => {
     expect(sameFacts(line, 'Your resting HR was 52 bpm and you slept 7 h.')).toBe(true)
     // The same numbers and words, but the words now name the other number.
     expect(sameFacts(line, 'Sleep 52 bpm and resting HR 7 h.')).toBe(false)
+    // A single value: the words before it and after it stay where they are.
+    expect(
+      sameFacts(
+        'Resting heart rate was 60 bpm; maximum heart rate was not recorded.',
+        'Maximum heart rate was 60 bpm; resting heart rate was not recorded.',
+      ),
+    ).toBe(false)
+    expect(
+      sameFacts(
+        'Resting heart rate was 60 bpm; maximum heart rate was not recorded.',
+        'Your heart rate at rest was 60 bpm. Maximum heart rate was not recorded.',
+      ),
+    ).toBe(true)
+    // Two days and one value each side: a day cannot move to the other value.
+    expect(sameFacts('5 km on Monday and 8 km on Friday.', '5 km on Friday and 8 km on Monday.')).toBe(false)
     // One describing word cannot be swapped with anything: the order may change.
     expect(sameFacts('You ran 12 km in 60 minutes.', 'In 60 minutes you ran 12 km.')).toBe(true)
   })

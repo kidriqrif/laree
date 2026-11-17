@@ -715,6 +715,59 @@ describe('one send at a time', () => {
     expect(store.saved.map((o) => o.body)).toEqual([{ id: 'c-1', v: 2 }])
     expect(here.pending.map((o) => o.body)).toEqual([{ id: 'c-1', v: 2 }])
   })
+
+  it('lets one tab send at a time, so an older write cannot reach the server after a newer one', async () => {
+    const store = memoryOutboxStore()
+    const here = new Outbox(store)
+    const there = new Outbox(store)
+    await here.load()
+    await there.load()
+    await here.add([{ ...op, body: { id: 'c-1', v: 1 } }])
+    const server: unknown[] = []
+    let release: () => void = () => undefined
+    let started: () => void = () => undefined
+    const onItsWay = new Promise<void>((resolve) => (started = resolve))
+    // This tab's send of v1 is slow to arrive.
+    const slow = here.flush(async (_t, _s, ops) => {
+      started()
+      await new Promise<void>((resolve) => (release = resolve))
+      server.push(...ops.map((o) => o.body))
+      return { ok: true }
+    })
+    await onItsWay
+    // Another tab changes the same row and sends while v1 is still on its way.
+    await there.add([{ ...op, body: { id: 'c-1', v: 2 } }])
+    const fast = there.flush(async (_t, _s, ops) => {
+      server.push(...ops.map((o) => o.body))
+      return { ok: true }
+    })
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(server).toEqual([])
+    release()
+    await Promise.all([slow, fast])
+    expect(server.at(-1)).toEqual({ id: 'c-1', v: 2 })
+    expect(store.saved).toEqual([])
+  })
+
+  it('does not replay a sent write over a newer one when the saves before the send failed', async () => {
+    const inner = memoryOutboxStore()
+    let failing = 0
+    const store = {
+      ...inner,
+      update: (change: (saved: Op[]) => Op[]) => (failing-- > 0 ? Promise.reject(new Error('full')) : inner.update(change)),
+    }
+    const here = new Outbox(store)
+    await here.load()
+    // Two saves fail: the write of v1 is still due when its send begins.
+    failing = 2
+    await here.add([{ ...op, body: { id: 'c-1', v: 1 } }])
+    await here.flush(async () => {
+      // Another tab saves v2 for the same row while v1 is on its way.
+      await inner.update((q) => [...q.filter((o) => o.id !== 'c-1'), { ...op, body: { id: 'c-1', v: 2 } }])
+      return { ok: true }
+    })
+    expect(inner.saved.map((o) => o.body)).toEqual([{ id: 'c-1', v: 2 }])
+  })
 })
 
 describe('paged pulls', () => {

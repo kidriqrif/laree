@@ -73,9 +73,21 @@ curl -fsS -o /dev/null -X DELETE "${auth[@]}" "$object"
 curl -fsS "${auth[@]}" -o "$work/restored" "$object"
 cmp -s "$work/second" "$work/restored" || fail "the restored file differs"
 
-# 5. The secret key never goes to an address with a user part, or over HTTP to another machine.
-for url in 'http://localhost:123@example.invalid' 'http://example.invalid' 'http://127.0.0.1.example.invalid:1'; do
-  if SUPABASE_URL="$url" "$here/backup.sh" "$work/bad" > /dev/null 2>&1; then fail "backup.sh accepted $url"; fi
-  if SUPABASE_URL="$url" "$here/restore-files.sh" "$work/two" > /dev/null 2>&1; then fail "restore-files.sh accepted $url"; fi
+# 5. The secret key never goes to an address with a user part, over HTTP to another machine, or
+#    anywhere but a bare origin. The check itself is asked, so a refusal cannot be mistaken for a
+#    failed connection; both scripts are then run once with such an address.
+# shellcheck source=scripts/supabase-url.sh
+. "$here/supabase-url.sh"
+for url in 'http://localhost:123@example.invalid' 'https://user@example.invalid' 'https://user:pw@example.invalid' \
+  'http://example.invalid' 'http://localhost.example.com' 'http://127.0.0.1.example.invalid:1' \
+  'https://example.invalid/path' 'http://localhost:1/x' 'http://127.0.0.1:1\@example.invalid' 'ftp://example.invalid'; do
+  if check_supabase_url "$url" 2> /dev/null; then fail "the address check accepted $url"; fi
+done
+for url in 'https://example.supabase.co' 'https://example.supabase.co/' 'http://localhost:54321' 'http://127.0.0.1:54321'; do
+  check_supabase_url "$url" 2> /dev/null || fail "the address check refused $url"
+done
+for script in backup.sh restore-files.sh; do
+  out="$(SUPABASE_URL='https://user@example.invalid' "$here/$script" "$work/two" 2>&1)" && fail "$script ran with a user part"
+  [[ "$out" == *"user information"* ]] || fail "$script did not refuse the address before connecting"
 done
 echo "Backup and restore work, and unsafe addresses are refused."

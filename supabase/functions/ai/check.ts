@@ -129,23 +129,44 @@ function ambiguous(lineFacts: readonly string[]): boolean {
 }
 
 /**
+ * The describing words between the numbers, stretch by stretch: before the first number, between
+ * each pair, after the last. Within a stretch the order is free ("heart rate at rest" is "resting
+ * HR"); across stretches it is not, because which number a word goes with is seen only from that.
+ */
+function stretches(marked: readonly string[]): string[][] {
+  const out: string[][] = [[]]
+  for (const m of marked) {
+    if (isFact(m)) out.push([])
+    else out[out.length - 1]?.push(m)
+  }
+  return out
+}
+
+/**
  * May `to` stand in for `from`? It must state exactly the same facts: every number with its sign
  * and unit, none added, none dropped. It must keep the words that say what the numbers measure
  * (`DESCRIBES`), so "resting heart rate 60 bpm" cannot become "maximum heart rate 60 bpm". Where
  * a line holds two different values of the same kind ("resting 60 bpm, maximum 180 bpm"), a
  * rewording could swap them unseen, so that line must come back word for word. Where it holds
- * several different values and several describing words, which word goes with which number is
- * known only from their order, so that order must stay. Whatever cannot be verified is refused.
+ * two or more describing words, which word goes with which number is known only from where they
+ * stand, so the numbers keep their order and each word stays in its stretch between them. One
+ * describing word cannot go with the wrong number in a way that changes what is said, so it may
+ * move. Whatever cannot be verified is refused.
  */
 export function sameFacts(from: string, to: string): boolean {
   const a = marks(from)
   const b = marks(to)
   const fa = a.filter(isFact)
-  if (!sameItems(fa, b.filter(isFact))) return false
+  const fb = b.filter(isFact)
+  if (!sameItems(fa, fb)) return false
   if (ambiguous(fa)) return from.trim() === to.trim()
   const words = a.filter((m) => !isFact(m))
   if (!sameItems(words, b.filter((m) => !isFact(m)))) return false
-  return new Set(fa).size < 2 || words.length < 2 || a.join(' ') === b.join(' ')
+  if (words.length < 2 || fa.length === 0) return true
+  if (fa.some((f, i) => f !== fb[i])) return false
+  const sa = stretches(a)
+  const sb = stretches(b)
+  return sa.every((part, i) => sameItems(part, sb[i] ?? []))
 }
 
 /**

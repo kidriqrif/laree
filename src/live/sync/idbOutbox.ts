@@ -33,6 +33,9 @@ export function idbOutboxStore(uid: string): OutboxStore {
       if (ops.length === 0) await del(key, store)
       else await set(key, [...ops], store)
     },
+    // One sending tab at a time for this account (Web Locks, shared by the site's tabs). Without
+    // the API (old browsers), sends are not ordered across tabs.
+    exclusive: (work) => (globalThis.navigator?.locks ? navigator.locks.request(`laree-outbox:${uid}`, work) : work()),
     // Read and write in one transaction: another tab's save cannot land in between and be lost.
     update: async (change) => {
       let next: Op[] = []

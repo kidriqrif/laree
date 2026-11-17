@@ -76,4 +76,45 @@ describe('AI wording on the device', () => {
     }
     expect(localStorage.getItem(CACHE_KEY)).toBeNull()
   })
+
+  it('takes its write back when another tab clears between the check and the write', async () => {
+    vi.resetModules()
+    const otherTab = await import('./aiText.ts')
+    invoke.mockResolvedValue(answer)
+    const real = localStorage.setItem.bind(localStorage)
+    let cleared = false
+    // The other tab clears at the worst moment: just before this tab writes the cache.
+    const racing = (key: string, value: string) => {
+      if (key === CACHE_KEY && !cleared) {
+        cleared = true
+        otherTab.clearPolishedCache()
+      }
+      real(key, value)
+    }
+    Object.defineProperty(localStorage, 'setItem', { value: racing, configurable: true, writable: true })
+    try {
+      expect(await polish(draft)).toBeNull()
+    } finally {
+      Object.defineProperty(localStorage, 'setItem', { value: real, configurable: true, writable: true })
+    }
+    expect(cleared).toBe(true)
+    expect(localStorage.getItem(CACHE_KEY)).toBeNull()
+  })
+
+  it('says when the wording could not be removed', () => {
+    const real = localStorage.removeItem.bind(localStorage)
+    Object.defineProperty(localStorage, 'removeItem', {
+      value: () => {
+        throw new DOMException('blocked', 'SecurityError')
+      },
+      configurable: true,
+      writable: true,
+    })
+    try {
+      expect(clearPolishedCache()).toBe(false)
+    } finally {
+      Object.defineProperty(localStorage, 'removeItem', { value: real, configurable: true, writable: true })
+    }
+    expect(clearPolishedCache()).toBe(true)
+  })
 })

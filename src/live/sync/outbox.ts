@@ -20,6 +20,13 @@ export interface OutboxStore {
    * meanwhile is kept. Resolves to the saved queue. A store without it is read, then saved.
    */
   update?(change: (saved: Op[]) => Op[]): Promise<Op[]>
+  /**
+   * Run `work` while no other tab sends this queue. A send holds it from reading the queue until
+   * the sent writes are removed, so another tab never sends a write that is still on its way from
+   * here, and an older write cannot reach the server after a newer one sent from another tab.
+   * Writes from another device are not covered: the last request to arrive wins there.
+   */
+  exclusive?<T>(work: () => Promise<T>): Promise<T>
 }
 
 /**
@@ -114,6 +121,14 @@ export class Outbox {
 
   /** Apply a change here now, and to the device's queue on the next save. */
   private record(change: Change): void {
+    if (change.kind === 'drop') {
+      // A write that was sent or refused is no longer this tab's to queue: a put of it still due
+      // would otherwise replace a newer write to the same row that another tab saved meanwhile.
+      const gone = new Set(change.ops.map(sameWrite))
+      this.changes = this.changes
+        .map((c) => (c.kind === 'put' ? { kind: 'put' as const, ops: c.ops.filter((o) => !gone.has(sameWrite(o))) } : c))
+        .filter((c) => c.kind === 'drop' || c.ops.length > 0)
+    }
     this.changes.push(change)
     this.ops = apply(this.ops, [change])
   }
@@ -197,7 +212,8 @@ export class Outbox {
    * replaces another shares this queue, and its send starts only when the older one has ended.
    */
   flush(send: SendBatch, cancelled: () => boolean = () => false): Promise<FlushResult> {
-    const run = this.sending.then(() => this.sendAll(send, cancelled))
+    const exclusive = this.store.exclusive?.bind(this.store)
+    const run = this.sending.then(() => (exclusive ? exclusive(() => this.sendAll(send, cancelled)) : this.sendAll(send, cancelled)))
     this.sending = run.catch(() => undefined)
     return run
   }
@@ -271,9 +287,15 @@ async function attempt(send: SendBatch, ops: readonly Op[]): Promise<SendResult>
   }
 }
 
-/** A store in memory, for tests. */
-export function memoryOutboxStore(initial: Op[] = []): OutboxStore & { saved: Op[] } {
+/** A store in memory, for tests. Outboxes on one store share its lock, as tabs share a queue. */
+export function memoryOutboxStore(initial: Op[] = []): OutboxStore & { saved: Op[]; update: NonNullable<OutboxStore['update']> } {
+  let held: Promise<unknown> = Promise.resolve()
   const box = {
+    exclusive<T>(work: () => Promise<T>): Promise<T> {
+      const run = held.then(work)
+      held = run.catch(() => undefined)
+      return run
+    },
     saved: [...initial],
     load: async () => structuredClone(box.saved),
     save: async (ops: readonly Op[]) => {
