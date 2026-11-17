@@ -102,14 +102,10 @@ export function fileSender(queue: FileQueue, upload: Upload) {
     send,
     /**
      * The names of this account's files still waiting on this device, as the bucket would list
-     * them. Empty when the queue cannot be read: without it nothing can be waiting there.
+     * them. Rejects when the queue cannot be read: that does not show that nothing is waiting.
      */
     async waiting(uid: string): Promise<string[]> {
-      try {
-        return (await waitingFor(uid)).map((w) => w.path.slice(uid.length + 1)).sort()
-      } catch {
-        return []
-      }
+      return (await waitingFor(uid)).map((w) => w.path.slice(uid.length + 1)).toSorted()
     },
     /**
      * Forget this account's waiting files on this device (after the account is deleted). False

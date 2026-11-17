@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(76);
+select plan(78);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -193,6 +193,12 @@ set local role authenticated;
 select lives_ok(
   $$insert into storage.objects (bucket_id, name) values ('activity-files', '00000000-0000-4000-a000-0000000000a1/act-1.fit')$$,
   'an athlete uploads into their own folder');
+select throws_ok(
+  $$insert into storage.objects (bucket_id, name) values ('activity-files', '00000000-0000-4000-a000-0000000000a1/a..fit')$$,
+  '42501', null, 'a file name with two dots in a row is refused: the backup refuses it');
+select throws_ok(
+  $$update storage.objects set name = '00000000-0000-4000-a000-0000000000a1/..' where name = '00000000-0000-4000-a000-0000000000a1/act-1.fit'$$,
+  '42501', null, 'and a file cannot be renamed to one');
 reset role;
 select pg_temp.login('00000000-0000-4000-a000-00000000000a', 'coach.a@example.test');
 set local role authenticated;

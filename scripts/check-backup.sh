@@ -17,8 +17,15 @@ name="00000000-0000-4000-a000-$(printf '%012d' $$)/check.fit"
 object="$SUPABASE_URL/storage/v1/object/activity-files/$name"
 auth=(-H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY")
 upload() { curl -fsS -o /dev/null -X POST "${auth[@]}" -H 'x-upsert: true' -H 'Content-Type: application/octet-stream' --data-binary "@$1" "$object"; }
+bad="${name%/*}/a..fit"
+# A row with no bytes behind it, so it is removed in SQL; storage allows that only when asked.
+drop_bad() {
+  psql "$DB_URL" -v ON_ERROR_STOP=1 -qc "set storage.allow_delete_query = 'true';
+    delete from storage.objects where bucket_id = 'activity-files' and name = '$bad'"
+}
 cleanup() {
   curl -fsS -o /dev/null -X DELETE "${auth[@]}" "$object" || true
+  drop_bad || true
   rm -rf "$work"
 }
 trap cleanup EXIT
@@ -49,13 +56,24 @@ SUPABASE_CLI="$work/cli" "$here/backup.sh" "$work/two" > /dev/null 2> "$work/two
 grep -q 'changed while the rows were dumped' "$work/two.log" || fail "the change during the dump went unseen"
 cmp -s "$work/second" "$work/two/files/$name" || fail "the backup kept the replaced bytes"
 
-# 3. The restore puts the file back.
+# 3. A name the backup does not accept (made before the upload rules refused it) is left out and
+#    listed, and the backup still succeeds.
+psql "$DB_URL" -v ON_ERROR_STOP=1 -qc "insert into storage.objects (bucket_id, name) values ('activity-files', '$bad')"
+refuse_ok=0
+"$here/backup.sh" "$work/three" > /dev/null 2> "$work/three.log" && refuse_ok=1
+drop_bad
+[ "$refuse_ok" = 1 ] || fail "a refused name stopped the backup"
+grep -qx "$bad" "$work/three/files.refused.txt" || fail "the refused name is not listed"
+grep -qx "$bad" "$work/three/files.txt" && fail "the refused name was backed up"
+[ ! -e "$work/three/files/$bad" ] || fail "the refused name was written to disk"
+
+# 4. The restore puts the file back.
 curl -fsS -o /dev/null -X DELETE "${auth[@]}" "$object"
 "$here/restore-files.sh" "$work/two" > /dev/null
 curl -fsS "${auth[@]}" -o "$work/restored" "$object"
 cmp -s "$work/second" "$work/restored" || fail "the restored file differs"
 
-# 4. The secret key never goes to an address with a user part, or over HTTP to another machine.
+# 5. The secret key never goes to an address with a user part, or over HTTP to another machine.
 for url in 'http://localhost:123@example.invalid' 'http://example.invalid' 'http://127.0.0.1.example.invalid:1'; do
   if SUPABASE_URL="$url" "$here/backup.sh" "$work/bad" > /dev/null 2>&1; then fail "backup.sh accepted $url"; fi
   if SUPABASE_URL="$url" "$here/restore-files.sh" "$work/two" > /dev/null 2>&1; then fail "restore-files.sh accepted $url"; fi

@@ -61,11 +61,17 @@ function epoch(): string | null {
  */
 export function clearPolishedCache(): void {
   generation++
+  // The cache goes first and on its own: a full storage can refuse the mark below, but never
+  // keeps the removal from being tried.
   try {
-    localStorage.setItem(EPOCH_KEY, crypto.randomUUID())
     localStorage.removeItem(CACHE_KEY)
   } catch {
     // No storage: nothing kept, nothing to clear.
+  }
+  try {
+    localStorage.setItem(EPOCH_KEY, crypto.randomUUID())
+  } catch {
+    // Without the mark, other tabs are not told; this tab's own requests still see `generation`.
   }
 }
 

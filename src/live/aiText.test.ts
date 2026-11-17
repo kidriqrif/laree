@@ -58,4 +58,22 @@ describe('AI wording on the device', () => {
     invoke.mockResolvedValue(answer)
     expect((await polish(draft))?.headline).toBe('Steady week')
   })
+
+  it('removes the kept wording even when the storage is too full for the mark', async () => {
+    invoke.mockResolvedValue(answer)
+    await polish(draft)
+    expect(localStorage.getItem(CACHE_KEY)).not.toBeNull()
+    const real = localStorage.setItem.bind(localStorage)
+    const full = () => {
+      throw new DOMException('full', 'QuotaExceededError')
+    }
+    Object.defineProperty(localStorage, 'setItem', { value: full, configurable: true, writable: true })
+    try {
+      expect(() => localStorage.setItem('x', 'y')).toThrow('full')
+      clearPolishedCache()
+    } finally {
+      Object.defineProperty(localStorage, 'setItem', { value: real, configurable: true, writable: true })
+    }
+    expect(localStorage.getItem(CACHE_KEY)).toBeNull()
+  })
 })

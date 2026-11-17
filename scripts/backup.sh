@@ -14,7 +14,8 @@
 # file was added, deleted or replaced in place from before the dump began until the last download
 # ended, and the files are exactly those the dump's moment saw. Every inventoried file must
 # download with its recorded size. Otherwise everything is done again, up to three times, and
-# then the backup fails.
+# then the backup fails. Files with names the backup does not accept are left out and listed in
+# <dir>/files.refused.txt.
 set -euo pipefail
 
 dir="${1:?usage: backup.sh <dir>}"
@@ -32,16 +33,23 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 # One line per file: name, version, size in bytes, last change. Tabs never occur in a name (shape).
+# A name of another shape is never written to disk (".." would climb out of <dir>): it goes to
+# <file>.refused instead, and the backup goes on without it. The upload rules refuse such names
+# (20261117000000_file_names.sql), so one can only be older than them or put there by hand.
 inventory() {
   psql "$DB_URL" -v ON_ERROR_STOP=1 -At -F $'\t' -c "
     select name, coalesce(version, ''), coalesce(metadata->>'size', ''), updated_at
-    from storage.objects where bucket_id = '$bucket' order by name" > "$1"
-  while IFS=$'\t' read -r name _; do
-    if ! [[ "$name" =~ $shape ]] || [[ "$name" == *..* ]]; then
-      echo "Refusing an unexpected file name in the bucket: $name" >&2
-      exit 1
+    from storage.objects where bucket_id = '$bucket' order by name" > "$1.all"
+  : > "$1"
+  : > "$1.refused"
+  while IFS= read -r line; do
+    name="${line%%$'\t'*}"
+    if [[ "$name" =~ $shape ]] && [[ "$name" != *..* ]]; then
+      printf '%s\n' "$line" >> "$1"
+    else
+      printf '%s\n' "$name" >> "$1.refused"
     fi
-  done < "$1"
+  done < "$1.all"
 }
 
 # Download every file of an inventory into a fresh <dir>/files. Fails on the first file that
@@ -70,18 +78,23 @@ for try in 1 2 3; do
   inventory "$work/before"
   "${cli[@]}" db dump --db-url "$DB_URL" --data-only --schema public,auth -f "$dir/data.sql"
   inventory "$work/after"
-  if ! cmp -s "$work/before" "$work/after"; then
+  if ! cmp -s "$work/before.all" "$work/after.all"; then
     echo "The files changed while the rows were dumped" >&2
     continue
   fi
   fetch "$work/after" || continue
   inventory "$work/end"
-  if ! cmp -s "$work/after" "$work/end"; then
+  if ! cmp -s "$work/after.all" "$work/end.all"; then
     echo "The files changed while they were downloaded" >&2
     continue
   fi
   cut -f1 "$work/after" > "$dir/files.txt"
   echo "Backed up the rows and $(grep -c . "$dir/files.txt" || true) activity files"
+  if [ -s "$work/after.refused" ]; then
+    cp "$work/after.refused" "$dir/files.refused.txt"
+    echo "Left out $(grep -c . "$dir/files.refused.txt") files whose names the backup does not accept; they are listed in files.refused.txt:" >&2
+    cat "$dir/files.refused.txt" >&2
+  fi
   exit 0
 done
 echo "The backup failed: the files kept changing, or one could not be downloaded. Run it again." >&2

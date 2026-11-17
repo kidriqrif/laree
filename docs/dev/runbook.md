@@ -39,7 +39,7 @@ The deploy and backup jobs use a GitHub environment named `production`. Add the 
 | `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY` | AI provider keys. Any subset works. |
 | `AI_PROVIDERS` | Optional: the provider chain as JSON (backend.md, "AI") |
 
-**Supabase, Authentication:** the site URL and redirect URLs are the Vercel URL. The email templates "Magic link" and "Confirm signup" carry `{{ .Token }}` (copy `supabase/templates/sign-in.html`). OTP expiry is 600 seconds.
+**Supabase, Authentication:** the site URL is `https://laree.vercel.app`; the redirect URLs are that address and the preview addresses (`https://laree-*-kidriqrifs-projects.vercel.app/**`). The email templates "Magic link" and "Confirm signup" carry `{{ .Token }}` (copy `supabase/templates/sign-in.html`, subject "Your Laree sign-in code"). OTP expiry is 600 seconds. On the free plan, Supabase allows custom templates only with custom SMTP: until then the email holds a link, not a code, and the app's code screen cannot be used.
 
 **Email:** Supabase's built-in email sends only to the project's team members, a few per hour. Before inviting anyone else, add custom SMTP under Authentication, SMTP settings. A free tier of an email service is enough for a small team. Brevo, for example, allows 300 emails a day. Use a sender address you own.
 
@@ -71,8 +71,8 @@ A backup holds the rows (`dump/data.sql`: the app's tables and the accounts) and
 
 1. **Get the backup.** Download the newest `laree-backup` artifact from the "Nightly backup" workflow run and decrypt it with your age key: `age -d -i key.txt laree-YYYY-MM-DD.tar.gz.age | tar -xz`
 2. **Make an empty project** in `ap-southeast-1` and note its project ref, database password, URL and keys.
-3. **Apply the migrations.** `npx supabase link --project-ref NEW_REF`, then `npx supabase db push`. This creates the tables, the access rules, the sign-up trigger on `auth.users`, and the `activity-files` bucket with its rules. A data dump contains none of these.
-4. **Deploy the functions and their secrets.** `npx supabase functions deploy ai delete-account`, then set every secret from "Settings to keep in place" with `npx supabase secrets set`. Without this step, AI and "Delete my account" do not work in the restored app.
+3. **Apply the migrations.** `npx supabase link --project-ref NEW_REF`, then `npx supabase db push --remote` (without `--remote` the CLI pushes to the local stack). This creates the tables, the access rules, the sign-up trigger on `auth.users`, and the `activity-files` bucket with its rules. A data dump contains none of these.
+4. **Deploy the functions and their secrets.** `npx supabase functions deploy ai delete-account --use-api`, then set every secret from "Settings to keep in place" with `npx supabase secrets set`. Without this step, AI and "Delete my account" do not work in the restored app.
 5. **Set up sign-in** as in "Settings to keep in place": site URL, redirect URLs, email templates, OTP expiry and SMTP.
 6. **Load the rows.** The dump's first line turns triggers off for its own session (`SET session_replication_role = replica`). That matters: the sign-up trigger would otherwise make a second profile for every account, and the stamp triggers would rewrite every row's time. So load the file as it is, in one transaction, as the `postgres` user:
 

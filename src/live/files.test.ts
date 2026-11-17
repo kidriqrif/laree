@@ -152,9 +152,10 @@ describe('activity files', () => {
     await files.keep(OTHER, 'act-9', file('c'))
     // act-1 went up; act-2 could not, and the other account's file is not this account's.
     expect(await files.waiting(UID)).toEqual(['act-2.fit'])
+    // A queue that cannot be read does not show that nothing is waiting: the export must fail.
     queue.list = async () => {
       throw new Error('blocked')
     }
-    expect(await files.waiting(UID)).toEqual([])
+    await expect(files.waiting(UID)).rejects.toThrow('blocked')
   })
 })

@@ -346,13 +346,15 @@ function slowStore(saved: Op[]) {
   let release: () => void = () => undefined
   const gate = new Promise<void>((resolve) => (release = resolve))
   const saves: Op[][] = []
+  let current = [...saved]
   const store: OutboxStore = {
     load: async () => {
       await gate
-      return [...saved]
+      return [...current]
     },
     save: async (ops) => {
       saves.push([...ops])
+      current = [...ops]
     },
   }
   return { store, saves, release }
@@ -668,6 +670,51 @@ describe('one send at a time', () => {
     expect((await second).sent).toBe(0)
     expect(calls).toEqual(['first:1'])
   })
+
+  it("keeps another tab's write when this tab saves", async () => {
+    const store = memoryOutboxStore()
+    const here = new Outbox(store)
+    const there = new Outbox(store)
+    await here.load()
+    await there.load()
+    await there.add([{ ...op, id: 'there' }])
+    await here.add([{ ...op, id: 'here' }])
+    expect(store.saved.map((o) => o.id)).toEqual(['there', 'here'])
+    // An empty send round here does not save an empty queue over the other tab's write either.
+    await here.flush(async () => ({ ok: false, denied: false, message: 'offline' }))
+    expect(store.saved.map((o) => o.id)).toEqual(['there', 'here'])
+  })
+
+  it('sends what another tab queued while this outbox was kept', async () => {
+    const store = memoryOutboxStore()
+    const kept = new Outbox(store)
+    await kept.load()
+    // Another tab of the same account queues a write while this tab's outbox waits for its next sync.
+    const there = new Outbox(store)
+    await there.load()
+    await there.add([{ ...op, id: 'there' }])
+    const sent: string[] = []
+    await kept.flush(async (_table, _scope, ops) => {
+      sent.push(...ops.map((o) => o.id))
+      return { ok: true }
+    })
+    expect(sent).toEqual(['there'])
+    expect(store.saved).toEqual([])
+  })
+
+  it('keeps a newer write to a row that another tab queued while this tab sent the older one', async () => {
+    const store = memoryOutboxStore([{ ...op, body: { id: 'c-1', v: 1 } }])
+    const here = new Outbox(store)
+    const there = new Outbox(store)
+    await here.load()
+    await there.load()
+    await here.flush(async () => {
+      await there.add([{ ...op, body: { id: 'c-1', v: 2 } }])
+      return { ok: true }
+    })
+    expect(store.saved.map((o) => o.body)).toEqual([{ id: 'c-1', v: 2 }])
+    expect(here.pending.map((o) => o.body)).toEqual([{ id: 'c-1', v: 2 }])
+  })
 })
 
 describe('paged pulls', () => {
@@ -942,7 +989,17 @@ describe('forgetting the queue', () => {
     const box = new Outbox(store)
     await box.load()
     let release: () => void = () => undefined
-    const sending = box.flush(() => new Promise((resolve) => (release = () => resolve({ ok: false, denied: false, message: 'offline' }))))
+    let started: () => void = () => undefined
+    const onItsWay = new Promise<void>((resolve) => (started = resolve))
+    const sending = box.flush(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve({ ok: false, denied: false, message: 'offline' })
+          started()
+        }),
+    )
+    // The send has begun before the queue is forgotten.
+    await onItsWay
     const gone = box.destroy()
     release()
     await Promise.all([sending, gone])
@@ -961,24 +1018,42 @@ describe('forgetting the queue', () => {
   it('reports a save as done only when it covers the newest write', async () => {
     const finish: (() => void)[] = []
     const states: boolean[] = []
-    const box = new Outbox({ load: async () => [], save: () => new Promise<void>((resolve) => finish.push(resolve)) })
-    box.onSaveState = (saved) => states.push(saved)
+    let saved: Op[] = []
+    const box = new Outbox({
+      load: async () => [...saved],
+      save: async (ops) => {
+        saved = [...ops]
+      },
+      // Each save waits until the test lets it land.
+      update: (change) =>
+        new Promise((resolve) =>
+          finish.push(() => {
+            saved = change(saved)
+            resolve([...saved])
+          }),
+        ),
+    })
+    const until = async (ok: () => boolean) => {
+      for (let i = 0; i < 50 && !ok(); i++) await Promise.resolve()
+    }
+    box.onSaveState = (ok) => states.push(ok)
     const loaded = box.load()
-    await Promise.resolve()
-    await Promise.resolve()
+    await until(() => finish.length === 1)
     finish.shift()?.()
     await loaded
     states.length = 0
     const first = box.add([op])
+    // The first write's save is on its way when the second write is made.
+    await until(() => finish.length === 1)
     const second = box.add([{ ...op, id: 'c-2' }])
-    await Promise.resolve()
     finish.shift()?.()
     await first
     // The first save worked, but the second write is not on the device yet.
     expect(states).toEqual([])
-    await Promise.resolve()
+    await until(() => finish.length === 1)
     finish.shift()?.()
     await second
     expect(states).toEqual([true])
+    expect(saved.map((o) => o.id)).toEqual(['c-1', 'c-2'])
   })
 })
