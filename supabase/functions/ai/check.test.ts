@@ -104,6 +104,12 @@ describe('the check on a provider answer', () => {
     expect(sameFacts('Load changed by -12%.', 'Load changed by -12% before the race.')).toBe(false)
     expect(sameFacts('You ran 12 km.', 'You ran 12 km, so you should rest.')).toBe(false)
     expect(sameFacts('You ran 5 km on Monday and Friday.', 'You ran 5 km each on Monday and Friday.')).toBe(false)
+    // Words of the draft cannot be dropped either: a name, a session, a "missed".
+    expect(sameFacts('Boston Marathon is in 3 weeks.', 'Marathon is in 3 weeks.')).toBe(false)
+    expect(sameFacts('Boston Marathon is in 3 weeks.', 'The Boston Marathon is in 3 weeks.')).toBe(true)
+    expect(sameFacts('2 key sessions missed.', '2 sessions.')).toBe(false)
+    // Grammar words may go.
+    expect(sameFacts('Sleep was 7 h.', 'Sleep: 7 h.')).toBe(true)
     // A plural or past form of the draft's own word is the same word.
     expect(sameFacts('Next week has no key sessions marked.', 'No key session is marked for next week.')).toBe(true)
   })

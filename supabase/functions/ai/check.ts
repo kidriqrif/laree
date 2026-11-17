@@ -162,14 +162,27 @@ function wordsOf(text: string): string[] {
   return out
 }
 
-/** Does `to` use only words that `from` has, or neutral ones? */
-function noNewWords(from: string, to: string): boolean {
-  const own = new Set(wordsOf(from).map(stem))
-  const groups = new Set(wordsOf(from).map((w) => DESCRIBES[w]).filter(Boolean))
-  return wordsOf(to).every((w) => {
-    const group = DESCRIBES[w]
-    return own.has(stem(w)) || NEUTRAL.has(w) || (group !== undefined && groups.has(group))
-  })
+/**
+ * Do `from` and `to` use the same words, grammar aside? `to` may add only neutral words, and must
+ * keep every other word of `from`: a name ("Boston"), a session or a "missed" cannot be dropped.
+ * A word counts as kept in another form of it ("sessions", "session") or as a word of the same
+ * describing group ("rest" for "resting", "HR" for "heart").
+ */
+function sameWords(from: string, to: string): boolean {
+  const covers = (text: string) => {
+    const words = wordsOf(text)
+    const stems = new Set(words.map(stem))
+    const groups = new Set(words.map((w) => DESCRIBES[w]).filter(Boolean))
+    return (w: string) => {
+      const group = DESCRIBES[w]
+      return stems.has(stem(w)) || (group !== undefined && groups.has(group))
+    }
+  }
+  const inFrom = covers(from)
+  const inTo = covers(to)
+  const added = wordsOf(to).every((w) => NEUTRAL.has(w) || inFrom(w))
+  const kept = wordsOf(from).every((w) => NEUTRAL.has(w) || inTo(w))
+  return added && kept
 }
 
 /**
@@ -201,7 +214,8 @@ function betweenNumbers(text: string): string[] {
 /**
  * May `to` stand in for `from`? It must state exactly the same facts: every number with its sign
  * and unit, none added, none dropped. It may use only the draft's own words and neutral ones
- * (`NEUTRAL`), and must keep the words that say what the numbers measure (`DESCRIBES`), so
+ * (`NEUTRAL`), must keep every other word of the draft, and must keep the words that say what the
+ * numbers measure (`DESCRIBES`), so
  * "resting heart rate 60 bpm" cannot become "maximum heart rate 60 bpm" nor "resting HR exceeded
  * 60 bpm". Where a line holds two different values of the same kind ("resting 60 bpm, maximum 180
  * bpm"), a rewording could swap them unseen, so that line must come back word for word. Which
@@ -216,7 +230,7 @@ export function sameFacts(from: string, to: string): boolean {
   const fb = b.filter(isFact)
   if (!sameItems(fa, fb)) return false
   if (ambiguous(fa)) return from.trim() === to.trim()
-  if (!noNewWords(from, to)) return false
+  if (!sameWords(from, to)) return false
   const words = a.filter((m) => !isFact(m))
   if (!sameItems(words, b.filter((m) => !isFact(m)))) return false
   if (words.length < 2 || fa.length === 0) return true
