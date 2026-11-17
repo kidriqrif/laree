@@ -67,6 +67,18 @@ describe('deleting the account', () => {
       return null
     }
     expect(await deleteMyAccount()).toBeNull()
-    expect(useAccount.getState().notice).toMatch(/could not be removed from this device/)
+    // The warning names what is left: the AI summaries, not unsent data.
+    expect(useAccount.getState().notice).toBe(
+      "Your account is deleted. Some AI summaries could not be removed from this device: clear this site's data in your browser settings.",
+    )
+  })
+
+  it('names both when unsent data and AI summaries are left', async () => {
+    deleted()
+    fake.clear = async () => false
+    const files = await import('./files.ts')
+    vi.spyOn(files, 'dropWaitingFiles').mockResolvedValue(false)
+    expect(await deleteMyAccount()).toBeNull()
+    expect(useAccount.getState().notice).toMatch(/Some unsent data and AI summaries could not be removed/)
   })
 })

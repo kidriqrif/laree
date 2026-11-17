@@ -76,34 +76,35 @@ export function saveBlob(blob: Blob, fileName: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
-const DATA_LEFT = "Some unsent data could not be removed from this device: clear this site's data in your browser settings."
+/** What could not be removed from this device, named for the person. */
+const dataLeft = (left: ReadonlySet<'unsent' | 'ai'>): string => {
+  const parts = [left.has('unsent') ? 'unsent data' : '', left.has('ai') ? 'AI summaries' : ''].filter(Boolean)
+  return `Some ${parts.join(' and ')} could not be removed from this device: clear this site's data in your browser settings.`
+}
 
 /**
  * Delete the account on the server, then clear this device: the AI wording, the unsent queue and
  * the waiting files of this account. Returns an error message, or null. A failed deletion keeps
- * everything as it was. If something could not be removed from the device, the person is told.
+ * everything as it was. If something could not be removed from the device, the person is told what.
  */
 export async function deleteMyAccount(): Promise<string | null> {
   const { data: who } = await supabase().auth.getSession()
   const uid = who.session?.user.id
   const { data, error } = await supabase().functions.invoke('delete-account', { body: { confirm: 'DELETE' } })
   if (error || !(data as { ok?: boolean } | null)?.ok) return 'Your account could not be deleted. Try again, or contact the owner.'
-  let left = !(await clearPolishedCache())
+  const left = new Set<'unsent' | 'ai'>()
+  if (!(await clearPolishedCache())) left.add('ai')
   if (uid) {
     // The sync stops first: a send on its way must not save the queue again after it is removed.
-    await discardUnsent(uid).catch(() => {
-      left = true
-    })
-    if (!(await dropWaitingFiles(uid))) left = true
+    await discardUnsent(uid).catch(() => left.add('unsent'))
+    if (!(await dropWaitingFiles(uid))) left.add('unsent')
   }
   const signOutError = await signOut()
-  // Sign-out clears the AI wording once more and says so when that failed: keep the warning.
-  if (useAccount.getState().notice === AI_LEFT) left = true
-  if (signOutError)
-    return `Your account was deleted, but this device could not sign out. Reload the page.${left ? ` ${DATA_LEFT}` : ''} (${signOutError})`
+  // Sign-out clears the AI wording once more and says so when that failed: keep that.
+  if (useAccount.getState().notice === AI_LEFT) left.add('ai')
+  const warning = left.size > 0 ? ` ${dataLeft(left)}` : ''
+  if (signOutError) return `Your account was deleted, but this device could not sign out. Reload the page.${warning} (${signOutError})`
   // This screen closes with the sign-out, so the sign-in screen carries the message.
-  useAccount.setState({
-    notice: left ? `Your account is deleted. ${DATA_LEFT}` : 'Your account and your data are deleted.',
-  })
+  useAccount.setState({ notice: left.size > 0 ? `Your account is deleted.${warning}` : 'Your account and your data are deleted.' })
   return null
 }
