@@ -45,6 +45,17 @@ describe('the sign-in page', () => {
     expect(fake.sent).toEqual([])
   })
 
+  it('clears the error once the address is edited', () => {
+    show()
+    const email = screen.getByLabelText('Email')
+    fireEvent.change(email, { target: { value: 'not-an-address' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send sign-in code' }))
+    fireEvent.change(email, { target: { value: 'coach@example.com' } })
+    expect(screen.queryByText('Enter your email address, like name@example.com.')).toBeNull()
+    expect(email.hasAttribute('aria-invalid')).toBe(false)
+    expect(email.hasAttribute('aria-describedby')).toBe(false)
+  })
+
   it('sends the code to the tidied address, then asks for it', async () => {
     show()
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: '  Coach@Example.com ' } })

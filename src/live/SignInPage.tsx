@@ -68,6 +68,12 @@ export function SignInPage() {
     field.current?.focus()
   }
 
+  /** Typing in the field starts a new try: the last error is about what was there before. */
+  const edit = (set: (value: string) => void, value: string) => {
+    set(value)
+    setError('')
+  }
+
   const send = async (e?: FormEvent) => {
     e?.preventDefault()
     const address = email.trim().toLowerCase()
@@ -138,7 +144,7 @@ export function SignInPage() {
                 value={email}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={describedBy}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => edit(setEmail, e.target.value)}
               />
             </label>
             {error ? (
@@ -173,7 +179,7 @@ export function SignInPage() {
                 value={code}
                 aria-invalid={error ? true : undefined}
                 aria-describedby={describedBy}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => edit(setCode, e.target.value)}
               />
             </label>
             {error ? (
