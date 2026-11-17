@@ -1,4 +1,5 @@
-import { freshData, type LareeData } from '../../../data/store.ts'
+import { freshData } from '../../../data/freshData.ts'
+import type { LareeData } from '../../../data/store.ts'
 import {
   currentDay,
   selectAnalytics,

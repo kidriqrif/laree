@@ -13,6 +13,13 @@ import { Button } from '../../../ui/core/index.ts'
 import { SegmentedControl, Switch } from '../../../ui/form/index.ts'
 import { showToast } from '../../../ui/overlay/index.ts'
 import styles from './SettingsPage.module.css'
+import { settingsOf } from '../../../domain/settings.ts'
+import { isLive } from '../../../app/mode.ts'
+
+// `__LIVE__` is a literal: in the demo build the import is dead code and the live app's
+// files are left out of the build.
+const AccountPanel = lazy(() => (__LIVE__ ? import('../../../live/AccountPanel.tsx') : Promise.reject(new Error('live build only'))))
+const CoachTeamPanel = lazy(() => (__LIVE__ ? import('../../../live/CoachTeamPanel.tsx') : Promise.reject(new Error('live build only'))))
 
 /** The consent dialog loads only when a coach opens it for an athlete. */
 const AiConsentDialog = lazy(() => import('./AiConsentDialog.tsx').then((m) => ({ default: m.AiConsentDialog })))
@@ -36,9 +43,11 @@ const SECTIONS = [
   { id: 'units', label: 'Units' },
   { id: 'theme', label: 'Theme' },
   { id: 'keyboard', label: 'Keyboard' },
-  { id: 'ai', label: 'AI consent' },
-  { id: 'prototype', label: 'Prototype' },
-] as const
+  ...(isLive ? [] : ([{ id: 'ai', label: 'AI consent' }] as const)),
+  ...(isLive
+    ? ([{ id: 'team', label: 'Team' }, { id: 'account', label: 'Account' }] as const)
+    : ([{ id: 'prototype', label: 'Prototype' }] as const)),
+]
 
 /** Scroll a section to the top of the sheet and move focus to its heading. */
 function goToSection(id: string) {
@@ -57,7 +66,7 @@ export default function SettingsPage() {
   const setAiConsent = useLaree((s) => s.setAiConsent)
   const [consentFor, setConsentFor] = useState<AthleteId | null>(null)
 
-  const coach = data.settings.coach
+  const coach = settingsOf(data.settings, 'coach')
   const coachOn = coach.aiConsent
   // Off but not saved for good, also after a reload: the warning stays under the switch until it is saved.
   const coachUnsaved = useLaree((s) => s.aiUnsavedOwners.includes('coach')) && !coachOn
@@ -113,7 +122,7 @@ export default function SettingsPage() {
                 <dt>Units</dt>
                 <dd>
                   Metric (km, metres, kilograms)
-                  <p className={styles.hint}>Metric is the only system in this prototype.</p>
+                  <p className={styles.hint}>Metric is the only system for now.</p>
                 </dd>
               </div>
             </dl>
@@ -167,66 +176,76 @@ export default function SettingsPage() {
             </dl>
           </section>
 
-          <section className={styles.section} aria-labelledby="settings-ai">
-            <h2 id="settings-ai" tabIndex={-1} className={styles.sectionTitle}>
-              AI consent
-            </h2>
-            <p className={styles.hint}>
-              AI runs for an athlete only when both the athlete and Coach have turned it on. Coach can never turn it on for an athlete.
-            </p>
-            <Switch
-              isSelected={coachOn}
-              onChange={toggleCoachAi}
-              isDisabled={readOnly}
-              label="Coach AI for the team"
-              hint={coachOn ? 'On. AI runs for each athlete who has turned it on too.' : 'Off for every athlete.'}
-              error={coachUnsaved ? WITHDRAWAL_UNSAVED : undefined}
-            />
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <caption className={styles.srOnly}>AI consent by athlete</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Athlete</th>
-                    <th scope="col">Athlete's consent</th>
-                    <th scope="col">Coach's consent</th>
-                    <th scope="col">Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ATHLETES.map((a) => {
-                    const state = selectAiState(data, a.id)
-                    const athleteOn = data.settings[a.id].aiConsent
-                    return (
-                      <tr key={a.id}>
-                        <th scope="row">{a.name}</th>
-                        <td>{athleteOn ? 'On' : 'Off'}</td>
-                        <td>{coachOn ? 'On' : 'Off'}</td>
-                        <td>{AI_RESULT[state]}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className={styles.section} aria-labelledby="settings-prototype">
-            <h2 id="settings-prototype" tabIndex={-1} className={styles.sectionTitle}>
-              Prototype
-            </h2>
-            <dl className={styles.rows}>
-              <div className={styles.row}>
-                <dt>Demo data</dt>
-                <dd>
-                  <Link to="/reset" className={styles.link}>
-                    Reset demo data
-                  </Link>
-                  <p className={styles.hint}>Puts the seeded demo back on this device. Your changes are lost.</p>
-                </dd>
+          {/* Live, AI access is per athlete in Team, and each athlete agrees for themself. */}
+          {isLive ? null : (
+            <section className={styles.section} aria-labelledby="settings-ai">
+              <h2 id="settings-ai" tabIndex={-1} className={styles.sectionTitle}>
+                AI consent
+              </h2>
+              <p className={styles.hint}>
+                AI runs for an athlete only when both the athlete and Coach have turned it on. Coach can never turn it on for an athlete.
+              </p>
+              <Switch
+                isSelected={coachOn}
+                onChange={toggleCoachAi}
+                isDisabled={readOnly}
+                label="Coach AI for the team"
+                hint={coachOn ? 'On. AI runs for each athlete who has turned it on too.' : 'Off for every athlete.'}
+                error={coachUnsaved ? WITHDRAWAL_UNSAVED : undefined}
+              />
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <caption className={styles.srOnly}>AI consent by athlete</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Athlete</th>
+                      <th scope="col">Athlete's consent</th>
+                      <th scope="col">Coach's consent</th>
+                      <th scope="col">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ATHLETES.map((a) => {
+                      const state = selectAiState(data, a.id)
+                      const athleteOn = data.settings[a.id]?.aiConsent === true
+                      return (
+                        <tr key={a.id}>
+                          <th scope="row">{a.name}</th>
+                          <td>{athleteOn ? 'On' : 'Off'}</td>
+                          <td>{coachOn ? 'On' : 'Off'}</td>
+                          <td>{AI_RESULT[state]}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </dl>
-          </section>
+            </section>
+          )}
+
+          {isLive ? (
+            <Suspense fallback={null}>
+              <CoachTeamPanel headingId="settings-team" />
+              <AccountPanel headingId="settings-account" />
+            </Suspense>
+          ) : (
+            <section className={styles.section} aria-labelledby="settings-prototype">
+              <h2 id="settings-prototype" tabIndex={-1} className={styles.sectionTitle}>
+                Prototype
+              </h2>
+              <dl className={styles.rows}>
+                <div className={styles.row}>
+                  <dt>Demo data</dt>
+                  <dd>
+                    <Link to="/reset" className={styles.link}>
+                      Reset demo data
+                    </Link>
+                    <p className={styles.hint}>Puts the seeded demo back on this device. Your changes are lost.</p>
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          )}
         </div>
       </div>
 

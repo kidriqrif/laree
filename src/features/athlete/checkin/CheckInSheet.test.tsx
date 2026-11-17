@@ -108,4 +108,41 @@ describe('check-in sheet and strip', () => {
     expect(text).not.toMatch(/flag|warning|alert|concern|risk|overtrain/i)
     expect(text).toContain('Checked in.')
   })
+
+  it('keeps the readings of a check-in that arrives after the sheet opened', () => {
+    mount('/athlete/today?sheet=check-in')
+    const day = currentDay()
+    // Another device checked in this morning; the sync brings it in while the sheet is open.
+    act(() => {
+      useLaree.getState().saveCheckIn({ id: 'from-sync', athleteId: ME, day, sleepHours: 6.5, soreness: 4, mood: 2, restingHr: 41, hrvMs: 93 })
+    })
+    const dialog = screen.getByRole('dialog')
+    expect((within(dialog).getByRole('textbox', { name: /Resting heart rate/ }) as HTMLInputElement).value).toBe('41')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Update' }))
+    const saved = useLaree.getState().data.checkIns.filter((c) => c.athleteId === ME && c.day === day)
+    expect(saved).toHaveLength(1)
+    expect(saved[0]).toMatchObject({ id: 'from-sync', sleepHours: 6.5, soreness: 4, mood: 2, restingHr: 41, hrvMs: 93 })
+  })
+
+  it('keeps what the person typed, and a reading they cleared, when a check-in arrives', () => {
+    mount('/athlete/today?sheet=check-in')
+    const day = currentDay()
+    const dialog = screen.getByRole('dialog')
+    const field = (name: RegExp) => within(dialog).getByRole('textbox', { name }) as HTMLInputElement
+    fireEvent.change(field(/Resting heart rate/), { target: { value: '55' } })
+    fireEvent.blur(field(/Resting heart rate/))
+    fireEvent.change(field(/HRV/), { target: { value: '' } })
+    fireEvent.blur(field(/HRV/))
+    act(() => {
+      useLaree.getState().saveCheckIn({ id: 'from-sync', athleteId: ME, day, sleepHours: 6.5, soreness: 4, mood: 2, restingHr: 41, hrvMs: 93 })
+    })
+    expect(field(/Resting heart rate/).value).toBe('55')
+    expect(field(/HRV/).value).toBe('')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Update' }))
+    const saved = useLaree.getState().data.checkIns.find((c) => c.athleteId === ME && c.day === day)!
+    expect(saved.restingHr).toBe(55)
+    expect(saved.hrvMs).toBeUndefined()
+    // Fields the person left alone take the arrived values.
+    expect(saved.sleepHours).toBe(6.5)
+  })
 })

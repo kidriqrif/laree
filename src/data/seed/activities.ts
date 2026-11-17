@@ -13,7 +13,7 @@ import type {
 } from '../../domain/types.ts';
 import { BEHAVIOUR, CURRENT_WEEK_BEHAVIOUR } from './behaviour.ts';
 import type { Directive, Extra } from './behaviour.ts';
-import { ATHLETES, HISTORY_LAST_WEEK, THRESHOLDS, thresholdsOn, weekFirstDay } from './people.ts';
+import { ATHLETES, HISTORY_LAST_WEEK, seedOf, THRESHOLDS, thresholdsOn, weekFirstDay } from './people.ts';
 import { between, clamped, pick, rngFor } from './rng.ts';
 import type { Rng } from './rng.ts';
 
@@ -213,12 +213,12 @@ export function buildActivities(
     const week = weekOfDay(w.day);
     if (week > lastWeek) continue;
     const rng = rngFor('activity', w.id);
-    const table = week <= HISTORY_LAST_WEEK ? BEHAVIOUR[athleteId][week] : CURRENT_WEEK_BEHAVIOUR[athleteId];
+    const table = week <= HISTORY_LAST_WEEK ? seedOf(BEHAVIOUR, athleteId)[week] : seedOf(CURRENT_WEEK_BEHAVIOUR, athleteId);
     const a = fromPlanned(w, table?.slots?.[slotKey(w)], rng);
     if (a) out.push(a);
   }
   for (let week = 1; week <= lastWeek; week++) {
-    const table = week <= HISTORY_LAST_WEEK ? BEHAVIOUR[athleteId][week] : CURRENT_WEEK_BEHAVIOUR[athleteId];
+    const table = week <= HISTORY_LAST_WEEK ? seedOf(BEHAVIOUR, athleteId)[week] : seedOf(CURRENT_WEEK_BEHAVIOUR, athleteId);
     for (const e of table?.extras ?? []) {
       if (weekFirstDay(week) + e.day >= today) continue;
       out.push(fromExtra(athleteId, week, e, rngFor('extra', athleteId, week, e.day)));

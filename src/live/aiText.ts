@@ -1,0 +1,133 @@
+/**
+ * Live AI text: the rule-based summary goes to the ai Edge Function, which has a model reword it.
+ * Results are cached on the device by the draft's content, so a page visit does not call again.
+ */
+import type { AiCheckInOutput, AiRecapOutput } from '../ai/types.ts'
+import { supabase } from './session.ts'
+
+type TextOut = Extract<AiRecapOutput | AiCheckInOutput, { status: 'ok' }>
+
+interface Polished {
+  headline: string
+  lines: string[]
+  provider: string
+  model: string
+}
+
+const CACHE_KEY = 'laree:live:ai'
+/** Changes whenever any tab clears the cache. Tabs share it, so each sees the others' sign-outs. */
+const EPOCH_KEY = 'laree:live:ai:epoch'
+const CACHE_SIZE = 60
+
+function hash(text: string): string {
+  let h = 2166136261
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619)
+  return (h >>> 0).toString(36)
+}
+
+function readCache(): Record<string, Polished> {
+  try {
+    return JSON.parse(localStorage.getItem(CACHE_KEY) ?? '{}') as Record<string, Polished>
+  } catch {
+    return {}
+  }
+}
+
+function writeCache(key: string, value: Polished): void {
+  try {
+    const entries = Object.entries(readCache()).filter(([k]) => k !== key)
+    entries.push([key, value])
+    localStorage.setItem(CACHE_KEY, JSON.stringify(Object.fromEntries(entries.slice(-CACHE_SIZE))))
+  } catch {
+    // No storage: the text is fetched again next time.
+  }
+}
+
+/** Bumped whenever the cache is cleared: an answer asked for before that must not be kept or shown. */
+let generation = 0
+
+/** The device-wide mark of the last clearing, in any tab. Null when storage cannot be read. */
+function epoch(): string | null {
+  try {
+    return localStorage.getItem(EPOCH_KEY) ?? ''
+  } catch {
+    return null
+  }
+}
+
+/** The site's Web Locks, shared by its tabs, or null in a browser without them. */
+const siteLocks = () => globalThis.navigator?.locks ?? null
+
+/**
+ * Clearing and writing the wording take turns across the site's tabs (Web Locks), so a clear in
+ * one tab can never land between another tab's check and its write. Without the API nothing is
+ * written at all (`polish`), so only clearing runs here then.
+ */
+function cacheTurn<T>(work: () => T): Promise<T> {
+  const locks = siteLocks()
+  return locks ? locks.request('laree-ai-cache', async () => work()) : Promise.resolve().then(work)
+}
+
+/**
+ * Forget the AI wording kept on this device (on sign-out and account deletion). A request still
+ * on its way, in this tab or another, then neither keeps nor shows its answer. False when the
+ * wording could not be removed, or other tabs could not be told: an answer on its way there may
+ * then still be kept.
+ *
+ * The mark goes first, then the removal, each tried on its own.
+ */
+export function clearPolishedCache(): Promise<boolean> {
+  // This tab's own requests stop at once, before the turn comes.
+  generation++
+  return cacheTurn(() => {
+    let told = true
+    try {
+      localStorage.setItem(EPOCH_KEY, crypto.randomUUID())
+    } catch {
+      // A full storage: other tabs are not told. The removal below is still tried.
+      told = false
+    }
+    try {
+      localStorage.removeItem(CACHE_KEY)
+      return told
+    } catch {
+      return false
+    }
+  })
+}
+
+const apply = <T extends TextOut>(out: T, p: Polished): T => ({
+  ...out,
+  headline: p.headline,
+  lines: p.lines,
+  text: [p.headline, ...p.lines].join(' '),
+  label: 'AI summary',
+  model: `${p.model} via ${p.provider}`,
+})
+
+/** The reworded summary, or null when AI is not available (the rule-based text then stays). */
+export async function polish<T extends TextOut>(out: T): Promise<T | null> {
+  const key = `${out.feature}:${out.athleteId}:${hash([out.headline, ...out.lines].join('\n'))}`
+  const cached = readCache()[key]
+  if (cached) return apply(out, cached)
+  const asked = generation
+  const askedEpoch = epoch()
+  const { data, error } = await supabase().functions.invoke('ai', {
+    body: { feature: out.feature, athleteId: out.athleteId, headline: out.headline, lines: out.lines },
+  })
+  const body = data as ({ ok: true } & Polished) | { ok: false } | null
+  if (error || !body?.ok) return null
+  // Signed out or deleted while the request was on its way: the answer belongs to nobody here.
+  // Storage is shared between tabs, so this also sees a sign-out made in another tab.
+  const stale = () => asked !== generation || askedEpoch !== epoch()
+  const p: Polished = { headline: body.headline, lines: body.lines, provider: body.provider, model: body.model }
+  // Without Web Locks a write cannot be ordered against a clear in another tab: keep nothing then,
+  // and ask again next time.
+  if (!siteLocks()) return stale() ? null : apply(out, p)
+  const kept = await cacheTurn(() => {
+    if (stale()) return false
+    writeCache(key, p)
+    return true
+  })
+  return kept ? apply(out, p) : null
+}

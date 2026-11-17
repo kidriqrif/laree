@@ -16,13 +16,13 @@ const WED_10AM_KL = Date.UTC(2026, 10, 11, 2)
 const state = () => useLaree.getState()
 const data = () => state().data
 const flagOf = (athleteId: 'amir' | 'danial' | 'irfan', id: string) => {
-  const f = data().flagsState[athleteId].flags.find((x) => x.id === id)
+  const f = data().flagsState[athleteId]!.flags.find((x) => x.id === id)
   if (!f) throw new Error(`no flag ${id}`)
   return f
 }
 const openIds = (athleteId: 'amir' | 'danial' | 'irfan') =>
   data()
-    .flagsState[athleteId].flags.filter((f) => f.status === 'open')
+    .flagsState[athleteId]!.flags.filter((f) => f.status === 'open')
     .map((f) => f.id)
 
 beforeEach(() => {
@@ -95,7 +95,7 @@ describe('check-in summary', () => {
   it('quotes the values at opening for a day before the latest reading', () => {
     const today = currentDay()
     let historical = 0
-    for (const rec of data().flagsState.irfan.flags) {
+    for (const rec of data().flagsState.irfan!.flags) {
       for (const day of [rec.openedDay, today]) {
         const row = buildCheckInFacts(data(), 'irfan', day).flags.find((x) => x.ruleId === rec.ruleId)
         if (!flagsOpenOn(data(), 'irfan', day).some((x) => x.id === rec.id)) continue
@@ -273,28 +273,28 @@ describe('flag undo', () => {
   it('puts back a resolved flag and the quiet mark it set', () => {
     const [a] = pair()
     const ruleId = flagOf('irfan', a).ruleId
-    const wasQuiet = data().flagsState.irfan.quiet[ruleId] === true
+    const wasQuiet = data().flagsState.irfan!.quiet[ruleId] === true
     const before = flagOf('irfan', a)
     const undo = flagActionUndo('irfan', a, () => state().resolveFlag(a, 'irfan', 'Rested'))
     expect(flagOf('irfan', a).status).toBe('resolved')
     // The seeded rule is still true, so resolving it sets the quiet mark.
     expect(before.clearDays).toBe(0)
     expect(wasQuiet).toBe(false)
-    expect(data().flagsState.irfan.quiet[ruleId]).toBe(true)
+    expect(data().flagsState.irfan!.quiet[ruleId]).toBe(true)
     undo?.()
     expect(lifecycleOf(flagOf('irfan', a))).toEqual(lifecycleOf(before))
-    expect(data().flagsState.irfan.quiet[ruleId] === true).toBe(wasQuiet)
+    expect(data().flagsState.irfan!.quiet[ruleId] === true).toBe(wasQuiet)
     // The rule values measured by the rules are not part of the undo.
     expect(flagOf('irfan', a).valuesLatest).toEqual(before.valuesLatest)
   })
 
   it('leaves a quiet mark it did not set, and never undoes a resolve beside a newer flag of the rule', () => {
     const [a] = pair()
-    const s0 = data().flagsState.irfan
+    const s0 = data().flagsState.irfan!
     const target = s0.flags.find((f) => f.id === a)!
     const before = lifecycleOf(target)
     state().resolveFlag(a, 'irfan', 'Rested')
-    const s1 = data().flagsState.irfan
+    const s1 = data().flagsState.irfan!
     const after = lifecycleOf(flagOf('irfan', a))
     // unquiet false: the mark stays.
     expect(undoFlagAction(s1, a, before, after, false)?.quiet[target.ruleId]).toBe(true)
@@ -315,10 +315,10 @@ describe('flag undo', () => {
 
   it('refuses a stale undo in the domain function', () => {
     const [a] = pair()
-    const s0 = data().flagsState.irfan
+    const s0 = data().flagsState.irfan!
     const before = lifecycleOf(flagOf('irfan', a))
     state().acknowledgeFlag(a, 'irfan')
-    const s1 = data().flagsState.irfan
+    const s1 = data().flagsState.irfan!
     const after = lifecycleOf(flagOf('irfan', a))
     expect(undoFlagAction(s1, 'no-such-flag', before, after, false)).toBeNull()
     // The flag is not as the action left it.
@@ -358,7 +358,7 @@ describe('withdrawing AI consent while saving fails', () => {
     vi.stubGlobal('localStorage', fakeStorage(() => true))
     try {
       expect(state().setAiConsent('coach', false)).toBe(true)
-      expect(data().settings.coach.aiConsent).toBe(false)
+      expect(data().settings.coach!.aiConsent).toBe(false)
       expect(state().aiWithdrawalUnsaved).toBe(true)
     } finally {
       vi.stubGlobal('localStorage', real)
@@ -370,7 +370,7 @@ describe('withdrawing AI consent while saving fails', () => {
 
   it('keeps consent off after a reload when only the main save failed', async () => {
     expect(state().setAiConsent('coach', true)).toBe(true)
-    expect(JSON.parse(localStorage.getItem(STORE_KEY) ?? '{}').state.data.settings.coach.aiConsent).toBe(true)
+    expect(JSON.parse(localStorage.getItem(STORE_KEY) ?? '{}').state.data.settings.coach!.aiConsent).toBe(true)
     const real = localStorage
     let failing = true
     const fake = fakeStorage((k) => failing && k === STORE_KEY)
@@ -380,15 +380,15 @@ describe('withdrawing AI consent while saving fails', () => {
       expect(state().aiWithdrawalUnsaved).toBe(false)
       expect(readAiWithdrawn()).toEqual(['coach'])
       // The saved copy still says "on"; loading it must not bring consent back.
-      expect(JSON.parse(fake.kept.get(STORE_KEY) ?? '{}').state.data.settings.coach.aiConsent).toBe(true)
+      expect(JSON.parse(fake.kept.get(STORE_KEY) ?? '{}').state.data.settings.coach!.aiConsent).toBe(true)
       await useLaree.persist.rehydrate()
-      expect(data().settings.coach.aiConsent).toBe(false)
+      expect(data().settings.coach!.aiConsent).toBe(false)
       // Agreeing again, once saving works, clears the note.
       failing = false
       expect(state().setAiConsent('coach', true)).toBe(true)
       expect(readAiWithdrawn()).toEqual([])
       await useLaree.persist.rehydrate()
-      expect(data().settings.coach.aiConsent).toBe(true)
+      expect(data().settings.coach!.aiConsent).toBe(true)
     } finally {
       vi.stubGlobal('localStorage', real)
     }
@@ -406,7 +406,7 @@ describe('withdrawing AI consent while saving fails', () => {
       state().reset()
       expect(readAiWithdrawn()).toEqual(['coach'])
       await useLaree.persist.rehydrate()
-      expect(data().settings.coach.aiConsent).toBe(false)
+      expect(data().settings.coach!.aiConsent).toBe(false)
       // Once a reset saves, nothing of the old choice is left.
       failing = false
       state().reset()

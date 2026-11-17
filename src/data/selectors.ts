@@ -3,7 +3,7 @@
  * memoised on the identity of its inputs, so `useLaree((s) => selectWeek(s.data, ...))` returns
  * the same object until the data or the arguments change.
  */
-import { isActive } from '../domain/flags.ts'
+import { flagsOf, isActive } from '../domain/flags.ts'
 import type { FlagRecord, FlagStatus } from '../domain/flags.ts'
 import { badges as computeBadges, lap, streak } from '../domain/gamification.ts'
 import type { BadgeAward, GamificationInput, LapState, StreakResult } from '../domain/gamification.ts'
@@ -28,19 +28,24 @@ import type {
 } from '../domain/types.ts'
 import type { Severity } from '../domain/flags.ts'
 import type { LareeData } from './store.ts'
-import { START_FORM } from './seed/index.ts'
+import { ATHLETE_IDS } from '../app/people.ts'
+import { START_FORM } from './seed/people.ts'
+import { coachLayerOn } from '../ai/consent.ts'
+/** A live athlete has no seeded starting form: their fitness builds from zero. */
+const NO_FORM = { fitness: 0, fatigue: 0 }
 
-const ATHLETES: readonly AthleteId[] = ['amir', 'danial', 'irfan']
 
 /** Cache by a string key; an entry is reused while every argument is identical (Object.is). */
 function memoize<A extends readonly unknown[], R>(fn: (...args: A) => R, keyOf: (...args: A) => string): (...args: A) => R {
-  const cache = new Map<string, { args: A; result: R }>()
+  const cache = new Map<string, { args: A; roster: readonly AthleteId[]; result: R }>()
   return (...args: A): R => {
     const key = keyOf(...args)
     const hit = cache.get(key)
-    if (hit && hit.args.length === args.length && hit.args.every((a, i) => Object.is(a, args[i]))) return hit.result
+    // A new roster (sign-in) is a new list, so results for the old one are not reused.
+    if (hit && hit.roster === ATHLETE_IDS && hit.args.length === args.length && hit.args.every((a, i) => Object.is(a, args[i])))
+      return hit.result
     const result = fn(...args)
-    cache.set(key, { args, result })
+    cache.set(key, { args, roster: ATHLETE_IDS, result })
     return result
   }
 }
@@ -66,7 +71,7 @@ export const selectFitnessSeries = memoize(
   (data: LareeData, athleteId: AthleteId, today: DayOffset): FitnessPoint[] => {
     const ev = selectEvaluation(data, athleteId, today)
     const matched = new Set(ev.planned.filter((e) => e.status === 'matched').map((e) => e.plannedId))
-    const start = START_FORM[athleteId]
+    const start = START_FORM[athleteId] ?? NO_FORM
     return projectedSeries({
       firstDay: 0,
       today,
@@ -266,9 +271,9 @@ export const SEVERITY_RANK: Record<Severity, number> = { info: 0, watch: 1, act:
 
 export const selectRosterRows = memoize(
   (data: LareeData, today: DayOffset): RosterRow[] =>
-    ATHLETES.map((athleteId): RosterRow => {
+    ATHLETE_IDS.map((athleteId): RosterRow => {
       const point = selectFitnessSeries(data, athleteId, today).find((p) => p.day === today)
-      const active = data.flagsState[athleteId].flags.filter(isActive)
+      const active = flagsOf(data.flagsState, athleteId).flags.filter(isActive)
       const top = active.reduce<Severity | null>(
         (m, f) => (m === null || SEVERITY_RANK[f.severity] > SEVERITY_RANK[m] ? f.severity : m),
         null,
@@ -289,7 +294,7 @@ export const selectRosterRows = memoize(
         lastCheckInDay: last,
         daysSinceCheckIn: last === null ? null : today - last,
         nextRace: nextRace(data, athleteId, today),
-        aiConsent: data.settings[athleteId].aiConsent,
+        aiConsent: data.settings[athleteId]?.aiConsent === true,
       }
     }),
   (_d, today) => `roster:${today}`,
@@ -336,7 +341,7 @@ export const selectAnalytics = memoize(
 /** Flag lifecycle records for one athlete, newest first. Pass a status to keep one kind. */
 export const selectFlagRecords = memoize(
   (data: LareeData, athleteId: AthleteId, status: FlagStatus | undefined): FlagRecord[] =>
-    data.flagsState[athleteId].flags
+    flagsOf(data.flagsState, athleteId).flags
       .filter((f) => status === undefined || f.status === status)
       .toSorted((a, b) => b.openedDay - a.openedDay || a.id.localeCompare(b.id)),
   (_d, id, status) => `flagrecs:${id}:${status ?? 'all'}`,
@@ -353,8 +358,8 @@ export const selectOpenFlags = memoize(
 
 /** The number of open flags for one athlete, or for the whole team when no athlete is given. */
 export function selectOpenFlagCount(data: LareeData, athleteId?: AthleteId): number {
-  return (athleteId ? [athleteId] : ATHLETES).reduce(
-    (n, id) => n + data.flagsState[id].flags.filter((f) => f.status === 'open').length,
+  return (athleteId ? [athleteId] : ATHLETE_IDS).reduce(
+    (n, id) => n + flagsOf(data.flagsState, id).flags.filter((f) => f.status === 'open').length,
     0,
   )
 }
@@ -376,8 +381,8 @@ export type AiState = 'off' | 'athlete-only' | 'waiting-for-athlete' | 'active'
  * AI on yet." in Me; 'waiting-for-athlete' reads "Waiting for the athlete" in Settings.
  */
 export function selectAiState(data: LareeData, athleteId: AthleteId): AiState {
-  const athlete = data.settings[athleteId].aiConsent
-  const coach = data.settings.coach.aiConsent
+  const athlete = data.settings[athleteId]?.aiConsent === true
+  const coach = coachLayerOn(data.settings, athleteId)
   if (athlete && coach) return 'active'
   if (athlete) return 'athlete-only'
   return coach ? 'waiting-for-athlete' : 'off'
@@ -431,8 +436,8 @@ export const selectTemplate = (data: LareeData, id: string): WorkoutTemplate | u
 // ------------------------------------------------------------------ small helpers
 
 /** AI runs for an athlete only when both layers are on (docs/spec/ai.md 2.1). */
-export function aiActiveFor(settings: Record<'coach' | AthleteId, Settings>, athleteId: AthleteId): boolean {
-  return settings.coach.aiConsent && settings[athleteId].aiConsent
+export function aiActiveFor(settings: Readonly<Record<string, Settings>>, athleteId: AthleteId): boolean {
+  return coachLayerOn(settings, athleteId) && settings[athleteId]?.aiConsent === true
 }
 
 /** The threshold in force on a day: the latest row of that kind effective on or before it. */

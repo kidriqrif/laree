@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInRouterContext, useNavigate } from 'react-router'
 import { useViewer } from '../../../app/viewer.ts'
-import { ATHLETES } from '../../../data/seed/people.ts'
+import { ATHLETES } from '../../../app/people.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
 import { nowMinute } from '../../../domain/time.ts'
@@ -21,16 +21,23 @@ async function parseInWorker(bytes: ArrayBuffer, fileName: string, slot: { curre
   const w = new Worker(new URL('../../../io/import/worker.ts', import.meta.url), { type: 'module' })
   slot.current = w
   return new Promise<ImportResult>((resolve, reject) => {
-    w.onmessage = (e: MessageEvent<ImportResult>) => {
+    const done = () => {
       if (slot.current === w) slot.current = null
       w.terminate()
+    }
+    w.addEventListener('message', (e: MessageEvent<ImportResult>) => {
+      done()
       resolve(e.data)
-    }
-    w.onerror = () => {
-      if (slot.current === w) slot.current = null
-      w.terminate()
+    })
+    // A reply that cannot be read, or a worker that fails, ends the read with an error: never a stuck "Reading".
+    w.addEventListener('messageerror', () => {
+      done()
+      reject(new Error('worker reply unreadable'))
+    })
+    w.addEventListener('error', () => {
+      done()
       reject(new Error('worker failed'))
-    }
+    })
     w.postMessage({ buffer: bytes, fileName }, [bytes])
   })
 }
@@ -68,13 +75,16 @@ import {
   thresholdsFor,
 } from './logModel.ts'
 import styles from './LogSheet.module.css'
+import { isLive } from '../../../app/mode.ts'
+import { keepOriginal } from './keepOriginal.ts'
 
 type Method = 'quick' | 'import' | 'sync'
 
 const METHODS = [
   { id: 'quick', label: 'Quick log' },
   { id: 'import', label: 'Import file' },
-  { id: 'sync', label: 'Sync device' },
+  // Device sync is simulated: the demo shows it, the live app has no device link yet.
+  ...(isLive ? [] : [{ id: 'sync', label: 'Sync device' }]),
 ]
 
 const SPORT_OPTIONS = SPORTS.map((s) => ({ id: s, label: SPORT_NAMES[s] }))
@@ -96,7 +106,7 @@ type ImportState =
   | { status: 'idle' }
   | { status: 'reading'; name: string }
   | { status: 'error'; name: string; error: ImportError }
-  | { status: 'ready'; name: string; activities: ParsedActivity[] }
+  | { status: 'ready'; name: string; activities: ParsedActivity[]; file: File }
 
 function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChange: (open: boolean) => void }) {
   const athleteId = useViewer((s) => s.athleteId)
@@ -202,7 +212,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
     attempt(() => {
       const startMinute = defaultStartMinute(workout, effectiveDay, today, nowMinute(), durationS)
       const a = buildQuickActivity({
-        id: existing?.id ?? newActivityId(data, athleteId, 'q', effectiveDay),
+        id: existing?.id ?? newActivityId(),
         athleteId,
         day: effectiveDay,
         startMinute: existing?.startMinute ?? startMinute,
@@ -224,7 +234,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
     attempt(() => {
       const startMinute = defaultStartMinute(workout, effectiveDay, today, nowMinute(), workout?.plannedDurationS ?? 45 * 60)
       const a = buildSyncedActivity({
-        id: existing?.id ?? newActivityId(data, athleteId, 's', effectiveDay),
+        id: existing?.id ?? newActivityId(),
         athleteId,
         day: effectiveDay,
         startMinute,
@@ -253,7 +263,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
       if (ticket !== reading.current) return
       const result = await parseInWorker(bytes, file.name, worker)
       if (ticket !== reading.current) return
-      setImp(result.ok ? { status: 'ready', name: file.name, activities: result.activities } : { status: 'error', name: file.name, error: result.error })
+      setImp(result.ok ? { status: 'ready', name: file.name, activities: result.activities, file } : { status: 'error', name: file.name, error: result.error })
     } catch {
       if (ticket !== reading.current) return
       setImp({
@@ -297,13 +307,15 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
     if (importBlocked) return
     attempt(() => {
       let n = 0
+      let firstId: string | null = null
       for (const x of plans) {
         if (!x.sport) continue
         const { day: fileDay } = startOf(x.p)
         const matches = x.matches && workout !== undefined
         if (matches && moveSession && workout.day !== fileDay) moveWorkout(workout.id, fileDay)
         // The existing log's id is reused (and so replaced) only when this file takes its session.
-        const id = x.replaced ? x.replaced.id : newActivityId(useLaree.getState().data, athleteId, 'i', fileDay)
+        const id = x.replaced ? x.replaced.id : newActivityId()
+        firstId ??= id
         logActivity(
           buildImportedActivity({
             id,
@@ -318,6 +330,15 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
           }),
         )
         n++
+      }
+      // The live app keeps the original file, so it can be read again when the metrics improve.
+      // (`__LIVE__` is a literal, so the demo build leaves the upload code out.)
+      if (__LIVE__ && firstId && imp.status === 'ready') {
+        const original = imp.file
+        const activityId = firstId
+        void keepOriginal(() => import('../../../live/files.ts'), athleteId, activityId, original).then((kept) => {
+          if (!kept) showToast('Your session is saved, but its original file could not be kept.')
+        })
       }
       finish(n === 1 ? 'Logged 1 session from your file' : `Logged ${n} sessions from your file`)
     })

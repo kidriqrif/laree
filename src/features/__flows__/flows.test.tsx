@@ -53,7 +53,7 @@ function renderAt(path: string) {
   return router
 }
 
-const flagsOf = (id: AthleteId) => data().flagsState[id].flags
+const flagsOf = (id: AthleteId) => data().flagsState[id]!.flags
 const week = (id: AthleteId) => selectWeek(data(), id, weekOfDay(today()), today())
 const todayState = () => document.querySelector('[data-today]')?.getAttribute('data-today')
 

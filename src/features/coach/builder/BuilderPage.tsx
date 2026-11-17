@@ -107,7 +107,9 @@ function Editor({ saved, onSaved }: EditorProps) {
   const today = currentDay()
   const previewTh = useMemo(() => thresholdsFor(data, previewId, today), [data, previewId, today])
 
-  const id = savedId ?? nextTemplateId(data.templates)
+  // A new template keeps one id until it is saved, so "Add to calendar" and Save agree.
+  const [draftId] = useState(nextTemplateId)
+  const id = savedId ?? draftId
   const template = useMemo(() => toTemplate(id, draft.meta, draft.steps), [id, draft])
   const segments = useMemo(() => segmentsOf(draft.steps, draft.meta.sport, previewTh), [draft, previewTh])
   const zoneSeconds = useMemo(() => {

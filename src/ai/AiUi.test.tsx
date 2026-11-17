@@ -78,7 +78,7 @@ describe('AiConsentDialog', () => {
     render(<AiConsentDialog athleteId="amir" isOpen onClose={() => undefined} />)
     expect(await screen.findByRole('dialog', { name: 'Turn on AI features?' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Turn on' }))
-    expect(useLaree.getState().data.settings.coach.aiConsent).toBe(true)
+    expect(useLaree.getState().data.settings.coach!.aiConsent).toBe(true)
     expect(state()).toBe('waiting-for-athlete')
     expect(state('danial')).toBe('waiting-for-athlete')
   })
@@ -86,7 +86,7 @@ describe('AiConsentDialog', () => {
   it('refuses when someone other than Coach is viewing', async () => {
     render(<AiConsentDialog athleteId="amir" isOpen onClose={() => undefined} />)
     fireEvent.click(await screen.findByRole('button', { name: 'Turn on' }))
-    expect(useLaree.getState().data.settings.coach.aiConsent).toBe(false)
+    expect(useLaree.getState().data.settings.coach!.aiConsent).toBe(false)
     expect(await screen.findByRole('alert')).toBeTruthy()
   })
 })
@@ -108,7 +108,7 @@ describe('CoachConsentDialog unsaved withdrawal', () => {
       vi.unstubAllGlobals()
       fireEvent.click(screen.getByRole('button', { name: 'Try saving again' }))
       expect(useLaree.getState().aiWithdrawalUnsaved).toBe(false)
-      expect(useLaree.getState().data.settings.coach.aiConsent).toBe(false)
+      expect(useLaree.getState().data.settings.coach!.aiConsent).toBe(false)
     } finally {
       vi.unstubAllGlobals()
     }

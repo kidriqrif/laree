@@ -67,15 +67,16 @@ describe('theme', () => {
     await screen.findByRole('navigation', { name: 'Athlete' })
     expect(theme()).toBe('dark')
 
-    // Danial keeps the system setting, so the attribute goes.
+    // Danial keeps the system setting, so the attribute goes. The theme follows once the screen for
+    // the new viewer has rendered, which can wait for a page's code to load: wait for it.
     act(() => viewAs('athlete', 'danial'))
-    expect(theme()).toBeNull()
+    await waitFor(() => expect(theme()).toBeNull())
 
     act(() => viewAs('coach'))
-    expect(theme()).toBe('light')
+    await waitFor(() => expect(theme()).toBe('light'))
 
     act(() => useLaree.getState().setSettings('coach', { theme: 'system' }))
-    expect(theme()).toBeNull()
+    await waitFor(() => expect(theme()).toBeNull())
   })
 
   it('applies the theme on the role picker too', async () => {

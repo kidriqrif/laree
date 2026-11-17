@@ -16,8 +16,8 @@ const setConsent = (coach: boolean, athlete: boolean, id: A = 'amir') =>
         ...s.data,
         settings: {
           ...s.data.settings,
-          coach: { ...s.data.settings.coach, aiConsent: coach },
-          [id]: { ...s.data.settings[id], aiConsent: athlete },
+          coach: { ...s.data.settings.coach!, aiConsent: coach },
+          [id]: { ...s.data.settings[id]!, aiConsent: athlete },
         },
       },
     })),

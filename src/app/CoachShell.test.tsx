@@ -20,7 +20,7 @@ afterEach(() => {
 })
 
 const open = (id: 'amir' | 'danial' | 'irfan') =>
-  useLaree.getState().data.flagsState[id].flags.filter((f) => f.status === 'open').length
+  useLaree.getState().data.flagsState[id]!.flags.filter((f) => f.status === 'open').length
 
 async function renderRail() {
   const router = createMemoryRouter(routes, { initialEntries: ['/coach/overview'] })
@@ -46,7 +46,7 @@ describe('coach rail', () => {
 
   it('counts open flags on Check-ins and drops the count at zero', async () => {
     const total = (['amir', 'danial', 'irfan'] as const).reduce(
-      (n, id) => n + useLaree.getState().data.flagsState[id].flags.filter((f) => f.status === 'open').length,
+      (n, id) => n + useLaree.getState().data.flagsState[id]!.flags.filter((f) => f.status === 'open').length,
       0,
     )
     const rail = await renderRail()

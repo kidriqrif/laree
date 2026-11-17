@@ -13,6 +13,7 @@ import { Dialog, showUndoToast } from '../../../ui/overlay/index.ts'
 import { fmtWeekdayDate } from '../../shared/activity/format.ts'
 import { undoIfLatest, undoStepOf } from '../calendar/sessionModel.ts'
 import styles from './ExportDialogs.module.css'
+import { newId } from '../../../data/ids.ts'
 
 export interface AddToCalendarSlotProps {
   template: WorkoutTemplate
@@ -26,9 +27,7 @@ export function sessionFromTemplate(
   day: number,
 ): PlannedWorkout {
   const same = planned.filter((p) => p.athleteId === athleteId && p.day === day)
-  let n = same.length + 1
-  let id = `pw-${athleteId}-${day}-${n}`
-  while (planned.some((p) => p.id === id)) id = `pw-${athleteId}-${day}-${++n}`
+  const id = newId()
   const w: PlannedWorkout = {
     id,
     athleteId,

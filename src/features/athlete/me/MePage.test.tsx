@@ -4,7 +4,8 @@ import { RouterProvider } from 'react-router/dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { routes } from '../../../app/router.tsx'
 import { useViewer } from '../../../app/viewer.ts'
-import { freshData, useLaree } from '../../../data/store.ts'
+import { freshData } from '../../../data/freshData.ts'
+import { useLaree } from '../../../data/store.ts'
 
 function renderAt(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
@@ -55,12 +56,12 @@ describe('Me page', () => {
     await heading('Preferences')
     fireEvent.click(screen.getByRole('radio', { name: 'Dark' }))
     await waitFor(() => expect(document.documentElement.getAttribute('data-theme')).toBe('dark'))
-    expect(useLaree.getState().data.settings.amir.theme).toBe('dark')
+    expect(useLaree.getState().data.settings.amir!.theme).toBe('dark')
     fireEvent.click(screen.getByRole('radio', { name: 'Light' }))
     await waitFor(() => expect(document.documentElement.getAttribute('data-theme')).toBe('light'))
     fireEvent.click(screen.getByRole('radio', { name: 'System' }))
     await waitFor(() => expect(document.documentElement.hasAttribute('data-theme')).toBe(false))
-    expect(useLaree.getState().data.settings.amir.theme).toBe('system')
+    expect(useLaree.getState().data.settings.amir!.theme).toBe('system')
   })
 
   it('links to the reset page', async () => {
@@ -76,11 +77,11 @@ describe('Reset page', () => {
     useLaree.getState().setPref('x', 1)
     const router = renderAt('/reset')
     await heading('Reset demo data')
-    expect(useLaree.getState().data.settings.amir.theme).toBe('dark')
+    expect(useLaree.getState().data.settings.amir!.theme).toBe('dark')
 
     fireEvent.click(screen.getByRole('button', { name: 'Reset demo data' }))
     const dialog = await screen.findByRole('alertdialog')
-    expect(useLaree.getState().data.settings.amir.theme).toBe('dark')
+    expect(useLaree.getState().data.settings.amir!.theme).toBe('dark')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Reset demo data' }))
 
     await screen.findByText('Demo data reset.')

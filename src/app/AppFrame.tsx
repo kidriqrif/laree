@@ -1,6 +1,7 @@
 /* oxlint-disable jsx-a11y/prefer-tag-over-role, react/set-state-in-effect -- status region; the toast reports the viewer syncing to the router location */
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useMatches, useNavigationType } from 'react-router'
+import { isLive } from './mode.ts'
 import { writeRouteTitle } from './pageTitle.ts'
 import { personName } from './people.ts'
 import { RoleSwitcher } from './RoleSwitcher.tsx'
@@ -23,6 +24,11 @@ export function useRouteTitle(): string | undefined {
   }
   return undefined
 }
+
+/** The live app's sign-in, onboarding and route guards: its own chunk, never in the demo's path. */
+// `__LIVE__` is a literal: in the demo build the import is dead code and the live app's
+// files are left out of the build.
+const LiveGate = lazy(() => (__LIVE__ ? import('../live/LiveGate.tsx') : Promise.reject(new Error('live build only'))))
 
 const COACH_PATH = /^\/coach(\/|$)/
 const ATHLETE_PATH = /^\/athlete(\/|$)/
@@ -64,11 +70,12 @@ export function AppFrame() {
       if (pathname !== '/coach') setLastCoachRoute(`${pathname}${search}`)
       if (v.role !== 'coach') {
         v.viewAs('coach')
-        setToast('Viewing as Coach, because this is a coach page.')
+        // Live, only a self-coached athlete moves between sides: their own plan, not another person.
+        if (!isLive) setToast('Viewing as Coach, because this is a coach page.')
       }
     } else if (ATHLETE_PATH.test(pathname) && v.role === 'coach') {
       v.viewAs(v.athleteId)
-      setToast(`Viewing as ${personName(v.athleteId)}, because this is an athlete page.`)
+      if (!isLive) setToast(`Viewing as ${personName(v.athleteId)}, because this is an athlete page.`)
     }
   }, [pathname, search])
 
@@ -79,7 +86,7 @@ export function AppFrame() {
   }, [toast])
 
   return (
-    <div className={styles.frame}>
+    <div className={styles.frame} data-live-frame={isLive ? '' : undefined}>
       <ThemeSync />
       <button
         type="button"
@@ -88,10 +95,18 @@ export function AppFrame() {
       >
         Skip to content
       </button>
-      <RoleSwitcher />
+      {__LIVE__ ? null : <RoleSwitcher />}
       <StorageBanner />
       <div className={styles.body}>
-        <Outlet />
+        {isLive ? (
+          <Suspense fallback={null}>
+            <LiveGate>
+              <Outlet />
+            </LiveGate>
+          </Suspense>
+        ) : (
+          <Outlet />
+        )}
       </div>
       <UpdateToast />
       <div role="status" className={styles.toastRegion}>

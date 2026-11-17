@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useViewer } from '../app/viewer.ts'
 import type { Activity } from '../domain/types.ts'
 import { resetStorageStatus, STORE_KEY } from './persist.ts'
-import { freshData, useLaree } from './store.ts'
+import { freshData } from './freshData.ts'
+import { useLaree } from './store.ts'
 
 beforeEach(() => {
   localStorage.clear()
@@ -72,10 +73,10 @@ describe('actions', () => {
 
     useViewer.getState().viewAs('coach')
     useLaree.getState().setAiConsent('coach', true)
-    expect(useLaree.getState().data.settings.coach.aiConsent).toBe(true)
-    expect(useLaree.getState().data.settings.amir.aiConsent).toBe(false)
+    expect(useLaree.getState().data.settings.coach!.aiConsent).toBe(true)
+    expect(useLaree.getState().data.settings.amir!.aiConsent).toBe(false)
     useLaree.getState().setSettings('amir', { theme: 'dark' })
-    expect(useLaree.getState().data.settings.amir.theme).toBe('dark')
+    expect(useLaree.getState().data.settings.amir!.theme).toBe('dark')
   })
 })
 
@@ -96,7 +97,7 @@ describe('persistence', () => {
     localStorage.setItem(STORE_KEY, raw)
     await useLaree.persist.rehydrate()
     expect(useLaree.getState().data.prefs['rosterSort']).toBe('name')
-    expect(useLaree.getState().data.settings.amir.aiConsent).toBe(true)
+    expect(useLaree.getState().data.settings.amir!.aiConsent).toBe(true)
   })
 
   it('migrates a v0 payload from storage', async () => {
@@ -116,7 +117,7 @@ describe('persistence', () => {
     )
     await useLaree.persist.rehydrate()
     expect(useLaree.getState().unreadable).toBe(false)
-    expect(useLaree.getState().data.settings.coach.theme).toBe('dark')
+    expect(useLaree.getState().data.settings.coach!.theme).toBe('dark')
     expect(useLaree.getState().data.thresholds[0]?.source).toBe('seed')
   })
 
@@ -201,7 +202,7 @@ async function freshPageLoad() {
 }
 
 describe('AI withdrawal that could not be saved', () => {
-  const consent = (id: 'amir' | 'danial' | 'coach') => useLaree.getState().data.settings[id].aiConsent
+  const consent = (id: 'amir' | 'danial' | 'coach') => useLaree.getState().data.settings[id]!.aiConsent
   const asAthlete = () => useViewer.setState({ role: 'athlete', athleteId: 'amir' })
   const asCoach = () => useViewer.setState({ role: 'coach' })
 
@@ -276,8 +277,8 @@ describe('AI withdrawal that could not be saved', () => {
     // New copies of the modules, so nothing from this page's memory survives: only storage does.
     const page = await freshPageLoad()
     expect(page.persist.hasHydrated()).toBe(true)
-    expect(JSON.parse(raw).state.data.settings.amir.aiConsent).toBe(true)
-    expect(page.getState().data.settings.amir.aiConsent).toBe(false)
+    expect(JSON.parse(raw).state.data.settings.amir!.aiConsent).toBe(true)
+    expect(page.getState().data.settings.amir!.aiConsent).toBe(false)
     expect(page.getState().aiUnsavedOwners).toEqual(['amir'])
     expect(page.getState().aiWithdrawalUnsaved).toBe(true)
   })
@@ -290,7 +291,7 @@ describe('AI withdrawal that could not be saved', () => {
     useLaree.getState().setAiConsent('amir', false)
     expect(useLaree.getState().aiUnsavedOwners).toEqual(['amir'])
     const page = await freshPageLoad()
-    expect(page.getState().data.settings.amir.aiConsent).toBe(false)
+    expect(page.getState().data.settings.amir!.aiConsent).toBe(false)
   })
 
   it('does not warn after a reload when the withdrawal note lasts in localStorage', async () => {

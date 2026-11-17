@@ -5,9 +5,10 @@
  */
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { ATHLETES } from '../app/people.ts'
+import { ATHLETE_IDS, ATHLETES } from '../app/people.ts'
+import { isLive } from '../app/mode.ts'
 import { useViewer } from '../app/viewer.ts'
-import { acknowledgeFlag, addFlagNote, resolveFlag, stepFlags, undoFlagAction } from '../domain/flags.ts'
+import { acknowledgeFlag, addFlagNote, flagsOf, resolveFlag, stepFlags, undoFlagAction } from '../domain/flags.ts'
 import type { AthleteData, FlagLifecycle, FlagRecord, FlagsState } from '../domain/flags.ts'
 import type { BadgeSeen, WeekExcuse } from '../domain/gamification.ts'
 import { evaluateCompliance } from '../domain/metrics/compliance.ts'
@@ -33,7 +34,7 @@ import type {
   ThresholdSource,
   WorkoutTemplate,
 } from '../domain/types.ts'
-import { defaultSettingsMap, migrate, STORE_VERSION } from './migrations.ts'
+import { migrate, STORE_VERSION } from './migrations.ts'
 import {
   createLareeStorage,
   isSavedDataUnreadable,
@@ -45,9 +46,12 @@ import {
   readAiWithdrawnSessionOnly,
   STORE_KEY,
 } from './persist.ts'
-import { generateSeed } from './seed/index.ts'
+import { freshData } from './freshData.ts'
 import type { SeedCheckIn } from './seed/index.ts'
 import { earnedAwards, selectFitnessSeries } from './selectors.ts'
+import { settingsOf } from '../domain/settings.ts'
+import { newId } from './ids.ts'
+import { TEMPLATES } from './seed/templates.ts'
 
 /** Everything that is saved. */
 export interface LareeData {
@@ -148,6 +152,8 @@ export interface LareeState extends Persisted {
   skipCheckIn: (athleteId: AthleteId, day?: DayOffset) => void
   /** Re-run the flag rules for one athlete, or for all three. Running twice in a day is harmless. */
   refreshFlags: (athleteId?: AthleteId, day?: DayOffset) => void
+  /** Re-match activities, re-run the flag rules and award badges for one athlete, as after any change. */
+  resettle: (athleteId: AthleteId) => void
   acknowledgeFlag: (flagId: string, athleteId: AthleteId, day?: DayOffset) => void
   resolveFlag: (flagId: string, athleteId: AthleteId, note?: string, day?: DayOffset) => void
   addFlagNote: (flagId: string, athleteId: AthleteId, text: string, day?: DayOffset) => void
@@ -194,26 +200,20 @@ export interface LareeState extends Persisted {
   reset: () => void
 }
 
-/** A fresh copy of the seed data, dated to the current week. */
-export function freshData(): LareeData {
-  const s = generateSeed()
-  const copy = structuredClone({
-    thresholds: s.thresholds,
-    races: s.races,
-    phases: s.phases,
-    templates: s.templates,
-    planned: s.planned,
-    activities: s.activities,
-    checkIns: s.checkIns,
-    flags: s.flags,
-    flagsState: s.flagsState,
-    kudos: s.kudos,
-    badges: s.badges,
-    badgeSeen: s.badgeSeen,
-    excuses: s.excuses,
-  })
-  return { ...copy, skippedCheckIns: [], activityNotes: {}, settings: defaultSettingsMap(), drafts: {}, prefs: {} }
+/**
+ * The live app before the account's data arrives: no people's records, only the built-in library.
+ * The built-in templates are shared, not copied, so the sync can tell them from the coach's own.
+ */
+export function emptyLiveData(): LareeData {
+  return {
+    thresholds: [], races: [], phases: [], templates: [...TEMPLATES], planned: [], activities: [],
+    checkIns: [], flags: [], flagsState: {}, kudos: [], badges: [], badgeSeen: {}, excuses: [],
+    skippedCheckIns: [], activityNotes: {}, settings: {}, drafts: {}, prefs: {},
+  }
 }
+
+/** Where the live app keeps its offline copy of the account's data. */
+export const LIVE_STORE_KEY = 'laree:live:v1'
 
 const ARRAYS = [
   'thresholds', 'races', 'phases', 'templates', 'planned', 'activities',
@@ -228,10 +228,10 @@ function isUsable(d: unknown): d is LareeData {
     if (typeof r[k] !== 'object' || r[k] === null) return false
   }
   const fs = r['flagsState'] as Record<string, unknown>
-  return ['amir', 'danial', 'irfan'].every((id) => typeof fs[id] === 'object' && fs[id] !== null)
+  // The live roster loads after the saved copy, and a new athlete has no flag state yet.
+  if (isLive) return true
+  return ATHLETE_IDS.every((id) => typeof fs[id] === 'object' && fs[id] !== null)
 }
-
-const ATHLETE_IDS: readonly AthleteId[] = ['amir', 'danial', 'irfan']
 
 const RESOLUTION_NOTE: Record<string, string> = {
   auto: 'Back inside the usual range.',
@@ -274,10 +274,10 @@ const unsavedWithdrawals = new Set<string>()
  * Also says which owners the notes had to turn off: the main save still holds their old choice.
  */
 function withAiWithdrawals(data: LareeData): { data: LareeData; withdrawn: PersonId[] } {
-  const owners = readAiWithdrawn().filter((o): o is PersonId => o in data.settings && data.settings[o as PersonId].aiConsent)
+  const owners = readAiWithdrawn().filter((o): o is PersonId => data.settings[o]?.aiConsent === true)
   if (owners.length === 0) return { data, withdrawn: [] }
   const settings = { ...data.settings }
-  for (const o of owners) settings[o] = { ...settings[o], aiConsent: false }
+  for (const o of owners) settings[o] = { ...settingsOf(settings, o), aiConsent: false }
   return { data: { ...data, settings }, withdrawn: owners }
 }
 
@@ -316,7 +316,7 @@ function runFlags(data: LareeData, athleteId: AthleteId, day: DayOffset): Pick<L
     })),
     evaluations: ev.planned.map((e) => ({ plannedId: e.plannedId, band: e.band })),
   }
-  return syncFlags(data, athleteId, stepFlags(athleteId, day, input, data.flagsState[athleteId]))
+  return syncFlags(data, athleteId, stepFlags(athleteId, day, input, flagsOf(data.flagsState, athleteId)))
 }
 
 /** Re-match plans and activities for one athlete so activities carry their plan link and band. */
@@ -408,7 +408,7 @@ export const useLaree = create<LareeState>()(
         return r.added
       }
       return {
-        data: freshData(),
+        data: __LIVE__ ? emptyLiveData() : freshData(),
         anchor: runtimeStartEpochDay(),
         storageFailed: false,
         aiWithdrawalUnsaved: false,
@@ -437,9 +437,7 @@ export const useLaree = create<LareeState>()(
           if (!t) return undefined
           const planned = get().data.planned
           const same = planned.filter((p) => p.athleteId === athleteId && p.day === day)
-          let n = same.length + 1
-          let id = `pw-${athleteId}-${day}-${n}`
-          while (planned.some((p) => p.id === id)) id = `pw-${athleteId}-${day}-${++n}`
+          const id = newId()
           const w: PlannedWorkout = {
             id,
             athleteId,
@@ -501,17 +499,18 @@ export const useLaree = create<LareeState>()(
               ? {}
               : { skippedCheckIns: [...d.skippedCheckIns, { athleteId, day }] },
           ),
+        resettle: (athleteId) => settle(athleteId),
         refreshFlags: (athleteId, day = clockToday()) => {
           for (const id of athleteId ? [athleteId] : ATHLETE_IDS) patch((d) => runFlags(d, id, day))
         },
         acknowledgeFlag: (flagId, athleteId, day = clockToday()) =>
-          patch((d) => syncFlags(d, athleteId, acknowledgeFlag(d.flagsState[athleteId], flagId, day))),
+          patch((d) => syncFlags(d, athleteId, acknowledgeFlag(flagsOf(d.flagsState, athleteId), flagId, day))),
         resolveFlag: (flagId, athleteId, note, day = clockToday()) =>
-          patch((d) => syncFlags(d, athleteId, resolveFlag(d.flagsState[athleteId], flagId, day, note))),
+          patch((d) => syncFlags(d, athleteId, resolveFlag(flagsOf(d.flagsState, athleteId), flagId, day, note))),
         addFlagNote: (flagId, athleteId, text, day = clockToday()) =>
-          patch((d) => syncFlags(d, athleteId, addFlagNote(d.flagsState[athleteId], flagId, day, text))),
+          patch((d) => syncFlags(d, athleteId, addFlagNote(flagsOf(d.flagsState, athleteId), flagId, day, text))),
         undoFlagAction: (athleteId, flagId, before, after, unquiet) => {
-          const next = undoFlagAction(get().data.flagsState[athleteId], flagId, before, after, unquiet)
+          const next = undoFlagAction(flagsOf(get().data.flagsState, athleteId), flagId, before, after, unquiet)
           if (!next) return false
           // Through syncFlags, so the list rows and the lifecycle records never disagree.
           patch((d) => syncFlags(d, athleteId, next))
@@ -519,8 +518,7 @@ export const useLaree = create<LareeState>()(
         },
         sendKudos: (input, day = clockToday()) => {
           patch((d) => {
-            const n = d.kudos.filter((k) => k.athleteId === input.athleteId).length + 1
-            const k: Kudos = { id: `kudos-${input.athleteId}-${day}-${n}`, athleteId: input.athleteId, day, seenByAthlete: false }
+            const k: Kudos = { id: newId(), athleteId: input.athleteId, day, seenByAthlete: false }
             if (input.activityId !== undefined) k.activityId = input.activityId
             if (input.message !== undefined && input.message.trim() !== '') k.message = input.message.trim()
             return { kudos: [...d.kudos, k] }
@@ -554,10 +552,7 @@ export const useLaree = create<LareeState>()(
           patch((d) => ({ badges: awardBadges(d, athleteId, clockToday()) }))
         },
         addRace: (race) => {
-          const taken = new Set(get().data.races.map((r) => r.id))
-          let n = get().data.races.filter((r) => r.athleteId === race.athleteId).length + 1
-          let id = `race-${race.athleteId}-${n}`
-          while (taken.has(id)) id = `race-${race.athleteId}-${++n}`
+          const id = newId()
           patch((d) => ({ races: [...d.races, { ...race, id }] }))
           return id
         },
@@ -571,7 +566,7 @@ export const useLaree = create<LareeState>()(
           const derived = derivePhases(race, options).map((p) => ({
             ...p,
             athleteId: race.athleteId,
-            id: `${race.athleteId}-${p.kind}-${p.firstWeek}`,
+            id: newId(),
           }))
           if (derived.length > 0) get().setPhases(race.athleteId, derived)
           return derived
@@ -590,7 +585,7 @@ export const useLaree = create<LareeState>()(
           // Agreeing is personal. Withdrawing is open to either person (docs/spec/ai.md 2.2).
           if (on && !isOwnerViewing) return false
           if (!on && !isOwnerViewing && !(viewer.role === 'coach' && owner !== 'coach')) return false
-          patch((d) => ({ settings: { ...d.settings, [owner]: { ...d.settings[owner], aiConsent: on } } }))
+          patch((d) => ({ settings: { ...d.settings, [owner]: { ...settingsOf(d.settings, owner), aiConsent: on } } }))
           // The save above is synchronous, so its outcome is known here. A withdrawal that did not
           // reach the main save is written as a small note of its own, which loading applies.
           // Each owner is tracked on their own: the flag stays up until every withdrawal is saved.
@@ -611,7 +606,7 @@ export const useLaree = create<LareeState>()(
           return true
         },
         setSettings: (owner, change) =>
-          patch((d) => ({ settings: { ...d.settings, [owner]: { ...d.settings[owner], ...change } } })),
+          patch((d) => ({ settings: { ...d.settings, [owner]: { ...settingsOf(d.settings, owner), ...change } } })),
         setDraft: (key, value) => patch((d) => ({ drafts: { ...d.drafts, [key]: value } })),
         clearDraft: (key) =>
           patch((d) => {
@@ -622,7 +617,8 @@ export const useLaree = create<LareeState>()(
         dismissStorageBanner: () => set({ bannerDismissed: true }),
         reset: () => {
           unsavedWithdrawals.clear()
-          set({ data: freshData(), anchor: runtimeStartEpochDay(), undoStack: [], unreadable: false, aiWithdrawalUnsaved: false, aiUnsavedOwners: [] })
+          // The live app has no seed to go back to (and so does not carry the seed generator).
+          set({ data: __LIVE__ ? emptyLiveData() : freshData(), anchor: runtimeStartEpochDay(), undoStack: [], unreadable: false, aiWithdrawalUnsaved: false, aiUnsavedOwners: [] })
           // Reset clears every consent choice, the withdrawal note included (docs/spec/ai.md 4).
           // Only once the fresh data is saved: if that save failed, a reload brings the old copy
           // back, and the note must still be there to keep AI off.
@@ -633,7 +629,7 @@ export const useLaree = create<LareeState>()(
       }
     },
     {
-      name: STORE_KEY,
+      name: isLive ? LIVE_STORE_KEY : STORE_KEY,
       version: STORE_VERSION,
       storage: createLareeStorage<Persisted>(),
       partialize: (s) => ({ data: s.data, anchor: s.anchor }),

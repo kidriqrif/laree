@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Link } from 'react-router'
-import { ATHLETES as FOCUS } from '../../../app/people.ts'
-import { ATHLETES } from '../../../data/seed/people.ts'
+import { ATHLETES } from '../../../app/people.ts'
+import { isLive } from '../../../app/mode.ts'
 import { useViewer } from '../../../app/viewer.ts'
 import { currentDay } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
@@ -13,6 +13,10 @@ import { showToast } from '../../../ui/overlay/index.ts'
 import { AiSection } from './AiSection.tsx'
 import { changeLines, currentOf, historyOf, kindsFor, valueText, zoneRows } from './thresholds.ts'
 import styles from './MePage.module.css'
+
+// `__LIVE__` is a literal: in the demo build the import is dead code and the live app's
+// files are left out of the build.
+const AccountPanel = lazy(() => (__LIVE__ ? import('../../../live/AccountPanel.tsx') : Promise.reject(new Error('live build only'))))
 
 const THEMES: ReadonlyArray<{ id: ThemePreference; label: string }> = [
   { id: 'system', label: 'System' },
@@ -26,7 +30,7 @@ const SECTIONS = [
   ['data-in', 'Data in and out'],
   ['ai', 'AI summaries'],
   ['preferences', 'Preferences'],
-  ['prototype', 'Prototype'],
+  isLive ? ['account', 'Account'] : ['prototype', 'Prototype'],
 ] as const
 
 const timeFmt = new Intl.DateTimeFormat('en-GB', {
@@ -51,7 +55,7 @@ export default function MePage() {
   const setSettings = useLaree((s) => s.setSettings)
   const setPref = useLaree((s) => s.setPref)
   const athlete = ATHLETES.find((a) => a.id === athleteId)
-  const info = FOCUS.find((a) => a.id === athleteId)
+  const info = ATHLETES.find((a) => a.id === athleteId)
   const theme: ThemePreference = data.settings[athleteId]?.theme ?? 'system'
   const today = currentDay()
   const [themeError, setThemeError] = useState('')
@@ -189,16 +193,18 @@ export default function MePage() {
                 Import file
               </Link>
             </li>
-            <li className={styles.row}>
-              <span>
-                Sync device (simulated)
-                <br />
-                <span className={styles.label}>
-                  {lastSync === null ? 'Not synced yet' : `Last synced ${timeFmt.format(lastSync)}`}
+            {isLive ? null : (
+              <li className={styles.row}>
+                <span>
+                  Sync device (simulated)
+                  <br />
+                  <span className={styles.label}>
+                    {lastSync === null ? 'Not synced yet' : `Last synced ${timeFmt.format(lastSync)}`}
+                  </span>
                 </span>
-              </span>
-              <Button onPress={syncNow}>Sync now</Button>
-            </li>
+                <Button onPress={syncNow}>Sync now</Button>
+              </li>
+            )}
             <li>
               <div className={styles.row}>
                 <span>Send a session to Strava</span>
@@ -248,17 +254,23 @@ export default function MePage() {
         </Card>
       </section>
 
-      <section id="me-prototype" tabIndex={-1} className={styles.section} aria-labelledby="me-proto-h">
-        <h2 id="me-proto-h" className={styles.h}>
-          Prototype
-        </h2>
-        <p className={styles.sub}>Laree is a prototype with made-up data kept on this device.</p>
-        <div className={styles.actions}>
-          <Link className={styles.link} to="/reset">
-            Reset demo data
-          </Link>
-        </div>
-      </section>
+      {isLive ? (
+        <Suspense fallback={null}>
+          <AccountPanel headingId="me-account" />
+        </Suspense>
+      ) : (
+        <section id="me-prototype" tabIndex={-1} className={styles.section} aria-labelledby="me-proto-h">
+          <h2 id="me-proto-h" className={styles.h}>
+            Prototype
+          </h2>
+          <p className={styles.sub}>Laree is a prototype with made-up data kept on this device.</p>
+          <div className={styles.actions}>
+            <Link className={styles.link} to="/reset">
+              Reset demo data
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

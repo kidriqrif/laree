@@ -1,6 +1,5 @@
 import { ATHLETES } from '../../../app/people.ts'
 import { fmtDay, Sparkline } from '../../../charts/index.ts'
-import { ATHLETES as SEED_ATHLETES } from '../../../data/seed/people.ts'
 import { selectCheckInSkipped } from '../../../data/selectors.ts'
 import { useLaree } from '../../../data/store.ts'
 import { baselineOrStored, usualLabel } from '../../../domain/baselines.ts'
@@ -25,7 +24,7 @@ export default function CheckInDetailDrawer({ athleteId, day, onClose }: CheckIn
   const mine = data.checkIns.filter((c) => c.athleteId === athleteId)
   const checkIn = mine.find((c) => c.day === day)
   const skipped = selectCheckInSkipped(data, athleteId, day)
-  const stored = SEED_ATHLETES.find((a) => a.id === athleteId)?.baselines ?? { restingHr: 50, hrvMs: 70 }
+  const stored = ATHLETES.find((a) => a.id === athleteId)?.baselines ?? { restingHr: 50, hrvMs: 70 }
   const first = day - 13
   const days = Array.from({ length: 14 }, (_, i) => first + i)
 

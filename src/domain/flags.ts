@@ -544,6 +544,13 @@ export function flagValuesShort(f: FlagRecord, today: number, dayLabel: (day: nu
 
 export const emptyFlagsState = (): FlagsState => ({ flags: [], quiet: {} });
 
+const EMPTY_FLAGS: FlagsState = Object.freeze({ flags: [], quiet: {} }) as FlagsState;
+
+/** One athlete's flag state, or an empty one for an athlete with no records yet. */
+export function flagsOf(state: Readonly<Record<string, FlagsState>>, athleteId: string): FlagsState {
+  return state[athleteId] ?? EMPTY_FLAGS;
+}
+
 export const isActive = (f: FlagRecord): boolean => f.status !== 'resolved';
 
 /** Open flags only: acknowledged ones stay in the inbox but do not count towards the badge. */

@@ -3,6 +3,7 @@
  * tag, the sport and the week's target load. Pure; the dialog holds the proposal as state.
  * Down weeks come out lighter because their weekly target is already lower (domain/plan.ts).
  */
+import { newId } from '../../../data/ids.ts'
 import type { PlanChange } from '../../../data/store.ts'
 import { weekRange } from '../../../domain/time.ts'
 import type {
@@ -240,9 +241,7 @@ export function toChanges(
       if (c.kind !== 'slot' || !c.templateId) continue
       const t = byId.get(c.templateId)
       if (!t) continue
-      let n = 1
-      let id = `pw-${athleteId}-${c.day}-${n}`
-      while (taken.has(id)) id = `pw-${athleteId}-${c.day}-${++n}`
+      const id = newId()
       taken.add(id)
       const order = perDay.get(c.day) ?? planned.filter((p) => p.athleteId === athleteId && p.day === c.day).length
       perDay.set(c.day, order + 1)

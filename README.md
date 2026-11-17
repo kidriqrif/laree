@@ -8,7 +8,10 @@ Training planner for triathlon, running and cycling.
 
 Laree is for a coach and the athletes they train one-to-one. Athletes get a simple phone app: today's session, a quick log, a morning check-in and a lap that fills as the week goes. The coach gets a data-dense desktop tool: the whole team at a glance, flags from check-ins, a calendar, season plans, a workout builder and file exports.
 
-**Status:** prototype, to be tagged v0.1.0-prototype at release. A clickable prototype on fictional mock data, with no accounts and no backend. What you change is saved in this browser's localStorage until the week ends. Each Monday the demo starts again from a fresh seed. If the browser will not save, changes last only for this visit.
+**Status:** two builds from one code base.
+
+- **The demo** (GitHub Pages): a clickable prototype on fictional mock data, with no accounts and no backend. What you change is saved in this browser's localStorage until the week ends. Each Monday the demo starts again from a fresh seed.
+- **The live app** (Vercel and Supabase): real accounts with email-code sign-in, a coach and their athletes, data in Postgres with row-level access rules, offline logging that syncs later, opt-in AI for premium users, and data export and deletion. A build is live when `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are set. See [docs/dev/backend.md](docs/dev/backend.md) and [docs/dev/runbook.md](docs/dev/runbook.md).
 
 ## Live site
 
@@ -130,11 +133,20 @@ Start with these:
 
 ## Data and privacy
 
+**The demo** (GitHub Pages, no sign-in):
+
 - Every person, race and number in the demo is fictional.
-- Nothing you enter leaves the device. There is no backend and no account. The site is static files on GitHub Pages, and the browser fetches only those files and app updates.
+- Nothing you enter leaves the device. The demo has no backend and no account. It is static files, and the browser fetches only those files and app updates.
 - The data lives in this browser's storage, under keys that start with `laree:`. Most of it is in localStorage. A few small notes go in sessionStorage.
-- AI is off by default. The prototype never calls a model: it shows only simulated output, made on the device and labelled "Simulated AI - prototype".
+- AI is off by default. The demo never calls a model: it shows only simulated output, made on the device and labelled "Simulated AI - prototype".
 - `#/reset` puts the seeded demo back and clears every change, AI consent included.
+
+**The live app** (sign-in with an email code):
+
+- What you enter is stored in a database in Singapore (Supabase) and is kept on your device too, so the app works offline. Your coach, if you have one, can read your training and check-ins. Nobody else's account can.
+- Original activity files you import are kept in private storage.
+- AI is off by default and is a premium feature. When it is on, a short rule-based summary, with no name, note or GPS track, goes to a third-party AI provider that may be outside Malaysia.
+- You can download your data and delete your account in the app. The in-app privacy page (`#/privacy`) has the details.
 
 ## Licence
 

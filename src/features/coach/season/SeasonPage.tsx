@@ -12,7 +12,7 @@ import { useLaree } from '../../../data/store.ts'
 import { Bars, fmtDay, fmtNumber } from '../../../charts/index.ts'
 import type { BarDatum } from '../../../charts/index.ts'
 import { weeklyTargets } from '../../../domain/plan.ts'
-import { currentWeek, weekOfDay, weekRange } from '../../../domain/time.ts'
+import { currentWeek, lastPlanWeek, weekOfDay, weekRange } from '../../../domain/time.ts'
 import type { Phase, Race } from '../../../domain/types.ts'
 import { Button, Card, EmptyState } from '../../../ui/core/index.ts'
 import { DataTable } from '../../../ui/data/index.ts'
@@ -151,7 +151,7 @@ function SeasonBody() {
   const lined = aWeek !== null && phases.some((p) => p.kind === 'race' && p.firstWeek <= aWeek && aWeek <= p.lastWeek)
   const needsDerive = aRace !== undefined && !lined
 
-  const lastWeek = Math.max(PLAN_LAST_WEEK, ...phases.map((p) => p.lastWeek))
+  const lastWeek = Math.max(PLAN_LAST_WEEK, lastPlanWeek(), ...phases.map((p) => p.lastWeek))
   const rows: WeekRow[] = useMemo(() => {
     const first = phases[0]?.firstWeek
     if (first === undefined) return []
@@ -280,7 +280,6 @@ function SeasonBody() {
       at = b + 1
       return {
         ...p,
-        id: `${athleteId}-${p.kind}-${a}`,
         firstWeek: a,
         lastWeek: b,
         weeklyTargets: weeklyTargets(p.kind, a, b, base?.load, base?.hours),

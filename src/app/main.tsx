@@ -1,3 +1,5 @@
+// First: fixes day 0 in the live app before any module reads the date.
+import './liveEpoch.ts'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'

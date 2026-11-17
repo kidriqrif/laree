@@ -95,6 +95,7 @@ export const routes: RouteObject[] = [
           { path: 'brand', lazy: page(() => import('../features/shared/brand/BrandPage.tsx')), handle: title('Brand board') },
           { path: 'kit', lazy: page(() => import('../features/shared/kit/KitPage.tsx')), handle: title('UI kit') },
           { path: 'reset', lazy: page(() => import('../features/shared/reset/ResetPage.tsx')), handle: title('Reset demo data') },
+          { path: 'privacy', lazy: page(() => import('../features/shared/privacy/PrivacyPage.tsx')), handle: title('Privacy') },
           { path: '*', element: <NotFound scope="standalone" />, handle: title('Not found') },
         ]),
       },

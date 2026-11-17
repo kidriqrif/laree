@@ -1,0 +1,199 @@
+/* Sign-in, onboarding and account panels of the live app. */
+@layer components {
+  .page {
+    display: grid;
+    gap: var(--space-5);
+    align-content: start;
+    max-inline-size: 30rem;
+    min-block-size: 100dvb;
+    margin-inline: auto;
+    padding: var(--space-8) var(--space-4);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  .hero {
+    display: grid;
+    gap: var(--space-2);
+    justify-items: start;
+  }
+
+  .tagline {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+  }
+
+  .lede {
+    font-size: var(--text-md);
+  }
+
+  .form {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .field {
+    display: grid;
+    gap: var(--space-1);
+    font-weight: 600;
+  }
+
+  .field input {
+    min-block-size: var(--target-min);
+    padding-inline: var(--space-3);
+    border: 1px solid var(--color-control-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    font-weight: 400;
+  }
+
+  .field input:focus-visible,
+  .check input:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .consents {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+  }
+
+  .consents legend {
+    padding-inline: var(--space-1);
+    font-weight: 600;
+  }
+
+  .check {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-3);
+    align-items: start;
+  }
+
+  .check input {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    margin-block-start: 0.15rem;
+    accent-color: var(--color-action);
+  }
+
+  .primary {
+    justify-self: start;
+    min-block-size: var(--target-min);
+    padding-inline: var(--space-5);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--color-action);
+    color: var(--color-on-action);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .primary:hover:not(:disabled) {
+    background: var(--color-action-hover);
+  }
+
+  .primary:disabled,
+  .link:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  /* Use with .primary. */
+  .danger {
+    background: var(--color-danger);
+    color: var(--color-on-danger);
+  }
+
+  .danger:hover:not(:disabled) {
+    background: var(--color-danger);
+  }
+
+  .link {
+    justify-self: start;
+    min-block-size: var(--target-min);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-link);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+  }
+
+  .card {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  .small {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .message:empty {
+    display: none;
+  }
+
+  .message {
+    font-weight: 600;
+  }
+
+  .list {
+    display: grid;
+    gap: var(--space-2);
+    padding: 0;
+    list-style: none;
+  }
+
+  .listRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    align-items: center;
+    justify-content: space-between;
+    padding-block: var(--space-2);
+    border-block-end: 1px solid var(--color-rule);
+  }
+
+  .offline:empty {
+    display: none;
+  }
+
+  .offline {
+    position: fixed;
+    inset-block-start: var(--space-2);
+    inset-inline: 0;
+    z-index: var(--z-toast);
+    inline-size: fit-content;
+    max-inline-size: calc(100% - var(--space-8));
+    margin-inline: auto;
+    padding: var(--space-1) var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-size: var(--text-sm);
+  }
+}

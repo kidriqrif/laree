@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
@@ -19,8 +19,18 @@ const fitNotice = (chunk: { modules: Record<string, unknown> }) =>
 const shortcutIcon = [{ src: 'pwa-192.png', sizes: '192x192', type: 'image/png' }]
 
 // base './' keeps the build path-agnostic: the repo may be renamed later.
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
+  // Demo or live, as one literal (src/app/mode.ts). A literal lets the bundler drop the other
+  // side's code: the live app carries no seed data or role switcher, the demo no live gate.
+  const live = Boolean(env['VITE_SUPABASE_URL'] && env['VITE_SUPABASE_PUBLISHABLE_KEY'])
+  return {
   base: './',
+  define: {
+    __LIVE__: JSON.stringify(live),
+    // The build id in error reports: the commit on Vercel, empty elsewhere.
+    'import.meta.env.VITE_APP_VERSION': JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA ?? '').slice(0, 12)),
+  },
   plugins: [
     react(),
     VitePWA({
@@ -54,7 +64,8 @@ export default defineConfig({
       },
     }),
   ],
-  build: { target: 'es2022', rolldownOptions: { output: { postBanner: fitNotice } } },
+  // The manifest lets scripts/check-budget.ts measure what Today loads.
+  build: { target: 'es2022', manifest: true, rolldownOptions: { output: { postBanner: fitNotice } } },
   worker: { rolldownOptions: { output: { postBanner: fitNotice } } },
   test: {
     environment: 'happy-dom',
@@ -63,9 +74,10 @@ export default defineConfig({
     testTimeout: 60_000,
     // Page tests load whole lazy routes. With a worker per core they starve each other and time out.
     maxWorkers: '50%',
-    include: ['src/**/*.test.{ts,tsx}', 'brand/**/*.test.ts', 'scripts/**/*.test.ts'],
+    include: ['src/**/*.test.{ts,tsx}', 'brand/**/*.test.ts', 'scripts/**/*.test.ts', 'supabase/functions/**/*.test.ts'],
     alias: {
       'virtual:pwa-register/react': fileURLToPath(new URL('./src/app/pwa/registerStub.ts', import.meta.url)),
     },
   },
+  }
 })

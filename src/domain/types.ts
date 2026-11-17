@@ -1,6 +1,7 @@
 /** Shared domain types for Laree. Pure types: no runtime code. */
 
-export type AthleteId = 'amir' | 'danial' | 'irfan';
+/** An athlete's id: a seed name in the demo, an account UUID in the live app. */
+export type AthleteId = string;
 export type CoachId = 'coach';
 export type PersonId = AthleteId | CoachId;
 

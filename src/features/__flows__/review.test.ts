@@ -119,8 +119,9 @@ describe('library undo', () => {
     const firstCopy = duplicateTemplate(one.id) as string
     const gone = deleteTemplate(firstCopy)
     if (!gone) throw new Error('nothing was deleted')
-    const secondCopy = duplicateTemplate(two.id)
-    expect(secondCopy).toBe(firstCopy)
+    // Ids are UUIDs now, so a copy never reuses one by chance. Take the id on purpose instead,
+    // as a sync from another device could.
+    state().saveTemplate({ ...two, id: firstCopy, name: `${two.name} (copy)` })
     restoreTemplate(gone)
     const names = state().data.templates.map((t) => t.name)
     expect(state().data.templates).toHaveLength(before + 2)

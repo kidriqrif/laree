@@ -1,0 +1,54 @@
+name: Nightly backup
+
+# The free plan has no backups. Every night this dumps the data and downloads the original activity
+# files, encrypts both to the owner's age public key (only the owner can read them) and keeps the
+# result as an artifact for 7 days. The schema is not dumped: the migrations in this repository
+# are the schema. Restore steps: docs/dev/runbook.md.
+on:
+  schedule:
+    - cron: '41 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - name: Skip unless configured
+        id: ready
+        run: |
+          if [ -n "$DB_URL" ] && [ -n "$AGE_RECIPIENT" ] && [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_SECRET_KEY" ]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Backup skipped: set SUPABASE_DB_URL, SUPABASE_SECRET_KEY, SUPABASE_URL and BACKUP_AGE_RECIPIENT (docs/dev/runbook.md)."
+          fi
+      - uses: actions/checkout@v7
+        if: steps.ready.outputs.go == 'true'
+      - uses: supabase/setup-cli@v1
+        if: steps.ready.outputs.go == 'true'
+        with:
+          version: 3.1.0
+      - name: Dump
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          # Rows only, of the app's tables and the accounts, and the files that match them. The
+          # files' rows in the storage schema are left out: uploading the files again on restore
+          # recreates them.
+          scripts/backup.sh dump
+          sudo apt-get install -y age >/dev/null
+          tar -czf - dump | age -r "$AGE_RECIPIENT" -o "laree-$(date -u +%F).tar.gz.age"
+          rm -rf dump
+      - uses: actions/upload-artifact@v4
+        if: steps.ready.outputs.go == 'true'
+        with:
+          name: laree-backup
+          path: laree-*.tar.gz.age
+          retention-days: 7

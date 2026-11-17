@@ -6,6 +6,11 @@
     min-block-size: 100dvh;
   }
 
+  /* The live app has no prototype switcher, so the shells start at the top. */
+  :global(:root):has([data-live-frame]) {
+    --switcher-h: 0px;
+  }
+
   .body {
     display: flex;
     flex: 1;

@@ -1,11 +1,11 @@
 /** Check-ins page logic that is not drawing: grid metrics, inbox order and the undo helper. */
 import { fmtDay } from '../../../charts/index.ts'
 import type { HeatCell, HeatLegendItem, HeatLevel } from '../../../charts/index.ts'
-import { ATHLETES } from '../../../data/seed/people.ts'
+import { ATHLETES } from '../../../app/people.ts'
 import type { SeedCheckIn } from '../../../data/seed/index.ts'
 import { useLaree } from '../../../data/store.ts'
 import { baselineOrStored } from '../../../domain/baselines.ts'
-import { lifecycleOf, sameLifecycle } from '../../../domain/flags.ts'
+import { flagsOf, lifecycleOf, sameLifecycle } from '../../../domain/flags.ts'
 import type { FlagRecord, FlagRuleId, Severity } from '../../../domain/flags.ts'
 import type { AthleteId, DayOffset } from '../../../domain/types.ts'
 import { showToast } from '../../../ui/overlay/index.ts'
@@ -191,7 +191,7 @@ export const FLAG_UNDO_STALE = 'That flag has changed since, so nothing was undo
  */
 export function flagActionUndo(athleteId: AthleteId, flagId: string, run: () => void): (() => void) | undefined {
   const read = () => {
-    const state = useLaree.getState().data.flagsState[athleteId]
+    const state = flagsOf(useLaree.getState().data.flagsState, athleteId)
     const rec = state.flags.find((f) => f.id === flagId)
     return rec ? { life: lifecycleOf(rec), quiet: state.quiet[rec.ruleId] === true } : undefined
   }

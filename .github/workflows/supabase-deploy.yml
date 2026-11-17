@@ -1,0 +1,34 @@
+name: Deploy the database and functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.1.0
+      - run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+      # The CLI targets the local stack unless told otherwise: --remote is the linked project.
+      # --yes: this job is the confirmation that the hosted project changes.
+      - run: supabase db push --remote --yes
+      - run: supabase functions deploy --remote="$SUPABASE_PROJECT_REF" --use-api --yes
