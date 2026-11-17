@@ -140,12 +140,12 @@ describe('the coach’s team on the free plan', () => {
     act(() => useAccount.setState({ account: coachWith(2) }))
     await waitFor(() => expect(fake.loads).toBe(2))
   })
-  it('says so when the day’s invitations are used up', async () => {
+  it('says so when the last 24 hours’ invitations are used up', async () => {
     fake.insertError = { code: 'LA002', message: 'A coach may send 20 invitations a day' }
     useAccount.setState({ account: coachWith(0) })
     render(<CoachTeamPanel />)
     fireEvent.change(screen.getByLabelText('Invite an athlete by email'), { target: { value: 'ann@example.test' } })
     fireEvent.click(screen.getByRole('button', { name: 'Invite' }))
-    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/as many invitations as one day allows/))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/as many invitations made in the last 24 hours as Laree allows\. Withdraw one/))
   })
 })

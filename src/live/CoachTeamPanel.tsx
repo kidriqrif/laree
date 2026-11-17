@@ -84,7 +84,7 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
           : error.code === 'LA001'
             ? `Your free plan has room for ${room.limit ?? 0} athletes, open invitations included, and it is full.`
             : error.code === 'LA002'
-              ? 'You have sent as many invitations as one day allows. Try again tomorrow.'
+              ? 'You already have as many invitations made in the last 24 hours as Laree allows. Withdraw one, or try again later.'
               : `Could not invite: ${error.message}`,
       )
     }
