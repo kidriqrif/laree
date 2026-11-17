@@ -18,7 +18,7 @@ jobs:
     environment: production
     env:
       DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://lqxvjonypveaxsmcgbql.supabase.co' }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
     steps:
@@ -28,7 +28,7 @@ jobs:
           if [ -n "$DB_URL" ] && [ -n "$AGE_RECIPIENT" ] && [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_SECRET_KEY" ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::Backup skipped: set SUPABASE_DB_URL, SUPABASE_SECRET_KEY, SUPABASE_URL and BACKUP_AGE_RECIPIENT (docs/dev/runbook.md)."
+            echo "::warning::Backup skipped: set SUPABASE_DB_URL, SUPABASE_SECRET_KEY and BACKUP_AGE_RECIPIENT (docs/dev/runbook.md)."
           fi
       - uses: actions/checkout@v7
         if: steps.ready.outputs.go == 'true'
