@@ -188,8 +188,11 @@ function sameWords(from: string, to: string): boolean {
 /** A sentence as compared: lower case, spaces evened out, no closing mark. */
 const plainSentence = (text: string): string => text.toLowerCase().replace(/\s+/g, ' ').trim()
 
-/** The sentences of a text, split at full stops, semicolons, question and exclamation marks. */
-const sentencesOf = (text: string): string[] => text.split(/[.;!?]+/).map(plainSentence).filter(Boolean)
+/**
+ * The sentences of a text, split at full stops, semicolons, question and exclamation marks that
+ * end the text or come before a space. A mark between digits ("7.5") is part of a number.
+ */
+const sentencesOf = (text: string): string[] => text.split(/[.;!?]+(?=\s|$)/).map(plainSentence).filter(Boolean)
 
 /**
  * Does every sentence of `from` that holds a negation ("no", "not", "never") come back word for

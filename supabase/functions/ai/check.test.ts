@@ -117,6 +117,9 @@ describe('the check on a provider answer', () => {
     expect(sameFacts('Next week has no key sessions marked.', 'Next week has no key sessions marked.')).toBe(true)
     expect(sameFacts('7 check-ins in 7 days. No key session missed.', '7 check-ins in 7 days. No, a key session was missed.')).toBe(false)
     expect(sameFacts('7 check-ins in 7 days. No key session missed.', 'You did 7 check-ins in 7 days. No key session missed.')).toBe(true)
+    // A decimal point is not the end of a sentence: the whole negated sentence is compared.
+    expect(sameFacts('You did not sleep 7.5 h.', 'You did not sleep 7.5 h, or did you?')).toBe(false)
+    expect(sameFacts('Sleep was 7.5 h. You did not run.', 'Sleep: 7.5 h. You did not run.')).toBe(true)
   })
 
   it('keeps the sign of a number', () => {
