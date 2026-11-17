@@ -1,13 +1,22 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const fake = vi.hoisted(() => ({ updates: [] as unknown[], pending: 0, synced: 0 }))
+const fake = vi.hoisted(() => ({
+  updates: [] as unknown[],
+  pending: 0,
+  synced: 0,
+  loads: 0,
+  invites: [] as { id: string; email: string; expires_at: string }[],
+}))
 
 vi.mock('./session.ts', () => {
   const query = {
     select: () => query,
     is: () => query,
-    order: async () => ({ data: [], error: null }),
+    order: async () => {
+      fake.loads += 1
+      return { data: fake.invites, error: null }
+    },
   }
   return {
     supabase: () => ({
@@ -31,6 +40,7 @@ vi.mock('./session.ts', () => {
 
 import CoachTeamPanel from './CoachTeamPanel.tsx'
 import { useAccount } from './account.ts'
+import { useSyncStatus } from './sync/syncStatus.ts'
 import type { Account, Profile } from './account.ts'
 
 const person = (id: string, role: Profile['role']): Profile => ({
@@ -61,6 +71,9 @@ beforeEach(() => {
   fake.updates = []
   fake.pending = 0
   fake.synced = 0
+  fake.loads = 0
+  fake.invites = []
+  useSyncStatus.setState({ ready: true })
   vi.stubGlobal('confirm', () => true)
 })
 afterEach(() => {
@@ -98,5 +111,30 @@ describe('the coach’s team on the free plan', () => {
     render(<CoachTeamPanel />)
     fireEvent.click(screen.getByRole('button', { name: 'Stop coaching' }))
     await waitFor(() => expect(fake.updates).toEqual([{ status: 'ended' }]))
+  })
+  it('does not stop coaching before the saved queue has been read', async () => {
+    useSyncStatus.setState({ ready: false })
+    useAccount.setState({ account: coachWith(1) })
+    render(<CoachTeamPanel />)
+    fireEvent.click(screen.getByRole('button', { name: 'Stop coaching' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/not been sent yet/))
+    expect(fake.updates).toEqual([])
+  })
+
+  it('frees an invitation’s place the moment it expires', async () => {
+    fake.invites = [{ id: 'i1', email: 'x@example.test', expires_at: new Date(Date.now() + 300).toISOString() }]
+    useAccount.setState({ account: coachWith(2) })
+    render(<CoachTeamPanel />)
+    const invite = () => screen.getByRole('button', { name: 'Invite' }) as HTMLButtonElement
+    await waitFor(() => expect(invite().disabled).toBe(true))
+    await waitFor(() => expect(invite().disabled).toBe(false), { timeout: 3000 })
+  })
+
+  it('loads the invitations again when the account is refreshed', async () => {
+    useAccount.setState({ account: coachWith(1) })
+    render(<CoachTeamPanel />)
+    await waitFor(() => expect(fake.loads).toBe(1))
+    act(() => useAccount.setState({ account: coachWith(2) }))
+    await waitFor(() => expect(fake.loads).toBe(2))
   })
 })

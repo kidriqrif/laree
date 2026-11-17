@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { useLaree } from '../data/store.ts'
 import { coachRoom, useAccount } from './account.ts'
 import { pendingWrites, refreshAccount, supabase, syncNow } from './session.ts'
+import { useSyncStatus } from './sync/syncStatus.ts'
 import styles from './live.module.css'
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
@@ -36,9 +37,13 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
 
   const [version, setVersion] = useState(0)
   const load = useCallback(() => setVersion((v) => v + 1), [])
-  /** The time of the last load: "expired" is judged against it, so rendering reads no clock. */
+  /**
+   * When the invitations were last checked: "expired" is judged against it, so rendering reads no
+   * clock. It moves on at each load and when the next open invitation expires.
+   */
   const [loadedAt, setLoadedAt] = useState(0)
 
+  // Load again after an account refresh too: an invitation accepted since is no longer open.
   useEffect(() => {
     let gone = false
     void openInvitations().then((rows) => {
@@ -49,7 +54,15 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
     return () => {
       gone = true
     }
-  }, [version])
+  }, [version, account])
+
+  // An expiring invitation frees its place on the free plan: check again the moment it expires.
+  useEffect(() => {
+    const next = Math.min(...sent.map((s) => Date.parse(s.expires_at)).filter((t) => t > loadedAt))
+    if (!Number.isFinite(next)) return
+    const timer = setTimeout(() => setLoadedAt(Date.now()), Math.min(Math.max(next - Date.now(), 0) + 1, 2 ** 31 - 1))
+    return () => clearTimeout(timer)
+  }, [sent, loadedAt])
 
   if (!account || account.profile.role !== 'coach') return null
   const room = coachRoom(account)
@@ -88,7 +101,8 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
     if (!globalThis.confirm(`Stop coaching ${name}? You lose access to their training. They keep it all.`)) return
     // An edit still waiting to be sent would be refused once the link has ended: send it first.
     await syncNow()
-    if (pendingWrites() > 0) {
+    // Until the saved queue has been read, "nothing waiting" cannot be known.
+    if (!useSyncStatus.getState().ready || pendingWrites() > 0) {
       return setMessage(`Some of your changes have not been sent yet. Stop coaching ${name} once they are saved.`)
     }
     const { error } = await supabase()
