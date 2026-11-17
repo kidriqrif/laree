@@ -41,4 +41,21 @@ describe('AI wording on the device', () => {
     expect(await pending).toBeNull()
     expect(localStorage.getItem(CACHE_KEY)).toBeNull()
   })
+
+  it('neither keeps nor returns an answer when another tab cleared the cache meanwhile', async () => {
+    // A second copy of the module is another tab: its own memory, the same storage.
+    vi.resetModules()
+    const otherTab = await import('./aiText.ts')
+    let finish: (v: typeof answer) => void = () => undefined
+    invoke.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    const pending = polish(draft)
+    // The person signs out, or deletes the account, in the other tab.
+    otherTab.clearPolishedCache()
+    finish(answer)
+    expect(await pending).toBeNull()
+    expect(localStorage.getItem(CACHE_KEY)).toBeNull()
+    // Asked again after that, an answer is kept as usual.
+    invoke.mockResolvedValue(answer)
+    expect((await polish(draft))?.headline).toBe('Steady week')
+  })
 })

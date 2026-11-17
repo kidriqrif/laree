@@ -1,7 +1,8 @@
 /** "Download my data" and "Delete my account" (docs/dev/backend.md "Privacy"). */
 import type { Account } from './account.ts'
+import { aiConsentRecorded } from './aiConsent.ts'
 import { clearPolishedCache } from './aiText.ts'
-import { dropWaitingFiles } from './files.ts'
+import { dropWaitingFiles, sendWaitingFiles, waitingFileNames } from './files.ts'
 import { useAccount } from './account.ts'
 import { discardUnsent, signOut, supabase } from './session.ts'
 import { SPECS } from './sync/docs.ts'
@@ -21,11 +22,19 @@ async function fileNames(uid: string): Promise<string[]> {
   }
 }
 
+export const CONSENT_NOT_RECORDED = 'Your latest AI choice has not reached the server yet. Check your connection and try again.'
+
 /**
  * Everything Laree holds about this person, as one JSON file. A coach's athletes' rows are theirs,
  * not included. Any failed read fails the export, so a file is never incomplete without saying so.
+ *
+ * Two things travel apart from the sync queue, so "nothing waiting to sync" does not cover them:
+ * the AI answer in the consent history, and original activity files. The export waits for the
+ * first, and names the files that are still only on this device.
  */
 export async function exportMyData(account: Account): Promise<Blob> {
+  if (!(await aiConsentRecorded(account.uid))) throw new Error(CONSENT_NOT_RECORDED)
+  await sendWaitingFiles(account.uid)
   const db = supabase()
   const backend = supabaseBackend(db)
   const records: Record<string, unknown[]> = {}
@@ -34,10 +43,11 @@ export async function exportMyData(account: Account): Promise<Blob> {
     const mine = rows.filter((r) => r.key === account.uid && !r.deleted).map((r) => ({ id: r.id, day: r.day, ...r.body }))
     if (mine.length > 0) records[spec.table] = [...(records[spec.table] ?? []), ...mine]
   }
-  const [consents, links, files] = await Promise.all([
+  const [consents, links, files, waiting] = await Promise.all([
     db.from('consents').select('purpose, granted, text_version, at').eq('user_id', account.uid).order('at'),
     db.from('coach_athletes').select('coach_id, athlete_id, status, ai_access, started_at, ended_at'),
     fileNames(account.uid),
+    waitingFileNames(account.uid),
   ])
   for (const r of [consents, links]) if (r.error) throw new Error(r.error.message)
   const doc = {
@@ -47,6 +57,8 @@ export async function exportMyData(account: Account): Promise<Blob> {
     consents: consents.data ?? [],
     coachLinks: links.data ?? [],
     activityFiles: files,
+    // Kept on this device and not uploaded yet: offline, or the upload did not succeed.
+    activityFilesNotUploaded: waiting,
     records,
   }
   return new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' })
@@ -62,6 +74,8 @@ export function saveBlob(blob: Blob, fileName: string): void {
   a.remove()
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
+
+const DATA_LEFT = "Some unsent data could not be removed from this device: clear this site's data in your browser settings."
 
 /**
  * Delete the account on the server, then clear this device: the AI wording, the unsent queue and
@@ -83,12 +97,11 @@ export async function deleteMyAccount(): Promise<string | null> {
     if (!(await dropWaitingFiles(uid))) left = true
   }
   const signOutError = await signOut()
-  if (signOutError) return `Your account was deleted, but this device could not sign out. Reload the page. (${signOutError})`
+  if (signOutError)
+    return `Your account was deleted, but this device could not sign out. Reload the page.${left ? ` ${DATA_LEFT}` : ''} (${signOutError})`
   // This screen closes with the sign-out, so the sign-in screen carries the message.
   useAccount.setState({
-    notice: left
-      ? 'Your account is deleted. Some unsent data could not be removed from this device: clear this site\'s data in your browser settings.'
-      : 'Your account and your data are deleted.',
+    notice: left ? `Your account is deleted. ${DATA_LEFT}` : 'Your account and your data are deleted.',
   })
   return null
 }

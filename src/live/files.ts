@@ -101,6 +101,17 @@ export function fileSender(queue: FileQueue, upload: Upload) {
     },
     send,
     /**
+     * The names of this account's files still waiting on this device, as the bucket would list
+     * them. Empty when the queue cannot be read: without it nothing can be waiting there.
+     */
+    async waiting(uid: string): Promise<string[]> {
+      try {
+        return (await waitingFor(uid)).map((w) => w.path.slice(uid.length + 1)).sort()
+      } catch {
+        return []
+      }
+    },
+    /**
      * Forget this account's waiting files on this device (after the account is deleted). False
      * when they could not be removed, so the caller can say that something is left.
      */
@@ -164,4 +175,5 @@ const sender = fileSender(idbFileQueue(), uploadToBucket)
 export const keepActivityFile = sender.keep
 /** Upload this account's waiting files. */
 export const sendWaitingFiles = sender.send
+export const waitingFileNames = sender.waiting
 export const dropWaitingFiles = sender.drop

@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { isSelfCoached, useAccount } from './account.ts'
-import { deleteMyAccount, exportMyData, saveBlob } from './privacy.ts'
+import { CONSENT_NOT_RECORDED, deleteMyAccount, exportMyData, saveBlob } from './privacy.ts'
 import { pendingWrites, signOut, syncNow } from './session.ts'
 import { useSyncStatus } from './sync/syncStatus.ts'
 import styles from './live.module.css'
@@ -26,8 +26,9 @@ export default function AccountPanel({ headingId = 'account-h' }: { headingId?: 
     setNote('')
     try {
       saveBlob(await exportMyData(account), `laree-data-${new Date().toISOString().slice(0, 10)}.json`)
-    } catch {
-      setNote('Your data could not be downloaded. Check your connection and try again.')
+    } catch (e) {
+      const known = e instanceof Error && e.message === CONSENT_NOT_RECORDED
+      setNote(known ? CONSENT_NOT_RECORDED : 'Your data could not be downloaded. Check your connection and try again.')
     }
     setBusy(false)
   }

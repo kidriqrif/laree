@@ -143,4 +143,18 @@ describe('activity files', () => {
     await kept
     expect(queue.files.size).toBe(0)
   })
+
+  it("names this account's files that are still on the device, for the data export", async () => {
+    const queue = memoryFileQueue()
+    const files = fileSender(queue, async (w) => w.path.endsWith('act-1.gpx'))
+    await files.keep(UID, 'act-1', file('a'))
+    await files.keep(UID, 'act-2', file('b', 'ride.fit'))
+    await files.keep(OTHER, 'act-9', file('c'))
+    // act-1 went up; act-2 could not, and the other account's file is not this account's.
+    expect(await files.waiting(UID)).toEqual(['act-2.fit'])
+    queue.list = async () => {
+      throw new Error('blocked')
+    }
+    expect(await files.waiting(UID)).toEqual([])
+  })
 })

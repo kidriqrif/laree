@@ -9,6 +9,8 @@
  *   whose rows changed. That may queue writes of its own, which the next sync sends.
  * - Nothing is sent or pulled until the saved queue has been read: a pull must never replace
  *   local values whose unsent writes it cannot see.
+ * - A sync that replaces another for the same account is given the same outbox. Writes queued by
+ *   the one before, sent or not, saved or not, are then this sync's too.
  */
 import { useLaree } from '../../data/store.ts'
 import type { LareeData } from '../../data/store.ts'
@@ -45,11 +47,6 @@ export interface SyncOptions {
   onRejected?: (ops: readonly Op[], message: string | undefined) => void
   /** Milliseconds between background syncs. */
   intervalMs?: number
-  /**
-   * Wait for this before reading the saved queue: the end of the sync this one replaces. Its last
-   * save of the queue must land first, or it could overwrite what this sync saves.
-   */
-  after?: Promise<void>
 }
 
 export interface SyncHandle {
@@ -57,14 +54,10 @@ export interface SyncHandle {
   syncNow(): Promise<void>
   /**
    * Stop. Nothing more is sent or read from now on. The promise resolves once a round already on
-   * its way has ended and its last save of the queue has landed.
+   * its way has ended and the queue is saved: also an edit made before the saved queue was read,
+   * if the queue can be read now. If not, the edit stays in the outbox for the sync that uses it next.
    */
   stop(): Promise<void>
-  /**
-   * Stop, and forget this account's queue for good (the account was deleted). Rejects when the
-   * saved queue could not be removed from the device.
-   */
-  discard(): Promise<void>
 }
 
 export const QUEUE_UNREADABLE =
@@ -103,9 +96,19 @@ export function startSync(opts: SyncOptions): SyncHandle {
     if (stopped) return
     useSyncStatus.setState({ ...change, pending: outbox.pending.length })
   }
-  // Fresh status for this account: nothing carries over from the one before.
-  useSyncStatus.setState({ ready: false, pending: 0, syncing: false, offline: false, unsaved: false, lastSyncedAt: null, problem: null })
-  outbox.onSaveState = (saved) => setStatus({ unsaved: !saved })
+  // Fresh status for this account: nothing carries over from the one before, but the queue may:
+  // an outbox used before is read already and can hold writes.
+  useSyncStatus.setState({
+    ready: outbox.ready,
+    pending: outbox.pending.length,
+    syncing: false,
+    offline: false,
+    unsaved: false,
+    lastSyncedAt: null,
+    problem: null,
+  })
+  const onSaveState = (saved: boolean) => setStatus({ unsaved: !saved })
+  outbox.onSaveState = onSaveState
 
   const unsubscribe = useLaree.subscribe((state) => {
     if (state.data === baseline) return
@@ -197,7 +200,6 @@ export function startSync(opts: SyncOptions): SyncHandle {
 
   /** The saved queue must be read before anything is sent or pulled. False while it cannot be. */
   async function queueRead(): Promise<boolean> {
-    if (outbox.ready) return true
     try {
       await outbox.load()
       setStatus({ ready: true })
@@ -208,11 +210,8 @@ export function startSync(opts: SyncOptions): SyncHandle {
     }
   }
 
-  const predecessorDone = (opts.after ?? Promise.resolve()).catch(() => undefined)
-
   async function round(): Promise<void> {
-    await predecessorDone
-    if (stopped || !(await queueRead()) || stopped) return
+    if (!(await queueRead()) || stopped) return
     setStatus({ syncing: true })
     try {
       const sent = await outbox.flush(backend.send, isStopped)
@@ -271,21 +270,18 @@ export function startSync(opts: SyncOptions): SyncHandle {
 
   function stop(): Promise<void> {
     stopped = true
-    outbox.onSaveState = null
+    // A sync that took this outbox over has put its own listener there: leave that one alone.
+    if (outbox.onSaveState === onSaveState) outbox.onSaveState = null
     clearTimeout(debounce)
     clearInterval(timer)
     unsubscribe()
     globalThis.removeEventListener?.('online', onOnline)
     globalThis.document?.removeEventListener('visibilitychange', onVisible)
-    return (running ?? Promise.resolve()).then(() => outbox.settled())
+    return (running ?? Promise.resolve())
+      // Stopped before the saved queue was read: read it now, so an edit made meanwhile is saved.
+      .then(() => outbox.load().catch(() => undefined))
+      .then(() => outbox.settled())
   }
 
-  return {
-    syncNow: () => first.then(syncNow),
-    stop,
-    discard() {
-      void stop()
-      return outbox.destroy()
-    },
-  }
+  return { syncNow: () => first.then(syncNow), stop }
 }

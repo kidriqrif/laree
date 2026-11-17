@@ -29,7 +29,9 @@
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "db:stop": "supabase stop",
-    "check:budget": "node scripts/check-budget.ts"
+    "check:budget": "node scripts/check-budget.ts",
+    "check:api-timeout": "node scripts/check-api-timeout.ts",
+    "check:backup": "bash scripts/check-backup.sh"
   },
   "dependencies": {
     "@fontsource-variable/anybody": "5.3.0",

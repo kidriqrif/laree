@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Upload the activity files of a backup (made by backup-files.sh) into a project's private bucket.
+# Upload the activity files of a backup (made by backup.sh) into a project's private bucket.
 # Run it after the migrations are applied (they create the bucket) and the data is loaded.
 #
 #   SUPABASE_URL=... SUPABASE_SECRET_KEY=... scripts/restore-files.sh dump
@@ -10,15 +10,10 @@ dir="${1:?usage: restore-files.sh <dir>}"
 bucket=activity-files
 shape='^[0-9a-f-]{36}/[A-Za-z0-9._-]{1,80}$'
 
-# The secret key goes out in a header: HTTPS only. Plain HTTP is for a stack on this machine,
-# and only when ALLOW_LOCAL_HTTP=1 says so.
-case "$SUPABASE_URL" in
-  https://*) proto='=https' ;;
-  http://127.0.0.1:* | http://localhost:*)
-    [ "${ALLOW_LOCAL_HTTP:-}" = 1 ] || { echo "SUPABASE_URL is plain HTTP. Set ALLOW_LOCAL_HTTP=1 for a local stack." >&2; exit 1; }
-    proto='=http' ;;
-  *) echo "SUPABASE_URL must start with https://" >&2; exit 1 ;;
-esac
+# shellcheck source=scripts/supabase-url.sh
+. "$(dirname "$0")/supabase-url.sh"
+check_supabase_url "$SUPABASE_URL"
+base="${SUPABASE_URL%/}"
 
 count=0
 while IFS= read -r name; do
@@ -32,7 +27,7 @@ while IFS= read -r name; do
     -H "apikey: $SUPABASE_SECRET_KEY" -H "Authorization: Bearer $SUPABASE_SECRET_KEY" \
     -H "Content-Type: application/octet-stream" -H "x-upsert: true" \
     --data-binary "@$dir/files/$name" \
-    "$SUPABASE_URL/storage/v1/object/$bucket/$name"
+    "$base/storage/v1/object/$bucket/$name"
   count=$((count + 1))
 done < "$dir/files.txt"
 echo "Restored $count activity files"

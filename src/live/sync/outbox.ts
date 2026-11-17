@@ -1,6 +1,9 @@
 /**
  * Writes waiting to reach the database, kept on the device so nothing is lost offline or on a
  * reload. Writes are upserts keyed on the record's own id, so sending one twice is harmless.
+ *
+ * One Outbox per account and tab, whatever sync uses it (session.ts): it is the only writer of
+ * that account's saved queue here, so one sync can never save over what another queued.
  */
 import { opKey } from './diff.ts'
 import type { Op } from './diff.ts'
@@ -35,6 +38,9 @@ export class Outbox {
   /** Counts the saves asked for: only the newest one speaks for the whole queue. */
   private revision = 0
   private closed = false
+  private loading: Promise<void> | null = null
+  /** The send going on now, if any: the next one waits for it. */
+  private sending: Promise<unknown> = Promise.resolve()
   private readonly store: OutboxStore
   /** Told after every save: true when the queue is safely on the device, false when the save failed. */
   onSaveState: ((saved: boolean) => void) | null = null
@@ -51,12 +57,19 @@ export class Outbox {
   /**
    * Read the saved queue and put the writes made meanwhile after it. Nothing is saved before this
    * succeeds, so an early write can never replace the saved queue with a partial one. Rejects when
-   * the queue cannot be read; call it again to retry.
+   * the queue cannot be read; call it again to retry. Callers at the same time share one read.
    */
-  async load(): Promise<void> {
-    if (this.loaded) return
+  load(): Promise<void> {
+    if (this.loaded || this.closed) return Promise.resolve()
+    this.loading ??= this.read().finally(() => {
+      this.loading = null
+    })
+    return this.loading
+  }
+
+  private async read(): Promise<void> {
     const saved = await this.store.load()
-    if (this.loaded) return
+    if (this.loaded || this.closed) return
     this.ops = [...saved.filter((o) => !this.ops.some((p) => opKey(p) === opKey(o))), ...this.ops]
     this.loaded = true
     await this.persist()
@@ -116,9 +129,16 @@ export class Outbox {
 
   /**
    * Send everything in order, one batch per run of writes to the same table. `cancelled` is asked
-   * before every request: a stopped sync sends nothing more.
+   * before every request: a stopped sync sends nothing more. One send runs at a time: a sync that
+   * replaces another shares this queue, and its send starts only when the older one has ended.
    */
-  async flush(send: SendBatch, cancelled: () => boolean = () => false): Promise<FlushResult> {
+  flush(send: SendBatch, cancelled: () => boolean = () => false): Promise<FlushResult> {
+    const run = this.sending.then(() => this.sendAll(send, cancelled))
+    this.sending = run.catch(() => undefined)
+    return run
+  }
+
+  private async sendAll(send: SendBatch, cancelled: () => boolean): Promise<FlushResult> {
     if (!this.loaded) throw new Error('The saved changes have not been read yet')
     const result: FlushResult = { sent: 0, rejected: [], stalled: false }
     const queue = [...this.ops]

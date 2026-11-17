@@ -20,6 +20,19 @@ const PAGE = 1000
  */
 export const OVERLAP_MS = 30_000
 
+/**
+ * A fetch for the Supabase client that gives up on a database request after `ms`. Without it, a
+ * request that never answers keeps its sync, and the queue it is sending, busy for ever. Uploads,
+ * sign-in and function calls are left alone: they have limits of their own or may take longer.
+ */
+export function restFetch(ms: number, base: typeof fetch = (input, init) => fetch(input, init)): typeof fetch {
+  return (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+    if (init?.signal || !url.includes('/rest/v1/') || typeof AbortSignal.timeout !== 'function') return base(input, init)
+    return base(input, { ...init, signal: AbortSignal.timeout(ms) })
+  }
+}
+
 export const ownerColumn = (scope: Scope): 'athlete_id' | 'owner_id' => (scope === 'athlete' ? 'athlete_id' : 'owner_id')
 
 /** Refused by the access rules or the table's checks: sending again cannot help. */

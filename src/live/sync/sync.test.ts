@@ -12,7 +12,7 @@ import { QUEUE_UNREADABLE, startSync, useSyncStatus } from './engine.ts'
 import type { Backend, PulledRow, SyncHandle } from './engine.ts'
 import { memoryOutboxStore, Outbox } from './outbox.ts'
 import type { OutboxStore } from './outbox.ts'
-import { afterFilter, overlapStart, OVERLAP_MS, readPages, supabaseBackend } from './supabaseBackend.ts'
+import { afterFilter, overlapStart, OVERLAP_MS, readPages, restFetch, supabaseBackend } from './supabaseBackend.ts'
 import type { DbRow, PageEnd } from './supabaseBackend.ts'
 
 const COACH = '00000000-0000-4000-a000-00000000000a'
@@ -497,17 +497,11 @@ describe('stopping', () => {
 })
 
 describe('replacing a sync', () => {
-  it('reads the saved queue only after the sync before it has saved for the last time', async () => {
-    const server = fakeServer()
-    const inner = memoryOutboxStore()
-    const events: string[] = []
-    const store: OutboxStore = {
-      load: async () => (events.push('load'), inner.load()),
-      save: async (ops) => (events.push(`save:${ops.length}`), inner.save(ops)),
-    }
+  /** A backend whose sends wait until the test lets them go. */
+  function slowSends(backend: Backend) {
     let hold: Promise<void> = Promise.resolve()
-    const backend = server.as(athleteCtx)
     let begun: () => void = () => undefined
+    let release: () => void = () => undefined
     const slow: Backend = {
       ...backend,
       send: (table, scope, ops) => {
@@ -515,36 +509,164 @@ describe('replacing a sync', () => {
         return hold.then(() => backend.send(table, scope, ops))
       },
     }
+    return {
+      slow,
+      /** Hold the next sends. Resolves when one has begun. */
+      holdNext: () => {
+        hold = new Promise((resolve) => (release = resolve))
+        return new Promise<void>((resolve) => (begun = resolve))
+      },
+      release: () => release(),
+    }
+  }
+
+  const start = (backend: Backend, outbox: Outbox) => {
+    const handle = startSync({ backend, outbox, ctx: athleteCtx, intervalMs: 3_600_000 })
+    sessions.push(handle)
+    return handle
+  }
+
+  it('keeps an edit made between two replacements while the first sync is still sending', async () => {
+    const server = fakeServer()
+    const store = memoryOutboxStore()
+    // One outbox for the account, as in session.ts.
+    const outbox = new Outbox(store)
+    const { slow, holdNext, release } = slowSends(server.as(athleteCtx))
     useLaree.setState({ data: emptyLiveData(), undoStack: [] })
-    const first = startSync({ backend: slow, outbox: new Outbox(store), ctx: athleteCtx, intervalMs: 3_600_000 })
-    sessions.push(first)
+    const first = start(slow, outbox)
     await first.syncNow()
 
-    // A check-in is on its way to the server when the account is loaded again.
-    let release: () => void = () => undefined
-    hold = new Promise((resolve) => (release = resolve))
-    const c = checkIn(today())
-    useLaree.getState().saveCheckIn(c)
-    const inFlight = new Promise<void>((resolve) => (begun = resolve))
+    // A check-in is on its way to the server when the account is loaded again, twice.
+    const inFlight = holdNext()
+    const sent = checkIn(today())
+    useLaree.getState().saveCheckIn(sent)
     const sending = first.syncNow()
     await inFlight
-    const ended = first.stop()
-    const atStop = events.length
-    const second = startSync({ backend, outbox: new Outbox(store), ctx: athleteCtx, intervalMs: 3_600_000, after: ended })
-    sessions.push(second)
+    void first.stop()
+    const second = start(server.as(athleteCtx), outbox)
+    const between = checkIn(today() - 1)
+    useLaree.getState().saveCheckIn(between)
+    const secondEnded = second.stop()
+    const third = start(server.as(athleteCtx), outbox)
+    // The edit is on the device before the first sync's send has ended.
+    await secondEnded
+    expect(store.saved.map((o) => o.id)).toContain(between.id)
+    // The replacement sends nothing while the older send is on its way.
     await new Promise((resolve) => setTimeout(resolve, 20))
-    // The replacement has not touched the saved queue yet.
-    expect(events.slice(atStop)).not.toContain('load')
+    expect(server.writes).toEqual([])
 
     release()
     await sending
+    await third.syncNow()
+    expect(server.writes.filter((w) => w === `check_ins/${ATHLETE}/${sent.id}`)).toHaveLength(1)
+    expect(server.writes.filter((w) => w === `check_ins/${ATHLETE}/${between.id}`)).toHaveLength(1)
+    expect(store.saved).toEqual([])
+    // The third sync's full pull did not remove the edit from the store.
+    expect(useLaree.getState().data.checkIns.map((c) => c.id).sort()).toEqual([sent.id, between.id].sort())
+  })
+
+  it('saves an edit made before the saved queue was read, when that sync stops first', async () => {
+    const server = fakeServer()
+    const earlier: Op = { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: crypto.randomUUID(), day: null, body: { ...checkIn(today() - 2) } }
+    const inner = memoryOutboxStore([earlier])
+    let letRead: () => void = () => undefined
+    const reading = new Promise<void>((resolve) => (letRead = resolve))
+    const outbox = new Outbox({ load: () => reading.then(() => inner.load()), save: inner.save })
+    useLaree.setState({ data: emptyLiveData(), undoStack: [] })
+    const first = start(server.as(athleteCtx), outbox)
+    const edit = checkIn(today())
+    useLaree.getState().saveCheckIn(edit)
+    // Stopped while the device is still reading the saved queue: the edit is only in memory.
+    const ended = first.stop()
+    letRead()
+    await ended
+    // The stop is done only once the edit is saved, after the writes saved before. No other sync helped.
+    expect(inner.saved.map((o) => o.id)).toEqual([earlier.id, edit.id])
+    // The next sync of this account's full pull does not remove the edit: it is in its queue.
+    const second = start(server.as(athleteCtx), outbox)
     await second.syncNow()
-    const secondLoad = events.indexOf('load', atStop)
-    expect(secondLoad).toBeGreaterThan(-1)
-    // The first sync's last save (the check-in taken off the queue) came before that read.
-    expect(events.slice(atStop, secondLoad)).toContain('save:0')
-    expect(server.writes.filter((w) => w === `check_ins/${ATHLETE}/${c.id}`)).toHaveLength(1)
+    expect(server.writes).toContain(`check_ins/${ATHLETE}/${edit.id}`)
+    expect(useLaree.getState().data.checkIns.map((c) => c.id)).toContain(edit.id)
     expect(inner.saved).toEqual([])
+  })
+
+  it('reads the saved queue once more on stopping, so an edit made while it could not be read is saved', async () => {
+    const server = fakeServer()
+    const earlier: Op = { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: crypto.randomUUID(), day: null, body: { ...checkIn(today() - 2) } }
+    const inner = memoryOutboxStore([earlier])
+    let blocked = true
+    const outbox = new Outbox({ load: async () => (blocked ? Promise.reject(new Error('blocked')) : inner.load()), save: inner.save })
+    useLaree.setState({ data: emptyLiveData(), undoStack: [] })
+    const first = start(server.as(athleteCtx), outbox)
+    await first.syncNow()
+    expect(useSyncStatus.getState().problem).toBe(QUEUE_UNREADABLE)
+    const edit = checkIn(today())
+    useLaree.getState().saveCheckIn(edit)
+    blocked = false
+    await first.stop()
+    expect(inner.saved.map((o) => o.id)).toEqual([earlier.id, edit.id])
+  })
+
+  it('saves nothing after the queue is forgotten, also for an earlier sync still sending', async () => {
+    const server = fakeServer()
+    const store = memoryOutboxStore()
+    const outbox = new Outbox(store)
+    const { slow, holdNext, release } = slowSends(server.as(athleteCtx))
+    useLaree.setState({ data: emptyLiveData(), undoStack: [] })
+    const first = start(slow, outbox)
+    await first.syncNow()
+    const inFlight = holdNext()
+    useLaree.getState().saveCheckIn(checkIn(today()))
+    const sending = first.syncNow()
+    await inFlight
+    void first.stop()
+    const second = start(server.as(athleteCtx), outbox)
+    useLaree.getState().saveCheckIn(checkIn(today() - 1))
+    // The account is deleted: the second sync stops and the queue is removed.
+    void second.stop()
+    const gone = outbox.destroy()
+    release()
+    await Promise.all([sending, gone])
+    await outbox.settled()
+    expect(store.saved).toEqual([])
+  })
+
+  it('shows the queue of the outbox it takes over at once', async () => {
+    const server = fakeServer()
+    const a = signIn(server, athleteCtx)
+    await a.handle.syncNow()
+    server.setDown(true)
+    useLaree.getState().saveCheckIn(checkIn(today()))
+    await a.handle.syncNow()
+    void a.handle.stop()
+    start(server.as(athleteCtx), a.outbox)
+    expect(useSyncStatus.getState()).toMatchObject({ ready: true, pending: 1 })
+  })
+})
+
+describe('one send at a time', () => {
+  const op: Op = { table: 'check_ins', scope: 'athlete', key: ATHLETE, id: 'c-1', day: null, body: { id: 'c-1' } }
+
+  it('starts a second send only when the first has ended, and sends nothing twice', async () => {
+    const box = new Outbox(memoryOutboxStore([op]))
+    await box.load()
+    const calls: string[] = []
+    let finish: () => void = () => undefined
+    const first = box.flush((_table, _scope, ops) => {
+      calls.push(`first:${ops.length}`)
+      return new Promise((resolve) => (finish = () => resolve({ ok: true })))
+    })
+    const second = box.flush(async (_table, _scope, ops) => {
+      calls.push(`second:${ops.length}`)
+      return { ok: true }
+    })
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(calls).toEqual(['first:1'])
+    finish()
+    expect((await first).sent).toBe(1)
+    // The write went with the first send: nothing is left for the second.
+    expect((await second).sent).toBe(0)
+    expect(calls).toEqual(['first:1'])
   })
 })
 
@@ -573,6 +695,61 @@ describe('paged pulls', () => {
     const out = await readPages('athlete_id', fetchPage, () => false, 1)
     expect(out.map((r) => `${r.key}/${r.id}`)).toEqual([`${ATHLETE}/seen`, `${OTHER}/seen`, `${OTHER}/state`])
     expect(calls[1]).toEqual({ at: t, key: ATHLETE, id: 'seen' })
+  })
+
+  it('picks up a write that commits between the pages of a long pull', async () => {
+    const server = fakeServer()
+    const base = server.as(athleteCtx)
+    const stored = () => server.tables.get('check_ins') ?? new Map<string, PulledRow>()
+    const put = (c: CheckIn, at: number) =>
+      server.tables.set('check_ins', stored().set(`${ATHLETE}/${c.id}`, { key: ATHLETE, id: c.id, day: null, body: { ...c }, deleted: false, updatedAt: stamp(at) }))
+    // Check-ins are read through the real paging loop, one row per page.
+    let betweenPages: (() => void) | null = null
+    const paged: Backend = {
+      ...base,
+      pull(table, scope, since, cancelled) {
+        if (table !== 'check_ins') return base.pull(table, scope, since, cancelled)
+        const from = since === null ? null : overlapStart(since)
+        return readPages(
+          'athlete_id',
+          async (after, limit) => {
+            if (after) {
+              betweenPages?.()
+              betweenPages = null
+            }
+            return [...stored().values()]
+              .map((r) => ({ ...row(r.updatedAt, r.key, r.id), body: r.body }))
+              .filter((r) => (after ? isAfter(r, after) : from === null || r.updated_at > from))
+              .sort((a, b) => (position(a) < position(b) ? -1 : 1))
+              .slice(0, limit)
+          },
+          cancelled,
+          1,
+        )
+      },
+    }
+    useLaree.setState({ data: emptyLiveData(), undoStack: [] })
+    const handle = startSync({ backend: paged, outbox: new Outbox(memoryOutboxStore()), ctx: athleteCtx, intervalMs: 3_600_000 })
+    sessions.push(handle)
+    await handle.syncNow()
+
+    const [a, b, c, d] = [checkIn(today() - 3), checkIn(today() - 2), checkIn(today() - 1), checkIn(today())]
+    const scanStart = (server.clock.ms += 2000)
+    put(b, scanStart - 1000)
+    put(d, scanStart)
+    // After the first page (B): A, which began before B, commits. It sorts before B, so the
+    // later pages do not reach it. C is written 40 seconds into the pull, past the overlap window.
+    betweenPages = () => {
+      put(a, scanStart - 1500)
+      put(c, scanStart + 40_000)
+      server.clock.ms = scanStart + 40_000
+    }
+    await handle.syncNow()
+    const ids = () => useLaree.getState().data.checkIns.map((x) => x.id).sort()
+    expect(ids()).toEqual([b.id, c.id, d.id].sort())
+    // The cursor is the time that pull began, not C's stamp: the next pull reaches back to A.
+    await handle.syncNow()
+    expect(ids()).toEqual([a.id, b.id, c.id, d.id].sort())
   })
 
   it('stops between pages when the sync is stopped', async () => {
@@ -728,6 +905,32 @@ describe('the Supabase backend', () => {
   it("gives the server's time", async () => {
     const { client } = stubClient([])
     expect(await supabaseBackend(client).now()).toBe('2026-11-11T02:00:40.123456+00:00')
+  })
+})
+
+describe('a database request that never answers', () => {
+  it('is given a time limit; other requests and a caller\'s own signal are left alone', async () => {
+    const seen: (AbortSignal | null | undefined)[] = []
+    const base: typeof fetch = async (_input, init) => {
+      seen.push(init?.signal)
+      return new Response('{}')
+    }
+    const f = restFetch(30_000, base)
+    await f('https://x.supabase.co/rest/v1/check_ins?select=*')
+    await f(new URL('https://x.supabase.co/rest/v1/rpc/server_now'), { method: 'POST' })
+    await f('https://x.supabase.co/storage/v1/object/activity-files/a/b.fit', { method: 'POST' })
+    const own = new AbortController().signal
+    await f('https://x.supabase.co/rest/v1/check_ins', { signal: own })
+    expect(seen[0]).toBeInstanceOf(AbortSignal)
+    expect(seen[1]).toBeInstanceOf(AbortSignal)
+    expect(seen[2]).toBeUndefined()
+    expect(seen[3]).toBe(own)
+  })
+
+  it('ends with an error when the limit passes', async () => {
+    const never: typeof fetch = (_input, init) =>
+      new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal?.reason)))
+    await expect(restFetch(10, never)('https://x.supabase.co/rest/v1/check_ins')).rejects.toBeDefined()
   })
 })
 

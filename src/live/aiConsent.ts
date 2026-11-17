@@ -45,6 +45,18 @@ const supabaseConsents: ConsentServer = {
 /** The last piece of consent work per account. New work waits for it, across followers too. */
 const tails = new Map<string, Promise<void>>()
 
+/** The followers running now, per account. Each says whether the server holds that account's latest answer. */
+const followers = new Map<string, () => Promise<boolean>>()
+
+/**
+ * Is this account's latest AI answer on the server? An answer still due is tried first. True when
+ * nobody follows the account: a coach has no AI switch of their own. The data export asks this,
+ * so a file never leaves out the latest answer without saying so.
+ */
+export function aiConsentRecorded(uid: string): Promise<boolean> {
+  return followers.get(uid)?.() ?? Promise.resolve(true)
+}
+
 /** Follow the signed-in athlete's AI switch. Returns a stop function. */
 export function followAiConsent(uid: string, server: ConsentServer = supabaseConsents, retryMs = 30_000): () => void {
   /**
@@ -104,10 +116,19 @@ export function followAiConsent(uid: string, server: ConsentServer = supabaseCon
   globalThis.addEventListener?.('online', reconcile)
   reconcile()
 
+  const upToDate = async (): Promise<boolean> => {
+    reconcile()
+    // Never rejects: a failed round ends in its own catch above.
+    await tails.get(uid)
+    return wanted === null || recorded === wanted
+  }
+  followers.set(uid, upToDate)
+
   return () => {
     stopped = true
     clearTimeout(timer)
     unsubscribe()
     globalThis.removeEventListener?.('online', reconcile)
+    if (followers.get(uid) === upToDate) followers.delete(uid)
   }
 }

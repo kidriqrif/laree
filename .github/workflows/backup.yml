@@ -39,11 +39,10 @@ jobs:
       - name: Dump
         if: steps.ready.outputs.go == 'true'
         run: |
-          mkdir dump
-          # Rows only, of the app's tables and the accounts. The files' rows in the storage schema
-          # are left out: uploading the files again on restore recreates them.
-          supabase db dump --db-url "$DB_URL" --data-only --schema public,auth -f dump/data.sql
-          scripts/backup-files.sh dump
+          # Rows only, of the app's tables and the accounts, and the files that match them. The
+          # files' rows in the storage schema are left out: uploading the files again on restore
+          # recreates them.
+          scripts/backup.sh dump
           sudo apt-get install -y age >/dev/null
           tar -czf - dump | age -r "$AGE_RECIPIENT" -o "laree-$(date -u +%F).tar.gz.age"
           rm -rf dump

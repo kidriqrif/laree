@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkOutput, facts, safeBaseUrl, sameFacts } from './check.ts'
+import { checkOutput, facts, marks, safeBaseUrl, sameFacts } from './check.ts'
 
 const draft = { headline: 'A steady week', lines: ['You ran 12 km in 60 minutes.', 'Sleep was 7.5 h on 3 of 4 nights.'] }
 const answer = (headline: string, ...lines: string[]) => JSON.stringify({ headline, lines })
@@ -41,7 +41,31 @@ describe('the check on a provider answer', () => {
     expect(checkOutput(answer('Heart rate', 'Your resting heart rate was 60 bpm; your maximum was 180 bpm.'), hr)).toBeNull()
     expect(checkOutput(answer('Your heart rate', hr.lines[0] as string), hr)).not.toBeNull()
     // The same value twice is not two values.
-    expect(sameFacts('You ran 5 km on Monday and 5 km on Friday.', 'Monday and Friday: 5 km and 5 km.')).toBe(true)
+    expect(sameFacts('You ran 5 km on Monday and 5 km on Friday.', 'On Monday and Friday you ran 5 km and 5 km.')).toBe(true)
+  })
+
+  it('keeps what a number measures', () => {
+    expect(sameFacts('Resting heart rate was 60 bpm.', 'Maximum heart rate was 60 bpm.')).toBe(false)
+    expect(sameFacts('Resting HR 60 bpm.', 'Your heart rate at rest was 60 bpm.')).toBe(true)
+    expect(sameFacts('Resting heart rate was 60 bpm.', 'Heart rate was 60 bpm.')).toBe(false)
+    expect(sameFacts('Sleep was 7 h.', 'You slept 7 hours.')).toBe(true)
+    expect(sameFacts('You ran 12 km.', 'You swam 12 km.')).toBe(false)
+    expect(sameFacts('Load rose by 12%.', 'Load fell by 12%.')).toBe(false)
+    expect(sameFacts('2 key sessions missed.', 'You missed 2 sessions.')).toBe(false)
+    expect(sameFacts('Next week has no key sessions marked.', 'Last week had no key sessions.')).toBe(false)
+    expect(sameFacts('Next week has no key sessions marked.', 'No key sessions are marked for next week.')).toBe(true)
+    // A word after a number that is not its unit still counts: "3 runs" is not "3 rides".
+    expect(marks('3 runs')).toEqual(['3|', 'run'])
+    expect(sameFacts('You logged 3 runs.', 'You logged 3 rides.')).toBe(false)
+  })
+
+  it('keeps which describing word goes with which number when a line has several', () => {
+    const line = 'Resting HR 52 bpm and sleep 7 h.'
+    expect(sameFacts(line, 'Your resting HR was 52 bpm and you slept 7 h.')).toBe(true)
+    // The same numbers and words, but the words now name the other number.
+    expect(sameFacts(line, 'Sleep 52 bpm and resting HR 7 h.')).toBe(false)
+    // One describing word cannot be swapped with anything: the order may change.
+    expect(sameFacts('You ran 12 km in 60 minutes.', 'In 60 minutes you ran 12 km.')).toBe(true)
   })
 
   it('keeps the sign of a number', () => {

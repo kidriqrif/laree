@@ -74,7 +74,7 @@ The `ai` function (`supabase/functions/ai/`):
 2. Takes a place in the person's allowance of 40 requests per 24 hours before it calls any provider (`reserve_ai_run`, one step under a lock, so two requests cannot share the last place). A request counts whether or not a provider answers.
 3. Sends only the draft headline and lines: no names, notes, files or raw check-ins.
 4. Tries each provider in `AI_PROVIDERS` in turn, moving on after a rate limit, an error or a 20-second timeout. A provider whose address is not HTTPS is skipped, and redirects are refused, so a key or a draft never travels in the clear.
-5. Refuses any reply it cannot verify (`check.ts`) and tries the next provider. The reply must have the draft's lines, one for one, and each line must state the same numbers as the draft's line, with their signs and units: none added, dropped, moved or swapped ("60 km" is refused when the draft says "12 km" and "60 minutes"). A line with two different values of the same kind, such as two heart rates, must come back word for word, because a swap there cannot be seen from the numbers.
+5. Refuses any reply it cannot verify (`check.ts`) and tries the next provider. The reply must have the draft's lines, one for one, and each line must state the same numbers as the draft's line, with their signs and units: none added, dropped, moved or swapped ("60 km" is refused when the draft says "12 km" and "60 minutes"). The words that say what a number measures (resting, maximum, sleep, load, the sport, the day, up or down, and the like) must stay, none added or dropped, so "resting heart rate 60 bpm" cannot become "maximum heart rate 60 bpm". A line with two different values of the same kind, such as two heart rates, must come back word for word, because a swap there cannot be seen from the numbers. In a line with several values and several such words, their order must stay, since only the order says which word goes with which number.
 6. Records the provider, model, outcome and token counts, never the text, in the request's `ai_runs` row.
 
 Providers are any OpenAI-compatible API. The default chain uses free tiers listed in [awesome-free-llm-apis](https://github.com/mnfst/awesome-free-llm-apis): OpenRouter, then Groq, then Google Gemini. Each provider needs its own key, from that provider's own site. Set the chain without a deploy:
@@ -107,6 +107,8 @@ Needs Docker.
 | `npm run db:start` | Starts a local Supabase with the services Laree uses and applies the migrations. Prints the local URL and keys. |
 | `npm run db:test` | Runs the pgTAP access tests in `supabase/tests/`. |
 | `npm run db:reset` | Rebuilds the local database from the migrations. |
+| `npm run check:api-timeout` | Checks, through the local API, that a statement is cancelled after 8 seconds. The sync relies on that bound. |
+| `npm run check:backup` | Backs up the local stack with `scripts/backup.sh`, including a file replaced during the dump, restores the file with `scripts/restore-files.sh`, and checks that both scripts refuse unsafe addresses. |
 | `npm run db:stop` | Stops the local stack. |
 
 For a live build against the local stack, copy `.env.example` to `.env.local` and fill in the local URL and publishable key.

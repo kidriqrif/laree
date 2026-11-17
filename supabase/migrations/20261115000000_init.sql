@@ -499,6 +499,9 @@ create function public.ping() returns integer language sql immutable as $$ selec
 -- synced rows is outside it; devices pick such rows up on their next visit, which reads everything.
 create function public.server_now() returns timestamptz language sql volatile as $$ select clock_timestamp() $$;
 alter role authenticated set statement_timeout = '8s';
+-- The API reads role settings when it loads its configuration: tell it to load them again.
+-- scripts/check-api-timeout.ts checks, through the API, that the timeout is in effect.
+notify pgrst, 'reload config';
 
 -- ---------------------------------------------------------------------------------------------
 -- Who may call which function

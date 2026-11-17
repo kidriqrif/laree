@@ -67,7 +67,7 @@ update public.profiles set plan = 'premium' where id = (select id from auth.user
 
 ## Restore a backup
 
-A backup holds the rows (`dump/data.sql`: the app's tables and the accounts) and the original activity files (`dump/files/`, listed in `dump/files.txt`). It does not hold the schema, the Edge Functions or any setting: those come from this repository and from the steps below. Do the steps in this order. The app keeps pointing at the old project until the last step.
+A backup holds the rows (`dump/data.sql`: the app's tables and the accounts) and the original activity files (`dump/files/`, listed in `dump/files.txt`). `scripts/backup.sh` makes both and keeps them only if no file changed from before the dump until the last download, so the files match the rows. It does not hold the schema, the Edge Functions or any setting: those come from this repository and from the steps below. Do the steps in this order. The app keeps pointing at the old project until the last step.
 
 1. **Get the backup.** Download the newest `laree-backup` artifact from the "Nightly backup" workflow run and decrypt it with your age key: `age -d -i key.txt laree-YYYY-MM-DD.tar.gz.age | tar -xz`
 2. **Make an empty project** in `ap-southeast-1` and note its project ref, database password, URL and keys.

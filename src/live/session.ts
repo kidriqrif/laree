@@ -15,16 +15,21 @@ import { startSync } from './sync/engine.ts'
 import type { SyncHandle } from './sync/engine.ts'
 import { idbOutboxStore } from './sync/idbOutbox.ts'
 import { Outbox } from './sync/outbox.ts'
-import { supabaseBackend } from './sync/supabaseBackend.ts'
+import { restFetch, supabaseBackend } from './sync/supabaseBackend.ts'
 import { useSyncStatus } from './sync/syncStatus.ts'
 
 const OWNER_KEY = 'laree:live:owner'
+
+/** Well above the database's own limit for one statement (8 s). */
+const REST_TIMEOUT_MS = 30_000
 
 let client: SupabaseClient | null = null
 
 export function supabase(): SupabaseClient {
   client ??= createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: AUTH_KEY },
+    // A database request that never answers would hold the sync and its queue for ever.
+    global: { fetch: restFetch(REST_TIMEOUT_MS) },
   })
   return client
 }
@@ -33,16 +38,23 @@ let sync: SyncHandle | null = null
 let syncedFor = ''
 /** The account the running sync belongs to. */
 let syncUid = ''
-/** The end of the sync that ran before: its last save of the queue has landed, or it took too long. */
-let lastStopped: Promise<void> = Promise.resolve()
-const STOP_WAIT_MS = 15_000
+/**
+ * One queue per account in this tab, for every sync of that account. A sync that replaces another
+ * (the account was loaded again) and one stopped with a send still on its way then share one
+ * queue and one writer, so neither can save an older queue over the other's, however long that
+ * send takes. Another account has its own queue under its own key and never waits.
+ */
+const outboxes = new Map<string, Outbox>()
 
-/** Stop the running sync, if any, and remember when it has really ended. */
+function outboxFor(uid: string): Outbox {
+  let box = outboxes.get(uid)
+  if (!box) outboxes.set(uid, (box = new Outbox(idbOutboxStore(uid))))
+  return box
+}
+
+/** Stop the running sync, if any. Its queue stays in `outboxes` for the next sync of that account. */
 function stopSync(): void {
-  if (!sync) return
-  const ended = sync.stop()
-  // A request that never answers must not hold up the next account for ever.
-  lastStopped = Promise.race([ended, new Promise<void>((resolve) => setTimeout(resolve, STOP_WAIT_MS))])
+  void sync?.stop()
   sync = null
   syncedFor = ''
   syncUid = ''
@@ -66,11 +78,9 @@ function startSyncFor(a: Account): void {
   syncUid = a.uid
   sync = startSync({
     backend: supabaseBackend(supabase()),
-    outbox: new Outbox(idbOutboxStore(a.uid)),
+    outbox: outboxFor(a.uid),
     ctx: syncContext(a),
     onRejected,
-    // The sync before this one may still be saving its queue, which can be this account's too.
-    after: lastStopped,
   })
 }
 
@@ -111,6 +121,8 @@ function teardown(): void {
   stopAiConsent = null
   aiConsentFor = ''
   stopSync()
+  // In every tab: an AI answer still on its way belongs to nobody here any more.
+  clearPolishedCache()
   useLaree.setState({ data: emptyLiveData(), undoStack: [] })
 }
 
@@ -200,21 +212,17 @@ export async function signOut(): Promise<string | null> {
 
 /**
  * Stop the sync and remove this account's unsent changes from the device, for good (the account
- * was deleted). The sync is stopped first, so a send on its way cannot save the queue again.
+ * was deleted). The queue is closed first, so no send on its way can save it again: not the
+ * running sync's, and not one of an earlier sync of this account, which uses the same queue.
  * Rejects when the queue could not be removed.
  */
 export async function discardUnsent(uid: string): Promise<void> {
   // Only this account's sync is stopped. Another account's sync and queue are not touched.
-  if (sync && syncUid === uid) {
-    const running = sync
-    sync = null
-    syncedFor = ''
-    syncUid = ''
-    await running.discard()
-    return
-  }
-  await lastStopped
-  await idbOutboxStore(uid).save([])
+  if (syncUid === uid) stopSync()
+  const box = outboxes.get(uid)
+  outboxes.delete(uid)
+  if (box) await box.destroy()
+  else await idbOutboxStore(uid).save([])
 }
 
 /** Send and pull now, for "Sync now" and after a big change. */

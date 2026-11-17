@@ -5,7 +5,7 @@ vi.mock('./session.ts', () => ({ supabase: () => ({}) }))
 
 import { emptyLiveData, useLaree } from '../data/store.ts'
 import type { Settings } from '../domain/types.ts'
-import { followAiConsent } from './aiConsent.ts'
+import { aiConsentRecorded, followAiConsent } from './aiConsent.ts'
 import type { ConsentServer } from './aiConsent.ts'
 
 const UID = '00000000-0000-4000-a000-0000000000a1'
@@ -211,5 +211,45 @@ describe('the AI consent record', () => {
     setSwitch(false)
     await settle()
     expect(c.rows).toEqual([true, false])
+  })
+
+  it('tells the export whether the latest answer is on the server, and tries first', async () => {
+    const c = fakeConsents()
+    setSwitch(false)
+    follow(c.server)
+    await settle()
+    expect(await aiConsentRecorded(UID)).toBe(true)
+    // The switch is turned on offline: the settings may sync, the consent row has not.
+    c.setOnline(false)
+    setSwitch(true)
+    await settle()
+    expect(await aiConsentRecorded(UID)).toBe(false)
+    expect(c.rows).toEqual([])
+    // Back online, the question itself gets the answer recorded: no waiting for the retry timer.
+    c.setOnline(true)
+    expect(await aiConsentRecorded(UID)).toBe(true)
+    expect(c.rows).toEqual([true])
+  })
+
+  it('waits for an answer that is on its way', async () => {
+    const c = fakeConsents()
+    setSwitch(false)
+    follow(c.server)
+    await settle()
+    c.setHold(true)
+    setSwitch(true)
+    await settle()
+    let answered: boolean | null = null
+    void aiConsentRecorded(UID).then((v) => (answered = v))
+    await settle()
+    expect(answered).toBeNull()
+    c.setHold(false)
+    c.held.shift()?.()
+    await settle()
+    expect(answered).toBe(true)
+  })
+
+  it('has nothing to wait for when nobody follows the account', async () => {
+    expect(await aiConsentRecorded('00000000-0000-4000-a000-00000000000c')).toBe(true)
   })
 })

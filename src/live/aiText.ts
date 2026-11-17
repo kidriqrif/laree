@@ -15,6 +15,8 @@ interface Polished {
 }
 
 const CACHE_KEY = 'laree:live:ai'
+/** Changes whenever any tab clears the cache. Tabs share it, so each sees the others' sign-outs. */
+const EPOCH_KEY = 'laree:live:ai:epoch'
 const CACHE_SIZE = 60
 
 function hash(text: string): string {
@@ -44,10 +46,23 @@ function writeCache(key: string, value: Polished): void {
 /** Bumped whenever the cache is cleared: an answer asked for before that must not be kept or shown. */
 let generation = 0
 
-/** Forget the AI wording kept on this device (on sign-out and account deletion). */
+/** The device-wide mark of the last clearing, in any tab. Null when storage cannot be read. */
+function epoch(): string | null {
+  try {
+    return localStorage.getItem(EPOCH_KEY) ?? ''
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Forget the AI wording kept on this device (on sign-out and account deletion). A request still
+ * on its way, in this tab or another, then neither keeps nor shows its answer.
+ */
 export function clearPolishedCache(): void {
   generation++
   try {
+    localStorage.setItem(EPOCH_KEY, crypto.randomUUID())
     localStorage.removeItem(CACHE_KEY)
   } catch {
     // No storage: nothing kept, nothing to clear.
@@ -69,13 +84,15 @@ export async function polish<T extends TextOut>(out: T): Promise<T | null> {
   const cached = readCache()[key]
   if (cached) return apply(out, cached)
   const asked = generation
+  const askedEpoch = epoch()
   const { data, error } = await supabase().functions.invoke('ai', {
     body: { feature: out.feature, athleteId: out.athleteId, headline: out.headline, lines: out.lines },
   })
   const body = data as ({ ok: true } & Polished) | { ok: false } | null
   if (error || !body?.ok) return null
   // Signed out or deleted while the request was on its way: the answer belongs to nobody here.
-  if (asked !== generation) return null
+  // Storage is shared between tabs, so this also sees a sign-out made in another tab.
+  if (asked !== generation || askedEpoch !== epoch()) return null
   const p: Polished = { headline: body.headline, lines: body.lines, provider: body.provider, model: body.model }
   writeCache(key, p)
   return apply(out, p)

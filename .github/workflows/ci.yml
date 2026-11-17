@@ -43,9 +43,20 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: 3.1.0
-      - name: Start the database
-        run: supabase db start
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # The database, the API and the file storage: the timeout and backup checks below use them.
+      - name: Start the database and the API
+        run: supabase start -x studio,imgproxy,logflare,vector,supavisor,realtime,postgres-meta,edge-runtime
       - name: Access-rule tests
         run: supabase test db
+      # The sync relies on the API cancelling a statement after 8 seconds (src/live/sync).
+      - name: API statement timeout
+        run: node scripts/check-api-timeout.ts
+      # The nightly backup and the restore, against this stack: rows and files that match, and
+      # no secret key sent to an address it must not reach.
+      - name: Backup and restore
+        run: bash scripts/check-backup.sh
       - name: Schema lint
         run: supabase db lint --level warning --fail-on error
