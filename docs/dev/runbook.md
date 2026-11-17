@@ -29,6 +29,8 @@ Day-to-day running of the live app. How it works: [backend.md](backend.md).
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | variables. `keepalive.yml` defaults to this project's public values: set both or neither. `backup.yml` has no default and needs `SUPABASE_URL` of the same project as `SUPABASE_DB_URL` | `keepalive.yml`; `backup.yml` uses the URL |
 | `BACKUP_AGE_RECIPIENT` | variable, your age public key (`age1…`) | `backup.yml` |
 
+`backup.yml` also reads `SUPABASE_URL` and `BACKUP_AGE_RECIPIENT` from secrets of the same name, when no variable has them. With none of its four settings, the backup is skipped; with only some of them, it fails and names the ones missing.
+
 The deploy and backup jobs use a GitHub environment named `production`. Add the secrets there, or at repository level.
 
 **Supabase, Edge Function secrets** (`npx supabase secrets set NAME=value`):
