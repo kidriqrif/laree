@@ -42,6 +42,12 @@ create trigger coach_athletes_room before insert on public.coach_athletes
 create trigger invitations_room before insert on public.invitations
   for each row execute function private.check_coach_room();
 
+-- A coach chooses only whom to invite. The role, the dates and the acceptance are the server's, so
+-- an invitation cannot be made already accepted or already expired, and every one a free coach
+-- makes takes a place while it is open.
+revoke insert on public.invitations from authenticated;
+grant insert (coach_id, email) on public.invitations to authenticated;
+
 -- AI for a coached athlete now also needs their coach on premium.
 create or replace function public.ai_allowed(athlete uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
