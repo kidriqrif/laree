@@ -5,11 +5,17 @@ import {
   dateToDay,
   dayToDate,
   dayToIso,
+  minuteOfDay,
   now,
+  offsetAt,
   nowMinute,
   relativeWeek,
   relativeWeekLabel,
+  isoToEpochDay,
+  setFixedStart,
   setNow,
+  setTimeZone,
+  timeZone,
   today,
   weekLabel,
   weekOfDay,
@@ -22,7 +28,11 @@ import {
 const SUNDAY_NIGHT = '2026-11-08T23:30:00+08:00';
 const MONDAY_MORNING = '2026-11-09T00:30:00+08:00';
 
-afterEach(() => setNow(null));
+afterEach(() => {
+  setNow(null);
+  setTimeZone(null);
+  setFixedStart(null);
+});
 
 describe('clock', () => {
   it('reads the real clock by default and can be overridden', () => {
@@ -96,5 +106,37 @@ describe('labels', () => {
     expect(weekLabel(16)).toBe('Last week');
     expect(weekLabel(17)).toBe('This week');
     expect(weekLabel(20)).toBe('In 3 weeks');
+  });
+});
+
+describe('the time zone days are read in', () => {
+  it('is Kuala Lumpur unless set', () => {
+    expect(timeZone()).toBe('Asia/Kuala_Lumpur');
+    expect(offsetAt(Date.parse('2026-11-08T12:00:00Z'))).toBe(8 * 3_600_000);
+  });
+
+  it('moves today to the person’s own midnight', () => {
+    // 23:30 in London on Sunday is already Monday 07:30 in Kuala Lumpur. Day 0 is fixed, as live.
+    setFixedStart(isoToEpochDay('2026-07-27'));
+    setNow(new Date('2026-11-08T23:30:00Z'));
+    const kl = today();
+    expect(setTimeZone('Europe/London')).toBe(true);
+    expect(today()).toBe(kl - 1);
+    expect(nowMinute()).toBe(23 * 60 + 30);
+    setNow(new Date('2026-11-09T00:30:00Z'));
+    expect(today()).toBe(kl);
+  });
+
+  it('follows daylight saving', () => {
+    setTimeZone('America/New_York');
+    expect(offsetAt(Date.parse('2026-07-01T12:00:00Z'))).toBe(-4 * 3_600_000);
+    expect(offsetAt(Date.parse('2026-12-01T12:00:00Z'))).toBe(-5 * 3_600_000);
+    expect(minuteOfDay(Date.parse('2026-07-01T11:15:00Z'))).toBe(7 * 60 + 15);
+  });
+
+  it('keeps the zone it had when given a name the browser does not know', () => {
+    setTimeZone('Asia/Tokyo');
+    expect(setTimeZone('Not/A_Zone')).toBe(false);
+    expect(timeZone()).toBe('Asia/Tokyo');
   });
 });

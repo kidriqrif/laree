@@ -14,7 +14,7 @@ import styles from './CheckIn.module.css'
 import { newId } from '../../../data/ids.ts'
 import { isLive } from '../../../app/mode.ts'
 
-/** Today's check-in can be changed until midnight Malaysia time, which is when the day offset rolls on. */
+/** Today's check-in can be changed until local midnight (domain/time.ts), when the day offset rolls on. */
 export function canEditCheckIn(day: DayOffset): boolean {
   return day === currentDay()
 }
@@ -129,7 +129,7 @@ function OpenSheet({ onClose, onOpenChange }: { onClose: () => void; onOpenChang
   return (
     <Sheet isOpen onOpenChange={onOpenChange} title="How am I this morning?" footer={footer} data-testid="check-in-sheet">
       {closed ? (
-        <p className={styles.closed}>Today's check-in has closed. It can be changed until midnight, Malaysia time.</p>
+        <p className={styles.closed}>Today's check-in has closed. It can be changed until midnight.</p>
       ) : (
         <div className={styles.form}>
           <NumberField

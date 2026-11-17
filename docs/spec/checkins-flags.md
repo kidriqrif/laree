@@ -25,7 +25,7 @@ Related documents: [metrics](metrics.md) (Load, Fitness, Fatigue, Form, Ramp and
 | `ramp(x)` | `fitness(x) − fitness(x − 7)`: the 7-day change in Fitness. |
 | "two days running" | Check-ins exist for both `d` and `d − 1`, and both meet the condition. A day without a check-in breaks the run. |
 
-Times are local to Asia/Kuala_Lumpur. A check-in belongs to the local date on which it is saved.
+Times are local to the time zone days are read in: Asia/Kuala_Lumpur in the demo, the device's own zone in the live app. A check-in belongs to the local date on which it is saved, and can be changed until local midnight.
 
 ## The daily check-in
 

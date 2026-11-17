@@ -111,7 +111,7 @@ A higher percentage is always harder. For pace and swim targets that means faste
 
 - **`asciiSafe(text)`** is used for every text field in .mrc, .erg and .fit, because trainer apps and watch fonts are limited. It applies Unicode NFKD, removes combining marks, maps `×` to `x`, en and em dashes to `-`, curly quotes to straight ones, `·` to `-` and `…` to `...`, drops any other non-ASCII character and collapses runs of spaces. .zwo and .ics are UTF-8 and keep the original text.
 - **`slug(text)`**: `asciiSafe`, then `4 × 8` style pairs become `4x8`, then lower case, then every run of characters other than `a-z` and `0-9` becomes one `-`, trimmed of leading and trailing `-`, cut to 40 characters.
-- **File names**: a planned session is `laree-{athleteId}-{yyyy-mm-dd}-{slug(title)}.{ext}`; a library template is `laree-{athleteId}-{slug(name)}.{ext}`; a week of sessions is `laree-{athleteId}-week-{yyyy-mm-dd of the Monday}.ics`. Dates are local dates in Asia/Kuala_Lumpur.
+- **File names**: a planned session is `laree-{athleteId}-{yyyy-mm-dd}-{slug(title)}.{ext}`; a library template is `laree-{athleteId}-{slug(name)}.{ext}`; a week of sessions is `laree-{athleteId}-week-{yyyy-mm-dd of the Monday}.ics`. Dates are local dates in the time zone days are read in (Asia/Kuala_Lumpur in the demo, the device's zone in the live app).
 - **Duration labels**: `45 s`, `8 min`, `2 min 30 s`, `1 h 09 min`. **Target labels**: `242-255 W`, `141-149 bpm`, `4:11-4:25 /km`, `1:43-1:48 /100 m`, `RPE 7`, all with a plain hyphen.
 - **The step summary** has one line per top-level step or repeat block:
   - a flat step: `{duration} {kind} at {target}`, for example `8 min interval at 242-255 W`;
@@ -460,7 +460,7 @@ The calendar file follows RFC 5545. It is offered for one session (calendar sess
 - **DTSTAMP** is the export clock in UTC, for example `20261108T020000Z`.
 - **SEQUENCE** is the session's revision number, which starts at 0 and goes up by 1 on every save.
 - **Untimed sessions** (no `startMinute`) are all-day events: `DTSTART;VALUE=DATE:{day}` and `DTEND;VALUE=DATE:{next day}`, because the end date of an all-day event is exclusive. They carry `TRANSP:TRANSPARENT`, so the session does not show the athlete as busy all day.
-- **Timed sessions** use local time with a time-zone id: `DTSTART;TZID=Asia/Kuala_Lumpur:{yyyymmdd}T{hhmmss}` and `DTEND` at the start plus the planned duration, rounded up to the whole minute. They carry `TRANSP:OPAQUE`. A file with any timed event includes one `VTIMEZONE` for Asia/Kuala_Lumpur (section 7.4), as RFC 5545 requires for every TZID used.
+- **Timed sessions** use local time with a time-zone id: `DTSTART;TZID=Asia/Kuala_Lumpur:{yyyymmdd}T{hhmmss}` and `DTEND` at the start plus the planned duration, rounded up to the whole minute. They carry `TRANSP:OPAQUE`. A file with any timed event includes one `VTIMEZONE` for Asia/Kuala_Lumpur (section 7.4), as RFC 5545 requires for every TZID used. In any other time zone (the live app abroad), timed sessions are written as floating local times with no TZID and no `VTIMEZONE`: `DTSTART:{yyyymmdd}T{hhmmss}`, which a calendar reads in its own zone, daylight saving included.
 - **SUMMARY** is `{Sport} · {title} · {duration}`, with ` · key session` added for key sessions.
 - **CATEGORIES** is `Laree,{Sport}`.
 - **DESCRIPTION** is, line by line: the step summary (section 3.4); a totals line, `{duration} · Load {load} · planned at {threshold}`; `Coach: {note}` when there is a note; and `Open in Laree: {url}`. Step notes are left out.
@@ -651,7 +651,7 @@ The preview states what was missing and which method that leaves, in the words o
 
 ### 10.5 Day, time and matching
 
-- The start time is converted to Asia/Kuala_Lumpur (UTC+8). The activity's `day` is days since the runtime start and its `startMinute` is minutes after local midnight (metrics section 1.3). A session recorded abroad is still placed by Kuala Lumpur time in phase 1.
+- The start time is converted to the time zone days are read in: Asia/Kuala_Lumpur (UTC+8) in the demo, the device's zone in the live app. The activity's `day` is days since the runtime start and its `startMinute` is minutes after local midnight (metrics section 1.3).
 - Matching follows metrics section 7.1. When the athlete picked a session in "Which session?", that choice wins if the sport agrees. If the picked session is on another day, the preview says so and offers to move it to the file's day, which is what Coach's drag in the calendar does.
 - **Duplicates.** A file whose sport matches an existing activity of the same athlete that starts within 60 s is a duplicate. The preview names it and offers to open it instead.
 - **Replacing a quick log.** If the chosen session is already matched by a quick log, saving the file replaces the quick log's numbers and keeps its effort and note. The file has more detail, so it wins.

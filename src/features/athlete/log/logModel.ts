@@ -8,14 +8,13 @@ import type { LareeData } from '../../../data/store.ts'
 import { DEFAULT_INTENSITY, sessionLoad } from '../../../domain/metrics/load.ts'
 import type { LoadInput, LoadThresholds } from '../../../domain/metrics/load.ts'
 import { streamDigest } from '../../../domain/metrics/streamDigest.ts'
-import { dateToDay, dayToDate, KL_OFFSET_MS } from '../../../domain/time.ts'
+import { dateToDay, dayToDate, minuteOfDay } from '../../../domain/time.ts'
 import type { Activity, ActivitySummary, AthleteId, DayOffset, LoadResult, PlannedWorkout, Sport } from '../../../domain/types.ts'
 import type { ParsedActivity } from '../../../io/import/types.ts'
 import { sessionName } from '../../shared/activity/format.ts'
 import { newId } from '../../../data/ids.ts'
 
 export const NOT_PLANNED = 'none'
-const DAY_MS = 86_400_000
 export const LOG_BACK_DAYS = 7
 
 export const SPORT_NAMES: Record<Sport, string> = {
@@ -296,8 +295,7 @@ export function buildSyncedActivity(b: SyncBuild): Activity {
 
 export function startOf(p: ParsedActivity): { day: DayOffset; startMinute: number } {
   const ms = Date.parse(p.startUtc)
-  const local = ms + KL_OFFSET_MS
-  return { day: dateToDay(new Date(ms)), startMinute: Math.floor((((local % DAY_MS) + DAY_MS) % DAY_MS) / 60_000) }
+  return { day: dateToDay(new Date(ms)), startMinute: minuteOfDay(ms) }
 }
 
 const finiteOrNull = (n: number | null | undefined): number | undefined =>

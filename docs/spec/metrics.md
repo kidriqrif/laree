@@ -44,7 +44,7 @@ The engine works in SI units: seconds, metres, metres per second, watts and beat
 
 - Day 0 is the Monday of history week 1, called the runtime start. It sits 16 weeks before the current week, so the demo always looks current.
 - Week `w` (counted from 1) covers days `7(w − 1)` to `7(w − 1) + 6`. The current week is week 17, which covers days 112 to 118.
-- All times are local time in Asia/Kuala_Lumpur (UTC+8, no daylight saving). An activity belongs to the day on which it starts, even if it runs past midnight.
+- All times are local time in one time zone (`domain/time.ts`): Asia/Kuala_Lumpur (UTC+8, no daylight saving) in the demo, the device's own zone in the live app, daylight saving included. An activity belongs to the day on which it starts, even if it runs past midnight.
 - An activity carries `day` and `startMinute` (minutes after local midnight). A planned workout carries `day`, its `order` within that day, and an optional `startMinute`.
 
 ### 1.4 Thresholds have history

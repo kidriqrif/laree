@@ -6,7 +6,7 @@
  */
 import { formatLoad, roundHalfAway } from '../../domain/metrics/fitness.ts';
 import type { LoadThresholds } from '../../domain/metrics/load.ts';
-import { runtimeStartEpochDay } from '../../domain/time.ts';
+import { runtimeStartEpochDay, timeZone } from '../../domain/time.ts';
 import type {
   DayOffset,
   PlainStep,
@@ -66,6 +66,13 @@ const SPORT_BASIS: Partial<Record<Sport, StepTargetKind>> = {
   run: 'pctThresholdPace',
   swim: 'pctCss',
 };
+
+/**
+ * Timed events carry the Kuala Lumpur zone when days are read there (the demo). In any other zone
+ * they are written as local ("floating") times, which a calendar reads in its own zone, daylight
+ * saving included: a 07:00 run stays at 07:00 for the person.
+ */
+const inKualaLumpur = (): boolean => timeZone() === TZID;
 
 /** Time-zone block for Asia/Kuala_Lumpur: UTC+8 all year, no daylight saving (io.md 7.4). */
 const TIMEZONE_BLOCK: string[] = [
@@ -317,9 +324,10 @@ function sessionEvent(
   } else {
     const endMinute = session.startMinute + Math.ceil(session.plannedDurationS / 60);
     const endDay = day + Math.floor(endMinute / MINUTES_PER_DAY);
-    dates.push(`DTSTART;TZID=${TZID}:${compactOf(day, stamp.startEpoch)}T${clockDigits(session.startMinute)}`);
+    const zone = inKualaLumpur() ? `;TZID=${TZID}` : '';
+    dates.push(`DTSTART${zone}:${compactOf(day, stamp.startEpoch)}T${clockDigits(session.startMinute)}`);
     dates.push(
-      `DTEND;TZID=${TZID}:${compactOf(endDay, stamp.startEpoch)}T${clockDigits(endMinute % MINUTES_PER_DAY)}`,
+      `DTEND${zone}:${compactOf(endDay, stamp.startEpoch)}T${clockDigits(endMinute % MINUTES_PER_DAY)}`,
     );
   }
   const summary = `${SPORT_LABEL[session.sport]} · ${session.title} · ${durationLabel(session.plannedDurationS)}`;
@@ -369,7 +377,7 @@ function calendarText(calendarName: string, events: string[][], anyTimed: boolea
     'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeText(calendarName)}`,
   ];
-  const zone = anyTimed ? TIMEZONE_BLOCK : [];
+  const zone = anyTimed && inKualaLumpur() ? TIMEZONE_BLOCK : [];
   const lines = [...header, ...zone, ...events.flat(), 'END:VCALENDAR'].map(foldLine);
   return crlf(lines);
 }
