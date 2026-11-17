@@ -1,0 +1,284 @@
+/* The live app's front page. One column on a phone: who we are, sign-in, then what Laree does. From
+   56rem the sign-in card moves to the right of the other two. */
+@layer components {
+  .page {
+    display: grid;
+    grid-template-areas:
+      "intro"
+      "card"
+      "points"
+      "footer";
+    gap: var(--space-6);
+    align-content: start;
+    box-sizing: border-box;
+    max-inline-size: 30rem;
+    min-block-size: 100dvb;
+    margin-inline: auto;
+    padding-block: max(var(--space-8), env(safe-area-inset-top)) max(var(--space-8), env(safe-area-inset-bottom));
+    padding-inline: max(var(--space-4), env(safe-area-inset-left)) max(var(--space-4), env(safe-area-inset-right));
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  @media (width >= 56rem) {
+    .page {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      grid-template-areas:
+        "intro card"
+        "points card"
+        "footer card";
+      column-gap: var(--space-12, 3rem);
+      align-content: center;
+      max-inline-size: 68rem;
+      padding-inline: var(--space-8);
+    }
+  }
+
+  .intro {
+    grid-area: intro;
+    display: grid;
+    gap: var(--space-3);
+    justify-items: start;
+  }
+
+  .tagline {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+  }
+
+  .headline {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  @media (width >= 56rem) {
+    .headline {
+      font-size: var(--text-3xl);
+    }
+  }
+
+  .card {
+    position: relative;
+    grid-area: card;
+    align-self: start;
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-6) var(--space-5);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+
+  @media (width >= 56rem) {
+    .card {
+      align-self: center;
+      padding: var(--space-8);
+    }
+  }
+
+  .cardTitle {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .form {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .field {
+    display: grid;
+    gap: var(--space-1);
+    font-weight: 600;
+  }
+
+  .field input {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-block-size: var(--space-12, 3rem);
+    padding-inline: var(--space-3);
+    border: 1px solid var(--color-control-border);
+    border-radius: var(--radius-control);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font: inherit;
+    font-weight: 400;
+    transition: border-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .field input:hover {
+    border-color: var(--color-rule-strong);
+  }
+
+  .field input:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .field input[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+
+  /* Six digits, spaced so each one reads on its own. */
+  .field input.code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xl);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3em;
+  }
+
+  .error {
+    color: var(--color-danger);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  .primary {
+    display: inline-flex;
+    gap: var(--space-2);
+    align-items: center;
+    justify-content: center;
+    min-block-size: var(--space-12, 3rem);
+    margin-block-start: var(--space-1);
+    padding-inline: var(--space-5);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--color-action);
+    color: var(--color-on-action);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .primary:hover:not(:disabled) {
+    background: var(--color-action-hover);
+  }
+
+  .primary:focus-visible,
+  .link:focus-visible,
+  .footer a:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .primary:disabled,
+  .link:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .spinner {
+    inline-size: 1em;
+    block-size: 1em;
+    box-sizing: border-box;
+    border: 2px solid currentcolor;
+    border-inline-end-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* Without motion the ring stays still: the button's words already say it is working. */
+  @media (prefers-reduced-motion: reduce) {
+    .spinner {
+      animation: none;
+    }
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  .link {
+    min-block-size: var(--target-min);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-link);
+    font: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  .link:hover:not(:disabled) {
+    text-decoration-thickness: 2px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-5);
+  }
+
+  /* Empty, the status region takes no room but stays in the accessibility tree, so a screen reader
+     is already listening when a message arrives in it. */
+  .note:empty {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .note {
+    padding: var(--space-3);
+    border-inline-start: 3px solid var(--color-action);
+    background: var(--color-bg);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .small {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .points {
+    grid-area: points;
+    display: grid;
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .point {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: start;
+  }
+
+  .pointIcon {
+    display: grid;
+    place-items: center;
+    inline-size: var(--space-10, 2.5rem);
+    block-size: var(--space-10, 2.5rem);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-action);
+  }
+
+  .footer {
+    grid-area: footer;
+    display: grid;
+    gap: var(--space-2);
+    justify-items: start;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .footer a {
+    color: var(--color-link);
+    text-underline-offset: 0.2em;
+  }
+}

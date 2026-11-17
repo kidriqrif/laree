@@ -17,7 +17,8 @@ import type { Phase, Race } from '../../../domain/types.ts'
 import { Button, Card, EmptyState } from '../../../ui/core/index.ts'
 import { DataTable } from '../../../ui/data/index.ts'
 import type { DataTableColumn } from '../../../ui/data/index.ts'
-import { PhaseSlider, SegmentedControl } from '../../../ui/form/index.ts'
+import { PhaseSlider } from '../../../ui/form/index.ts'
+import { AthleteSwitcher } from '../AthleteSwitcher.tsx'
 import { ConfirmDialog, showUndoToast } from '../../../ui/overlay/index.ts'
 import { PHASE_LABEL } from './fill.ts'
 import styles from './SeasonPage.module.css'
@@ -330,12 +331,7 @@ function SeasonBody() {
       <header className={styles.head}>
         <h1 className={styles.title}>Season</h1>
         <div className={styles.controls}>
-          <SegmentedControl
-            ariaLabel="Athlete"
-            options={ATHLETES.map((a) => ({ id: a.id, label: a.name }))}
-            value={athleteId}
-            onChange={(id) => isAthleteId(id) && navigate(`/coach/season/${id}`)}
-          />
+          <AthleteSwitcher value={athleteId} onChange={(id) => void navigate(`/coach/season/${id}`)} />
           {readOnly ? null : (
             <>
               <Button variant="secondary" isDisabled={!canFill} onPress={() => setFillWeeks(selectedFuture)}>
