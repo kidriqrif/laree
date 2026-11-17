@@ -55,13 +55,16 @@ function epoch(): string | null {
   }
 }
 
+/** The site's Web Locks, shared by its tabs, or null in a browser without them. */
+const siteLocks = () => globalThis.navigator?.locks ?? null
+
 /**
  * Clearing and writing the wording take turns across the site's tabs (Web Locks), so a clear in
- * one tab can never land between another tab's check and its write. Without the API (old
- * browsers) they run at once, and the second check in `polish` takes a late write back.
+ * one tab can never land between another tab's check and its write. Without the API nothing is
+ * written at all (`polish`), so only clearing runs here then.
  */
 function cacheTurn<T>(work: () => T): Promise<T> {
-  const locks = globalThis.navigator?.locks
+  const locks = siteLocks()
   return locks ? locks.request('laree-ai-cache', async () => work()) : Promise.resolve().then(work)
 }
 
@@ -118,19 +121,12 @@ export async function polish<T extends TextOut>(out: T): Promise<T | null> {
   // Storage is shared between tabs, so this also sees a sign-out made in another tab.
   const stale = () => asked !== generation || askedEpoch !== epoch()
   const p: Polished = { headline: body.headline, lines: body.lines, provider: body.provider, model: body.model }
+  // Without Web Locks a write cannot be ordered against a clear in another tab: keep nothing then,
+  // and ask again next time.
+  if (!siteLocks()) return stale() ? null : apply(out, p)
   const kept = await cacheTurn(() => {
     if (stale()) return false
     writeCache(key, p)
-    // Without Web Locks another tab can clear between the check above and the write. It sets its
-    // mark before it removes, so the mark has changed by now if it did: take the write back.
-    if (stale()) {
-      try {
-        localStorage.removeItem(CACHE_KEY)
-      } catch {
-        // Nothing more can be done here; the clearing tab removes it too.
-      }
-      return false
-    }
     return true
   })
   return kept ? apply(out, p) : null

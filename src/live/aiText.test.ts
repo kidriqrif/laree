@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const invoke = vi.fn<(name: string, options: unknown) => Promise<unknown>>()
 vi.mock('./session.ts', () => ({ supabase: () => ({ functions: { invoke } }) }))
@@ -7,7 +7,6 @@ import type { AiRecapOutput } from '../ai/types.ts'
 import { clearPolishedCache, polish } from './aiText.ts'
 
 const CACHE_KEY = 'laree:live:ai'
-const EPOCH_KEY = 'laree:live:ai:epoch'
 const draft = {
   status: 'ok',
   feature: 'recap',
@@ -17,11 +16,35 @@ const draft = {
 } as unknown as Extract<AiRecapOutput, { status: 'ok' }>
 const answer = { data: { ok: true, headline: 'Steady week', lines: ['A 12 km run.'], provider: 'Mock', model: 'mock-1' }, error: null }
 
+/** Web Locks as a browser shares them between its tabs: one turn at a time. */
+function installLocks(): () => void {
+  let tail: Promise<unknown> = Promise.resolve()
+  const locks = {
+    request: (_name: string, work: () => Promise<unknown>) => {
+      const run = tail.then(work)
+      tail = run.catch(() => undefined)
+      return run
+    },
+  }
+  const nav = globalThis.navigator as Navigator & { locks?: unknown }
+  const before = Object.getOwnPropertyDescriptor(nav, 'locks')
+  Object.defineProperty(nav, 'locks', { value: locks, configurable: true })
+  return () => {
+    if (before) Object.defineProperty(nav, 'locks', before)
+    else delete (nav as { locks?: unknown }).locks
+  }
+}
+
+let removeLocks: () => void = () => undefined
+
 beforeEach(async () => {
   invoke.mockReset()
   localStorage.clear()
+  removeLocks = installLocks()
   await clearPolishedCache()
 })
+
+afterEach(() => removeLocks())
 
 describe('AI wording on the device', () => {
   it('keeps an answer, and does not ask twice for the same draft', async () => {
@@ -79,71 +102,40 @@ describe('AI wording on the device', () => {
     expect(localStorage.getItem(CACHE_KEY)).toBeNull()
   })
 
-  it('takes its write back when another tab clears between the check and the write', async () => {
-    // A browser without Web Locks: the clear and the write are not ordered across tabs.
+  it('keeps no AI wording on a device without Web Locks, and still shows the answer', async () => {
+    // Without the API a write cannot be ordered against a clear in another tab: nothing is kept.
+    removeLocks()
+    invoke.mockResolvedValue(answer)
+    expect((await polish(draft))?.headline).toBe('Steady week')
+    expect(localStorage.getItem(CACHE_KEY)).toBeNull()
+    // So the next visit asks again.
+    await polish(draft)
+    expect(invoke).toHaveBeenCalledTimes(2)
+  })
+
+  it('lets a clear from another tab wait for a write under way, then remove it', async () => {
+    // Each copy of the module is a tab: its own memory, the same storage and locks.
+    vi.resetModules()
+    const thisTab = await import('./aiText.ts')
     vi.resetModules()
     const otherTab = await import('./aiText.ts')
     invoke.mockResolvedValue(answer)
     const real = localStorage.setItem.bind(localStorage)
     let clearing: Promise<boolean> | null = null
-    // The other tab clears at the worst moment: its mark lands just before this tab writes.
     const racing = (key: string, value: string) => {
-      if (key === CACHE_KEY && !clearing) {
-        clearing = otherTab.clearPolishedCache()
-        real(EPOCH_KEY, 'set-by-the-other-tab')
-      }
+      // The other tab asks to clear while this tab is writing: it must wait its turn.
+      if (key === CACHE_KEY && !clearing) clearing = otherTab.clearPolishedCache()
       real(key, value)
     }
     Object.defineProperty(localStorage, 'setItem', { value: racing, configurable: true, writable: true })
     try {
-      expect(await polish(draft)).toBeNull()
-      await clearing
+      await thisTab.polish(draft)
+      expect(await clearing).toBe(true)
     } finally {
       Object.defineProperty(localStorage, 'setItem', { value: real, configurable: true, writable: true })
     }
     expect(clearing).not.toBeNull()
     expect(localStorage.getItem(CACHE_KEY)).toBeNull()
-  })
-
-  it('lets a clear from another tab wait for a write under way, then remove it', async () => {
-    // Web Locks shared by two tabs: one turn at a time.
-    let tail: Promise<unknown> = Promise.resolve()
-    const locks = {
-      request: (_name: string, work: () => Promise<unknown>) => {
-        const run = tail.then(work)
-        tail = run.catch(() => undefined)
-        return run
-      },
-    }
-    const nav = globalThis.navigator as Navigator & { locks?: unknown }
-    const before = Object.getOwnPropertyDescriptor(nav, 'locks')
-    Object.defineProperty(nav, 'locks', { value: locks, configurable: true })
-    try {
-      // Each copy of the module is a tab: its own memory, the same storage and locks.
-      vi.resetModules()
-      const thisTab = await import('./aiText.ts')
-      vi.resetModules()
-      const otherTab = await import('./aiText.ts')
-      invoke.mockResolvedValue(answer)
-      const real = localStorage.setItem.bind(localStorage)
-      let clearing: Promise<boolean> | null = null
-      const racing = (key: string, value: string) => {
-        // The other tab asks to clear while this tab is writing: it must wait its turn.
-        if (key === CACHE_KEY && !clearing) clearing = otherTab.clearPolishedCache()
-        real(key, value)
-      }
-      Object.defineProperty(localStorage, 'setItem', { value: racing, configurable: true, writable: true })
-      try {
-        await thisTab.polish(draft)
-        expect(await clearing).toBe(true)
-      } finally {
-        Object.defineProperty(localStorage, 'setItem', { value: real, configurable: true, writable: true })
-      }
-      expect(localStorage.getItem(CACHE_KEY)).toBeNull()
-    } finally {
-      if (before) Object.defineProperty(nav, 'locks', before)
-      else delete (nav as { locks?: unknown }).locks
-    }
   })
 
   it('says when the wording could not be removed', async () => {
