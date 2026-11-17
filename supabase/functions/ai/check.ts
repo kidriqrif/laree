@@ -185,6 +185,24 @@ function sameWords(from: string, to: string): boolean {
   return added && kept
 }
 
+/** A sentence as compared: lower case, spaces evened out, no closing mark. */
+const plainSentence = (text: string): string => text.toLowerCase().replace(/\s+/g, ' ').trim()
+
+/** The sentences of a text, split at full stops, semicolons, question and exclamation marks. */
+const sentencesOf = (text: string): string[] => text.split(/[.;!?]+/).map(plainSentence).filter(Boolean)
+
+/**
+ * Does every sentence of `from` that holds a negation ("no", "not", "never") come back word for
+ * word in `to`? A negation's reach turns on the exact words and marks around it: "No key session
+ * missed" and "No, a key session was missed" share every word that counts, and say the opposite.
+ */
+function negationsKept(from: string, to: string): boolean {
+  const kept = new Set(sentencesOf(to))
+  return sentencesOf(from)
+    .filter((sentence) => wordsOf(sentence).some((w) => DESCRIBES[w] === 'not'))
+    .every((sentence) => kept.has(sentence))
+}
+
 /**
  * The describing words between the numbers, stretch by stretch: before the first number, between
  * each pair, after the last.
@@ -231,6 +249,7 @@ export function sameFacts(from: string, to: string): boolean {
   if (!sameItems(fa, fb)) return false
   if (ambiguous(fa)) return from.trim() === to.trim()
   if (!sameWords(from, to)) return false
+  if (!negationsKept(from, to)) return false
   const words = a.filter((m) => !isFact(m))
   if (!sameItems(words, b.filter((m) => !isFact(m)))) return false
   if (words.length < 2 || fa.length === 0) return true

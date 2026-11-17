@@ -53,7 +53,8 @@ describe('the check on a provider answer', () => {
     expect(sameFacts('Load rose by 12%.', 'Load fell by 12%.')).toBe(false)
     expect(sameFacts('2 key sessions missed.', 'You missed 2 sessions.')).toBe(false)
     expect(sameFacts('Next week has no key sessions marked.', 'Last week had no key sessions.')).toBe(false)
-    expect(sameFacts('Next week has no key sessions marked.', 'No key sessions are marked for next week.')).toBe(true)
+    // Reworded, a negation's sentence is refused: it must come back as written.
+    expect(sameFacts('Next week has no key sessions marked.', 'No key sessions are marked for next week.')).toBe(false)
     // A word after a number that is not its unit still counts: "3 runs" is not "3 rides".
     expect(marks('3 runs')).toEqual(['3|', 'run'])
     expect(sameFacts('You logged 3 runs.', 'You logged 3 rides.')).toBe(false)
@@ -111,7 +112,11 @@ describe('the check on a provider answer', () => {
     // Grammar words may go.
     expect(sameFacts('Sleep was 7 h.', 'Sleep: 7 h.')).toBe(true)
     // A plural or past form of the draft's own word is the same word.
-    expect(sameFacts('Next week has no key sessions marked.', 'No key session is marked for next week.')).toBe(true)
+    // A sentence with a negation comes back word for word: its reach turns on the exact words.
+    expect(sameFacts('Next week has no key sessions marked.', 'No key session is marked for next week.')).toBe(false)
+    expect(sameFacts('Next week has no key sessions marked.', 'Next week has no key sessions marked.')).toBe(true)
+    expect(sameFacts('7 check-ins in 7 days. No key session missed.', '7 check-ins in 7 days. No, a key session was missed.')).toBe(false)
+    expect(sameFacts('7 check-ins in 7 days. No key session missed.', 'You did 7 check-ins in 7 days. No key session missed.')).toBe(true)
   })
 
   it('keeps the sign of a number', () => {
