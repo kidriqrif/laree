@@ -58,21 +58,24 @@ function epoch(): string | null {
 /**
  * Forget the AI wording kept on this device (on sign-out and account deletion). A request still
  * on its way, in this tab or another, then neither keeps nor shows its answer. False when the
- * wording could not be removed.
+ * wording could not be removed, or other tabs could not be told: an answer on its way there may
+ * then still be kept.
  *
  * The mark goes first, then the removal, each tried on its own: a request that writes after the
  * removal sees the new mark when it checks again (`polish`), and removes its write.
  */
 export function clearPolishedCache(): boolean {
   generation++
+  let told = true
   try {
     localStorage.setItem(EPOCH_KEY, crypto.randomUUID())
   } catch {
     // A full storage: other tabs are not told. The removal below is still tried.
+    told = false
   }
   try {
     localStorage.removeItem(CACHE_KEY)
-    return true
+    return told
   } catch {
     return false
   }

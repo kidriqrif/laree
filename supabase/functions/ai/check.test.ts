@@ -77,6 +77,9 @@ describe('the check on a provider answer', () => {
         'Your heart rate at rest was 60 bpm. Maximum heart rate was not recorded.',
       ),
     ).toBe(true)
+    // Between two numbers, words keep their order: each could go with either number.
+    expect(sameFacts('5 km on Monday; Friday: 30 min.', '5 km on Friday; Monday: 30 min.')).toBe(false)
+    expect(sameFacts('5 km on Monday; Friday: 30 min.', '5 km, Monday. Friday, 30 min.')).toBe(true)
     // Two days and one value each side: a day cannot move to the other value.
     expect(sameFacts('5 km on Monday and 8 km on Friday.', '5 km on Friday and 8 km on Monday.')).toBe(false)
     // One describing word cannot be swapped with anything: the order may change.

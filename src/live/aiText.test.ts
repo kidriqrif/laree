@@ -70,7 +70,8 @@ describe('AI wording on the device', () => {
     Object.defineProperty(localStorage, 'setItem', { value: full, configurable: true, writable: true })
     try {
       expect(() => localStorage.setItem('x', 'y')).toThrow('full')
-      clearPolishedCache()
+      // Removed here, but other tabs were not told: the clearing is not complete.
+      expect(clearPolishedCache()).toBe(false)
     } finally {
       Object.defineProperty(localStorage, 'setItem', { value: real, configurable: true, writable: true })
     }

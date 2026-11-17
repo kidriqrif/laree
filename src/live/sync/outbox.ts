@@ -35,8 +35,11 @@ export interface OutboxStore {
  * writes to it, or sent some, meanwhile.
  */
 type Change =
-  /** Queue these writes. A newer write to a row replaces the older one and moves to the back. */
-  | { kind: 'put'; ops: readonly Op[] }
+  /**
+   * Queue these writes. A newer write to a row replaces the older one and moves to the back.
+   * `ops` shrinks when some of them are sent before the put is saved (`record`).
+   */
+  | { kind: 'put'; ops: Op[] }
   /** Remove exactly these writes: sent or refused. A newer write to the same row stays. */
   | { kind: 'drop'; ops: readonly Op[] }
 
@@ -124,10 +127,9 @@ export class Outbox {
     if (change.kind === 'drop') {
       // A write that was sent or refused is no longer this tab's to queue: a put of it still due
       // would otherwise replace a newer write to the same row that another tab saved meanwhile.
+      // The put keeps its identity, so a save already holding it still finds it when it ends.
       const gone = new Set(change.ops.map(sameWrite))
-      this.changes = this.changes
-        .map((c) => (c.kind === 'put' ? { kind: 'put' as const, ops: c.ops.filter((o) => !gone.has(sameWrite(o))) } : c))
-        .filter((c) => c.kind === 'drop' || c.ops.length > 0)
+      for (const c of this.changes) if (c.kind === 'put') c.ops = c.ops.filter((o) => !gone.has(sameWrite(o)))
     }
     this.changes.push(change)
     this.ops = apply(this.ops, [change])
@@ -171,11 +173,12 @@ export class Outbox {
     this.saving = this.saving
       .then(async () => {
         if (this.closed) return
-        const taken = this.changes.length
-        const due = this.changes.slice(0, taken)
-        const saved = await this.write((current) => apply(current, due))
+        // The changes this save carries, by identity: `record` may shrink a put meanwhile, and
+        // later changes are added, but only these are done when it ends.
+        const due = new Set(this.changes)
+        const saved = await this.write((current) => apply(current, [...due]))
         // Changes made while this save ran stay due, on top of what is saved now.
-        this.changes = this.changes.slice(taken)
+        this.changes = this.changes.filter((c) => !due.has(c))
         if (!this.closed) this.ops = apply(saved, this.changes)
       })
       .then(

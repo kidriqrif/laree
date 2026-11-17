@@ -768,6 +768,42 @@ describe('one send at a time', () => {
     })
     expect(inner.saved.map((o) => o.body)).toEqual([{ id: 'c-1', v: 2 }])
   })
+
+  it('keeps an edit made while a save that still carries a sent write is on its way', async () => {
+    const inner = memoryOutboxStore()
+    let failing = 0
+    let gate: Promise<void> | null = null
+    const store = {
+      ...inner,
+      update: async (change: (saved: Op[]) => Op[]) => {
+        if (failing-- > 0) throw new Error('full')
+        if (gate) await gate
+        return inner.update(change)
+      },
+    }
+    const here = new Outbox(store)
+    await here.load()
+    const write = (id: string): Op => ({ ...op, id, body: { id } })
+    // Two saves fail: the write of A is still due when its send begins.
+    failing = 2
+    await here.add([write('A')])
+    let open: () => void = () => undefined
+    const flushing = here.flush(async () => {
+      // While A is on its way, B is saved slowly and C is made after it.
+      gate = new Promise<void>((resolve) => (open = resolve))
+      void here.add([write('B')])
+      void here.add([write('C')])
+      setTimeout(() => {
+        gate = null
+        open()
+      }, 20)
+      return { ok: true }
+    })
+    await flushing
+    await here.settled()
+    expect(inner.saved.map((o) => o.id)).toEqual(['B', 'C'])
+    expect(here.pending.map((o) => o.id)).toEqual(['B', 'C'])
+  })
 })
 
 describe('paged pulls', () => {

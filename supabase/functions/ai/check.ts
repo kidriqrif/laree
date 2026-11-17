@@ -130,8 +130,10 @@ function ambiguous(lineFacts: readonly string[]): boolean {
 
 /**
  * The describing words between the numbers, stretch by stretch: before the first number, between
- * each pair, after the last. Within a stretch the order is free ("heart rate at rest" is "resting
- * HR"); across stretches it is not, because which number a word goes with is seen only from that.
+ * each pair, after the last. Words may not move to another stretch: which number a word goes with
+ * is seen only from where it stands. In the first and the last stretch their order is free ("heart
+ * rate at rest" is "resting HR"): those words can only go with the number next to them. In a
+ * stretch between two numbers it is not: "Monday" and "Friday" there can each go with either.
  */
 function stretches(marked: readonly string[]): string[][] {
   const out: string[][] = [[]]
@@ -149,7 +151,8 @@ function stretches(marked: readonly string[]): string[][] {
  * a line holds two different values of the same kind ("resting 60 bpm, maximum 180 bpm"), a
  * rewording could swap them unseen, so that line must come back word for word. Where it holds
  * two or more describing words, which word goes with which number is known only from where they
- * stand, so the numbers keep their order and each word stays in its stretch between them. One
+ * stand, so the numbers keep their order and each word stays in its stretch between them, in
+ * order where it stands between two numbers. One
  * describing word cannot go with the wrong number in a way that changes what is said, so it may
  * move. Whatever cannot be verified is refused.
  */
@@ -166,7 +169,10 @@ export function sameFacts(from: string, to: string): boolean {
   if (fa.some((f, i) => f !== fb[i])) return false
   const sa = stretches(a)
   const sb = stretches(b)
-  return sa.every((part, i) => sameItems(part, sb[i] ?? []))
+  const last = sa.length - 1
+  return sa.every((part, i) =>
+    i === 0 || i === last ? sameItems(part, sb[i] ?? []) : part.join(' ') === (sb[i] ?? []).join(' '),
+  )
 }
 
 /**
