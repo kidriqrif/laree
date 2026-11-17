@@ -47,7 +47,7 @@ export default function PrivacyPage() {
 
       <h2>Where it is stored</h2>
       <p>
-        On Supabase servers in Singapore. In Malaysia, where the law asks for it, you agree to this when you start. The app itself is served
+        On Supabase servers in Singapore. When your device is set to a Malaysian time zone, Laree asks you to agree to this when you start, as Malaysian law requires. The app itself is served
         by Vercel.
       </p>
 
@@ -55,7 +55,7 @@ export default function PrivacyPage() {
       <p>
         Off unless you turn it on. When on, Laree sends only the short summary it has already written, never your
         name, notes, files or raw check-ins, to an AI provider (such as OpenRouter, Groq or Google) to reword it.
-        These providers are based in the United States, and free models may keep what they are sent. Turning AI off stops this
+        These providers may be in other countries, and OpenRouter passes a request on to the company that runs the model. Free models may keep what they are sent. Turning AI off stops this
         at once.
       </p>
 

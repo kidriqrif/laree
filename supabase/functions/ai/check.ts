@@ -34,6 +34,17 @@ export function freeModelOnly(baseUrl: string, model: string): boolean {
   return !openRouter || model.endsWith(':free')
 }
 
+/**
+ * May this provider entry be used? Its model must pass freeModelOnly, and so must every fallback in
+ * `extra.models`: OpenRouter tries those when the model fails, at their own price.
+ */
+export function freeOnly(p: { baseUrl: string; model: string; extra?: Record<string, unknown> }): boolean {
+  if (!freeModelOnly(p.baseUrl, p.model)) return false
+  const fallbacks = p.extra?.['models']
+  if (fallbacks === undefined) return true
+  return Array.isArray(fallbacks) && fallbacks.every((m) => typeof m === 'string' && freeModelOnly(p.baseUrl, m))
+}
+
 /** Units a summary may use, each under one name, so "7 h" and "7 hours" are the same fact. */
 const UNITS: Record<string, string> = {
   '%': '%', percent: '%',

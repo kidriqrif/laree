@@ -145,7 +145,7 @@ Start with these:
 
 - What you enter is stored in a database in Singapore (Supabase) and is kept on your device too, so the app works offline. Your coach, if you have one, can read your training and check-ins. Nobody else's account can.
 - Original activity files you import are kept in private storage.
-- AI is off by default and is a premium feature. When it is on, a short rule-based summary, with no name, note or GPS track, goes to a third-party AI provider, free models only, which may be outside your country.
+- AI is off by default and is a premium feature. When it is on, a short rule-based summary, with no name, note or GPS track, goes to a third-party AI provider, which may be outside your country. On OpenRouter, only free models are used.
 - You can download your data and delete your account in the app. The in-app privacy page (`#/privacy`) has the details.
 
 ## Licence

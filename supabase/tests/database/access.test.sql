@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(92);
+select plan(94);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -226,6 +226,10 @@ select is((select role::text || '/' || plan::text from profiles where id = '0000
   'they coach on the free plan');
 select lives_ok($$insert into invitations (coach_id, email) values ('00000000-0000-4000-a000-0000000000d1', 'e4@example.test')$$,
   'a free coach invites while there is room');
+select lives_ok($$insert into invitations (coach_id, email) values ('00000000-0000-4000-a000-0000000000d1', 'x1@example.test'), ('00000000-0000-4000-a000-0000000000d1', 'x2@example.test')$$,
+  'a free coach may hold as many open invitations as places');
+select throws_ok($$insert into invitations (coach_id, email) values ('00000000-0000-4000-a000-0000000000d1', 'x3@example.test')$$,
+  'LA001', null, 'open invitations take a free coach''s places too');
 reset role;
 
 insert into coach_athletes (coach_id, athlete_id) values ('00000000-0000-4000-a000-0000000000d1', '00000000-0000-4000-a000-0000000000e1'), ('00000000-0000-4000-a000-0000000000d1', '00000000-0000-4000-a000-0000000000e2'), ('00000000-0000-4000-a000-0000000000d1', '00000000-0000-4000-a000-0000000000e3');

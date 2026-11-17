@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLaree } from '../data/store.ts'
 import { coachRoom, useAccount } from './account.ts'
-import { refreshAccount, supabase } from './session.ts'
+import { pendingWrites, refreshAccount, supabase, syncNow } from './session.ts'
 import styles from './live.module.css'
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
@@ -53,6 +53,9 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
 
   if (!account || account.profile.role !== 'coach') return null
   const room = coachRoom(account)
+  // Open invitations take a place on the free plan too, as the database counts them.
+  const open = sent.filter((s) => Date.parse(s.expires_at) > loadedAt).length
+  const full = room.limit !== null && room.used + open >= room.limit
 
   const invite = async (e: FormEvent) => {
     e.preventDefault()
@@ -66,7 +69,7 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
         error.code === '23505'
           ? `${address} is already invited. Withdraw that invitation to send a new one.`
           : error.code === 'LA001'
-            ? `Your free plan has room for ${room.limit ?? 0} athletes, and it is full.`
+            ? `Your free plan has room for ${room.limit ?? 0} athletes, open invitations included, and it is full.`
             : `Could not invite: ${error.message}`,
       )
     }
@@ -83,6 +86,11 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
 
   const stop = async (athleteId: string, name: string) => {
     if (!globalThis.confirm(`Stop coaching ${name}? You lose access to their training. They keep it all.`)) return
+    // An edit still waiting to be sent would be refused once the link has ended: send it first.
+    await syncNow()
+    if (pendingWrites() > 0) {
+      return setMessage(`Some of your changes have not been sent yet. Stop coaching ${name} once they are saved.`)
+    }
     const { error } = await supabase()
       .from('coach_athletes')
       .update({ status: 'ended' })
@@ -112,8 +120,9 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
       </h2>
       {room.premium ? null : (
         <p className={styles.card}>
-          Free coach plan: {room.used} of {room.limit} athletes. Premium lifts the limit and adds AI summaries for your
-          athletes.
+          Free coach plan: {room.used} {room.used === 1 ? 'athlete' : 'athletes'} and {open} open{' '}
+          {open === 1 ? 'invitation' : 'invitations'}, of {room.limit} places. Premium lifts the limit and adds AI
+          summaries for your athletes.
         </p>
       )}
       <form className={styles.card} onSubmit={(e) => void invite(e)} noValidate>
@@ -123,16 +132,16 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
             type="email"
             autoComplete="off"
             value={email}
-            disabled={room.full}
+            disabled={full}
             onChange={(e) => setEmail(e.target.value)}
           />
         </label>
-        <button type="submit" className={styles.primary} disabled={busy || room.full}>
+        <button type="submit" className={styles.primary} disabled={busy || full}>
           Invite
         </button>
         <p className={styles.small}>
-          {room.full
-            ? 'Your free plan is full. To invite someone new, stop coaching one of your athletes below.'
+          {full
+            ? 'Your free plan is full. To invite someone new, withdraw an invitation or stop coaching an athlete below.'
             : 'They sign in to Laree with this email and accept. Then you see their training and plan their sessions.'}
         </p>
       </form>

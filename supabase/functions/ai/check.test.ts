@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkOutput, facts, freeModelOnly, marks, safeBaseUrl, sameFacts } from './check.ts'
+import { checkOutput, facts, freeModelOnly, freeOnly, marks, safeBaseUrl, sameFacts } from './check.ts'
 
 const draft = { headline: 'A steady week', lines: ['You ran 12 km in 60 minutes.', 'Sleep was 7.5 h on 3 of 4 nights.'] }
 const answer = (headline: string, ...lines: string[]) => JSON.stringify({ headline, lines })
@@ -182,5 +182,13 @@ describe('a model on OpenRouter', () => {
 
   it('does not limit other providers, which are free tiers of their own', () => {
     expect(freeModelOnly('https://api.groq.com/openai/v1', 'llama-3.3-70b-versatile')).toBe(true)
+  })
+  it('checks every fallback model too: OpenRouter would try a paid one at its price', () => {
+    const base = 'https://openrouter.ai/api/v1'
+    expect(freeOnly({ baseUrl: base, model: 'a:free', extra: { reasoning: { enabled: false } } })).toBe(true)
+    expect(freeOnly({ baseUrl: base, model: 'a:free', extra: { models: ['b:free', 'c:free'] } })).toBe(true)
+    expect(freeOnly({ baseUrl: base, model: 'a:free', extra: { models: ['b:free', 'openai/gpt-5'] } })).toBe(false)
+    expect(freeOnly({ baseUrl: base, model: 'a:free', extra: { models: 'b:free' } })).toBe(false)
+    expect(freeOnly({ baseUrl: base, model: 'a', extra: {} })).toBe(false)
   })
 })

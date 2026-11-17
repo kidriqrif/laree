@@ -8,10 +8,13 @@ alter table public.profiles drop constraint coaches_are_premium;
 create function private.free_coach_limit() returns integer
 language sql immutable set search_path = '' as $$ select 3 $$;
 
--- A free coach with no room left can neither invite nor take on another athlete. Error code LA001,
--- so the app can say what happened. The owner (no signed-in user) is not limited.
+-- A free coach with no room left can neither invite nor take on another athlete. An open invitation
+-- takes a place too, so a free coach cannot hand out invitations without end. Error code LA001, so
+-- the app can say what happened. The owner (no signed-in user) is not limited.
 create function private.check_coach_room() returns trigger
 language plpgsql security definer set search_path = '' as $$
+declare
+  taken bigint;
 begin
   if (select auth.uid()) is null or new.coach_id is null then
     return new;
@@ -21,8 +24,14 @@ begin
   if exists (select 1 from public.profiles p where p.id = new.coach_id and p.plan = 'premium') then
     return new;
   end if;
-  if (select count(*) from public.coach_athletes l where l.coach_id = new.coach_id and l.status = 'active')
-     >= private.free_coach_limit() then
+  taken := (select count(*) from public.coach_athletes l where l.coach_id = new.coach_id and l.status = 'active');
+  if tg_table_name = 'invitations' then
+    taken := taken + (
+      select count(*) from public.invitations i
+      where i.coach_id = new.coach_id and i.accepted_at is null and i.expires_at > now()
+    );
+  end if;
+  if taken >= private.free_coach_limit() then
     raise exception 'The free coach plan has room for % athletes', private.free_coach_limit()
       using errcode = 'LA001';
   end if;

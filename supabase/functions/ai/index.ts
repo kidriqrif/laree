@@ -2,7 +2,7 @@
 // rewrites the wording. The request carries the rule-based draft, never raw health data, names or
 // notes. Providers are any OpenAI-compatible APIs, tried in order (secret AI_PROVIDERS).
 import { asCaller, asService, cors, reply } from '../_shared/http.ts'
-import { checkOutput, freeModelOnly, safeBaseUrl } from './check.ts'
+import { checkOutput, freeOnly, safeBaseUrl } from './check.ts'
 
 interface Provider {
   name: string
@@ -145,8 +145,8 @@ Deno.serve(async (req) => {
 
   // Nothing to call: say so without using up a place.
   const chain = providers().flatMap((p) => {
-    if (!freeModelOnly(p.baseUrl, p.model)) {
-      console.error(`AI provider ${p.name} is skipped: ${p.model} is not a free model`)
+    if (!freeOnly(p)) {
+      console.error(`AI provider ${p.name} is skipped: ${p.model} or one of its fallbacks is not a free model`)
       return []
     }
     const key = Deno.env.get(p.keyEnv)
