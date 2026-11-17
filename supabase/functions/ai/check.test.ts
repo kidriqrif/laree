@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkOutput, facts, marks, safeBaseUrl, sameFacts } from './check.ts'
+import { checkOutput, facts, freeModelOnly, marks, safeBaseUrl, sameFacts } from './check.ts'
 
 const draft = { headline: 'A steady week', lines: ['You ran 12 km in 60 minutes.', 'Sleep was 7.5 h on 3 of 4 nights.'] }
 const answer = (headline: string, ...lines: string[]) => JSON.stringify({ headline, lines })
@@ -168,5 +168,19 @@ describe('a provider address', () => {
     expect(safeBaseUrl('http://localhost:8787/v1', true)).toBe(true)
     expect(safeBaseUrl('http://127.0.0.1:8787/v1', true)).toBe(true)
     expect(safeBaseUrl('http://localhost.example.com/v1', true)).toBe(false)
+  })
+})
+
+describe('a model on OpenRouter', () => {
+  it('must be a free one: one key reaches paid models too', () => {
+    expect(freeModelOnly('https://openrouter.ai/api/v1', 'google/gemma-4-31b-it:free')).toBe(true)
+    expect(freeModelOnly('https://openrouter.ai/api/v1', 'google/gemma-4-31b-it')).toBe(false)
+    expect(freeModelOnly('https://OpenRouter.ai/api/v1', 'openai/gpt-5')).toBe(false)
+    expect(freeModelOnly('https://eu.openrouter.ai/api/v1', 'x/y:free-ish')).toBe(false)
+    expect(freeModelOnly('not a url', 'x:free')).toBe(false)
+  })
+
+  it('does not limit other providers, which are free tiers of their own', () => {
+    expect(freeModelOnly('https://api.groq.com/openai/v1', 'llama-3.3-70b-versatile')).toBe(true)
   })
 })

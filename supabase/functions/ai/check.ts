@@ -18,6 +18,22 @@ export function safeBaseUrl(baseUrl: string, allowLocalHttp: boolean): boolean {
   return url.protocol === 'http:' && allowLocalHttp && LOCAL_HOSTS.has(url.hostname)
 }
 
+/**
+ * On OpenRouter one key reaches free and paid models alike, so only a free model (its id ends in
+ * ":free") may be named: a paid one would spend the owner's credit. Other providers are free tiers
+ * of their own and are not limited here.
+ */
+export function freeModelOnly(baseUrl: string, model: string): boolean {
+  let host: string
+  try {
+    host = new URL(baseUrl).hostname.toLowerCase()
+  } catch {
+    return false
+  }
+  const openRouter = host === 'openrouter.ai' || host.endsWith('.openrouter.ai')
+  return !openRouter || model.endsWith(':free')
+}
+
 /** Units a summary may use, each under one name, so "7 h" and "7 hours" are the same fact. */
 const UNITS: Record<string, string> = {
   '%': '%', percent: '%',
