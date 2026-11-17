@@ -773,11 +773,16 @@ describe('one send at a time', () => {
     const inner = memoryOutboxStore()
     let failing = 0
     let gate: Promise<void> | null = null
+    let entered: () => void = () => undefined
     const store = {
       ...inner,
       update: async (change: (saved: Op[]) => Op[]) => {
         if (failing-- > 0) throw new Error('full')
-        if (gate) await gate
+        if (gate) {
+          // This save has taken its changes and is now held.
+          entered()
+          await gate
+        }
         return inner.update(change)
       },
     }
@@ -788,18 +793,20 @@ describe('one send at a time', () => {
     failing = 2
     await here.add([write('A')])
     let open: () => void = () => undefined
-    const flushing = here.flush(async () => {
-      // While A is on its way, B is saved slowly and C is made after it.
+    await here.flush(async () => {
+      // While A is on its way, B's save starts and is held; C is made after that save began.
       gate = new Promise<void>((resolve) => (open = resolve))
+      const holding = new Promise<void>((resolve) => (entered = resolve))
       void here.add([write('B')])
+      await holding
       void here.add([write('C')])
+      // A arrives; the held save lands only after that.
       setTimeout(() => {
         gate = null
         open()
       }, 20)
       return { ok: true }
     })
-    await flushing
     await here.settled()
     expect(inner.saved.map((o) => o.id)).toEqual(['B', 'C'])
     expect(here.pending.map((o) => o.id)).toEqual(['B', 'C'])
