@@ -96,6 +96,14 @@ describe('the check on a provider answer', () => {
     // Judgement and hedging are new claims too.
     expect(sameFacts('You ran 12 km.', 'You ran a great 12 km.')).toBe(false)
     expect(sameFacts('You ran 12 km.', 'You ran only 12 km.')).toBe(false)
+    // Bounds and estimates, times, advice and causes are claims the draft does not make.
+    for (const added of ['over', 'under', 'about', 'around', 'within', 'nearly']) {
+      expect(sameFacts('You ran 12 km.', `You ran ${added} 12 km.`)).toBe(false)
+    }
+    expect(sameFacts('Load changed by -12%.', 'Your load changed by -12% this week.')).toBe(false)
+    expect(sameFacts('Load changed by -12%.', 'Load changed by -12% before the race.')).toBe(false)
+    expect(sameFacts('You ran 12 km.', 'You ran 12 km, so you should rest.')).toBe(false)
+    expect(sameFacts('You ran 5 km on Monday and Friday.', 'You ran 5 km each on Monday and Friday.')).toBe(false)
     // A plural or past form of the draft's own word is the same word.
     expect(sameFacts('Next week has no key sessions marked.', 'No key session is marked for next week.')).toBe(true)
   })
@@ -104,7 +112,7 @@ describe('the check on a provider answer', () => {
     const load = { headline: 'Load', lines: ['Load changed by -12%.'] }
     expect(checkOutput(answer('Load', 'Your load changed by +12%.'), load)).toBeNull()
     expect(checkOutput(answer('Load', 'Your load changed by 12%.'), load)).toBeNull()
-    expect(checkOutput(answer('Load', 'Your load changed by \u221212% this week.'), load)).not.toBeNull()
+    expect(checkOutput(answer('Load', 'Your load changed by \u221212%.'), load)).not.toBeNull()
     // A hyphen inside a range is not a sign.
     expect(facts('Zones 10-12 and Z2')).toEqual(['10|', '12|', '2|'])
     expect(facts('-12% and +3 km')).toEqual(['-12|%', '3|km'])

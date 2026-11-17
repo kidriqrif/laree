@@ -131,16 +131,17 @@ function ambiguous(lineFacts: readonly string[]): boolean {
 /**
  * Words a rewording may add although the draft does not have them: grammar, and nothing that says
  * what a number is, how it changed or what it means. Any other new word is refused, so a
- * relationship the check cannot read ("exceeded", "only", "great") never slips in.
+ * relationship the check cannot read never slips in: a bound or estimate ("over", "about"), a
+ * time ("this week", "before"), advice ("should"), a cause ("so"), a judgement ("great", "only").
  */
 const NEUTRAL = new Set(
   (
-    'a an the this that these those each every both some any ' +
+    'a an the this that these those ' +
     'you your yours yourself it its they them their he she his her we our us i my me athlete athletes ' +
-    'is was were are be been being am has have had having do does did will would can could should may might ' +
-    'of in on at by for from to into over under across through during within per with about around after before than ' +
-    'and or but so also too as while when where which who what how then there here ' +
-    'week weeks day days time times rate reading readings level value values number ' +
+    'is was were are be been being am has have had having do does did ' +
+    'of in on at by for from to into with ' +
+    'and or as also too there here ' +
+    'rate reading readings level value values number ' +
     's t d ll re ve m'
   ).split(' '),
 )
@@ -148,8 +149,18 @@ const NEUTRAL = new Set(
 /** A word and its plural or past form count as one: "session", "sessions"; "mark", "marked". */
 const stem = (word: string): string => (word.length > 4 ? word.replace(/(?:ing|ed|es|s)$/, '') : word)
 
-/** The words of a text, lower case. */
-const wordsOf = (text: string): string[] => [...text.toLowerCase().matchAll(/\p{L}+/gu)].map((m) => m[0])
+/**
+ * The words of a text, lower case, without the units that follow a number: those are checked
+ * with their number. A unit word on its own ("this week") is a word like any other.
+ */
+function wordsOf(text: string): string[] {
+  const out: string[] = []
+  for (const m of text.toLowerCase().matchAll(TOKEN)) {
+    if (m[4] !== undefined) out.push(m[4])
+    else if (m[3] && UNITS[m[3]] === undefined && m[3] !== '%') out.push(m[3])
+  }
+  return out
+}
 
 /** Does `to` use only words that `from` has, or neutral ones? */
 function noNewWords(from: string, to: string): boolean {
@@ -157,7 +168,7 @@ function noNewWords(from: string, to: string): boolean {
   const groups = new Set(wordsOf(from).map((w) => DESCRIBES[w]).filter(Boolean))
   return wordsOf(to).every((w) => {
     const group = DESCRIBES[w]
-    return own.has(stem(w)) || NEUTRAL.has(w) || UNITS[w] !== undefined || (group !== undefined && groups.has(group))
+    return own.has(stem(w)) || NEUTRAL.has(w) || (group !== undefined && groups.has(group))
   })
 }
 

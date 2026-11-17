@@ -4,7 +4,7 @@ import { aiConsentRecorded } from './aiConsent.ts'
 import { clearPolishedCache } from './aiText.ts'
 import { dropWaitingFiles, sendWaitingFiles, waitingFileNames } from './files.ts'
 import { useAccount } from './account.ts'
-import { discardUnsent, signOut, supabase } from './session.ts'
+import { AI_LEFT, discardUnsent, signOut, supabase } from './session.ts'
 import { SPECS } from './sync/docs.ts'
 import { supabaseBackend } from './sync/supabaseBackend.ts'
 
@@ -97,6 +97,8 @@ export async function deleteMyAccount(): Promise<string | null> {
     if (!(await dropWaitingFiles(uid))) left = true
   }
   const signOutError = await signOut()
+  // Sign-out clears the AI wording once more and says so when that failed: keep the warning.
+  if (useAccount.getState().notice === AI_LEFT) left = true
   if (signOutError)
     return `Your account was deleted, but this device could not sign out. Reload the page.${left ? ` ${DATA_LEFT}` : ''} (${signOutError})`
   // This screen closes with the sign-out, so the sign-in screen carries the message.

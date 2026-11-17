@@ -71,7 +71,7 @@ const SYSTEM = (feature: Draft['feature']) =>
       : 'The reader is the coach. Write about "the athlete".',
     'Keep every fact and every number exactly as given, written as digits with its unit and its sign. Add no new facts, numbers, dates, advice, diagnosis or medical claims.',
     'Keep the words that say what each number measures (such as resting, maximum, baseline, sleep, load, fitness, form, HRV), the sport, the day, the week (this, next, last) and any direction (up, down, missed, no) next to the same number. Do not add such words.',
-    'Use only the words of the line you rewrite, plus small grammar words (the, a, you, your, was, is, in, on, and). Add no verbs, adjectives or adverbs of your own. Where a line has words between two numbers, keep that part exactly as it is.',
+    'Use only the words of the line you rewrite, plus small grammar words (the, a, you, your, was, is, in, on, and). Add no verbs, adjectives, adverbs, times, bounds (over, about) or advice of your own. Where a line has words between two numbers, keep that part exactly as it is.',
     'Plain, warm British English. Short sentences.',
     'Return the same number of lines, in the same order. Each line rewrites the line at the same position and keeps all of that line\'s numbers. If a line gives two values of the same kind, return that line unchanged.',
     'Reply with JSON only: {"headline": string of at most 90 characters, "lines": array of strings of at most 200 characters each}.',
