@@ -118,6 +118,25 @@ function asAthlete(p: Profile): Athlete {
 
 export const isSelfCoached = (a: Account): boolean => a.profile.role === 'athlete' && a.coach === null
 
+/** How many athletes a coach on the free plan may have at once (the database says the same). */
+export const FREE_COACH_ATHLETES = 3
+
+export interface CoachRoom {
+  premium: boolean
+  used: number
+  /** Null on premium: no limit. */
+  limit: number | null
+  full: boolean
+}
+
+/** A coach's room for athletes: a free coach has FREE_COACH_ATHLETES, a premium coach no limit. */
+export function coachRoom(a: Account): CoachRoom {
+  const premium = a.profile.plan === 'premium'
+  const used = a.athletes.length
+  const limit = premium ? null : FREE_COACH_ATHLETES
+  return { premium, used, limit, full: limit !== null && used >= limit }
+}
+
 export function syncContext(a: Account): SyncContext {
   return {
     uid: a.uid,
@@ -131,12 +150,22 @@ export function syncContext(a: Account): SyncContext {
 function applyAiTier(a: Account): void {
   const granted = (athleteId: string) => a.links.some((l) => l.athlete_id === athleteId && l.ai_access)
   if (a.profile.role === 'coach') {
-    setCoachLayer({ on: granted, offReason: () => 'Turn on AI access for them in Settings, under Team.' })
+    const premium = a.profile.plan === 'premium'
+    setCoachLayer({
+      on: (athleteId) => premium && granted(athleteId),
+      offReason: () =>
+        premium ? 'Turn on AI access for them in Settings, under Team.' : 'AI for your athletes comes with the premium plan.',
+    })
   } else if (isSelfCoached(a)) {
     const premium = a.profile.plan === 'premium'
     setCoachLayer({ on: () => premium, offReason: () => 'AI is part of the premium plan.' })
   } else {
-    setCoachLayer({ on: granted, offReason: () => "Your coach hasn't turned on AI for you yet." })
+    // A coached athlete's AI comes through their coach, and only a premium coach's (backend.md, "Tiers").
+    const premiumCoach = a.coach?.plan === 'premium'
+    setCoachLayer({
+      on: (athleteId) => premiumCoach && granted(athleteId),
+      offReason: () => (premiumCoach ? "Your coach hasn't turned on AI for you yet." : "Your coach's plan doesn't include AI."),
+    })
   }
   // Selectors read the layer: wake them.
   useLaree.setState({})

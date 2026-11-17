@@ -8,8 +8,9 @@ The plan behind this page is [docs/roadmap/mvp.md](../roadmap/mvp.md). Where thi
 
 Every profile has a plan, `free` or `premium`. Users cannot change it; the owner sets it (see the runbook).
 
-- A coach is always premium. The database refuses a coach on the free plan.
-- A coached athlete gets AI only when their coach turns on "AI access" for them.
+- Anyone may choose to coach when they start (onboarding asks "I train" or "I coach"). The role is chosen once, and only while nobody is linked to the account (`public.choose_role`).
+- A coach on the free plan has at most 3 athletes at a time, and their athletes get no AI. The database refuses a fourth link or invitation (error `LA001`). Premium lifts both limits.
+- A coached athlete gets AI only when their coach is on premium and turns on "AI access" for them.
 - A self-coached athlete (no active coach) gets AI only on the premium plan.
 - Every athlete must also give their own AI consent. Without it, nothing is sent.
 
@@ -77,17 +78,17 @@ The `ai` function (`supabase/functions/ai/`):
 5. Refuses any reply it cannot verify (`check.ts`) and tries the next provider. The reply must have the draft's lines, one for one, and each line must state the same numbers as the draft's line, with their signs and units: none added, dropped, moved or swapped ("60 km" is refused when the draft says "12 km" and "60 minutes"). The words that say what a number measures (resting, maximum, sleep, load, the sport, the day, up or down, and the like) must stay, none added or dropped, so "resting heart rate 60 bpm" cannot become "maximum heart rate 60 bpm". A line with two different values of the same kind, such as two heart rates, must come back word for word, because a swap there cannot be seen from the numbers. In a line with several values and several such words, the numbers keep their order and each word stays on its side of them; text between two numbers stays exactly as written, since a word there could go with either. A sentence with a negation (no, not, never) must come back word for word, since its reach turns on the exact words. A rewording may use only the draft line's own words and a short list of grammar words (`NEUTRAL` in `check.ts`), so no new verb or adjective ("exceeded", "great", "only") can change what is said.
 6. Records the provider, model, outcome and token counts, never the text, in the request's `ai_runs` row.
 
-Providers are any OpenAI-compatible API. The default chain uses free tiers listed in [awesome-free-llm-apis](https://github.com/mnfst/awesome-free-llm-apis): OpenRouter, then Groq, then Google Gemini. Each provider needs its own key, from that provider's own site. Set the chain without a deploy:
+Providers are any OpenAI-compatible API. The default chain uses free tiers listed in [awesome-free-llm-apis](https://github.com/mnfst/awesome-free-llm-apis): three free OpenRouter models in turn (Nemotron 3 Ultra with thinking off, then two Gemma 4 models), then Groq, then Google Gemini. On OpenRouter only free models are used: a model whose id does not end in `:free` is skipped, so the key never spends credit. Each provider needs its own key, from that provider's own site. Set the chain without a deploy:
 
 ```bash
 npx supabase secrets set OPENROUTER_API_KEY=... GROQ_API_KEY=... GEMINI_API_KEY=...
 ```
 
 ```bash
-npx supabase secrets set AI_PROVIDERS='[{"name":"OpenRouter","baseUrl":"https://openrouter.ai/api/v1","model":"meta-llama/llama-3.3-70b-instruct:free","keyEnv":"OPENROUTER_API_KEY"}]'
+npx supabase secrets set AI_PROVIDERS='[{"name":"OpenRouter","baseUrl":"https://openrouter.ai/api/v1","model":"google/gemma-4-31b-it:free","keyEnv":"OPENROUTER_API_KEY"}]'
 ```
 
-Free models come and go. If one stops answering, change its `model`. A provider without a key is skipped. With no keys at all, the app keeps the rule-based text.
+Free models come and go: list the current ones with `curl -s https://openrouter.ai/api/v1/models | grep -o '"id":"[^"]*:free"'`, and change a `model` that stops answering. An entry may carry `extra` request options for its provider, such as `{"reasoning":{"enabled":false}}` for a model that would otherwise spend its whole answer thinking. Free OpenRouter models allow about 50 requests a day per key without credit. A provider without a key is skipped. With no keys at all, the app keeps the rule-based text.
 
 For a mock provider on your own machine only, `AI_ALLOW_LOCAL_HTTP=1` lets a `http://localhost` address through. Never set it on a hosted project.
 

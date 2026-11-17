@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useLaree } from '../data/store.ts'
-import { useAccount } from './account.ts'
+import { coachRoom, useAccount } from './account.ts'
 import { refreshAccount, supabase } from './session.ts'
 import styles from './live.module.css'
 
@@ -52,6 +52,7 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
   }, [version])
 
   if (!account || account.profile.role !== 'coach') return null
+  const room = coachRoom(account)
 
   const invite = async (e: FormEvent) => {
     e.preventDefault()
@@ -62,7 +63,11 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
     setBusy(false)
     if (error) {
       return setMessage(
-        error.code === '23505' ? `${address} is already invited. Withdraw that invitation to send a new one.` : `Could not invite: ${error.message}`,
+        error.code === '23505'
+          ? `${address} is already invited. Withdraw that invitation to send a new one.`
+          : error.code === 'LA001'
+            ? `Your free plan has room for ${room.limit ?? 0} athletes, and it is full.`
+            : `Could not invite: ${error.message}`,
       )
     }
     setEmail('')
@@ -74,6 +79,19 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
     const { error } = await supabase().from('invitations').delete().eq('id', id)
     if (error) return setMessage(`Could not withdraw: ${error.message}`)
     load()
+  }
+
+  const stop = async (athleteId: string, name: string) => {
+    if (!globalThis.confirm(`Stop coaching ${name}? You lose access to their training. They keep it all.`)) return
+    const { error } = await supabase()
+      .from('coach_athletes')
+      .update({ status: 'ended' })
+      .eq('coach_id', account.uid)
+      .eq('athlete_id', athleteId)
+      .eq('status', 'active')
+    if (error) return setMessage(`Could not stop coaching ${name}: ${error.message}`)
+    setMessage(`You no longer coach ${name}.`)
+    await refreshAccount()
   }
 
   const setAi = async (athleteId: string, on: boolean) => {
@@ -92,16 +110,30 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
       <h2 id={headingId} tabIndex={-1} className={styles.title}>
         Team
       </h2>
+      {room.premium ? null : (
+        <p className={styles.card}>
+          Free coach plan: {room.used} of {room.limit} athletes. Premium lifts the limit and adds AI summaries for your
+          athletes.
+        </p>
+      )}
       <form className={styles.card} onSubmit={(e) => void invite(e)} noValidate>
         <label className={styles.field}>
           <span>Invite an athlete by email</span>
-          <input type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            type="email"
+            autoComplete="off"
+            value={email}
+            disabled={room.full}
+            onChange={(e) => setEmail(e.target.value)}
+          />
         </label>
-        <button type="submit" className={styles.primary} disabled={busy}>
+        <button type="submit" className={styles.primary} disabled={busy || room.full}>
           Invite
         </button>
         <p className={styles.small}>
-          They sign in to Laree with this email and accept. Then you see their training and plan their sessions.
+          {room.full
+            ? 'Your free plan is full. To invite someone new, stop coaching one of your athletes below.'
+            : 'They sign in to Laree with this email and accept. Then you see their training and plan their sessions.'}
         </p>
       </form>
       {sent.length > 0 ? (
@@ -128,9 +160,11 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
         </div>
       ) : null}
       <div className={styles.card}>
-        <h3>AI access</h3>
+        <h3>Your athletes</h3>
         <p className={styles.small}>
-          AI is part of your premium plan. Turn it on for an athlete here; it runs only once they agree too.
+          {room.premium
+            ? 'AI is part of your premium plan. Turn it on for an athlete here; it runs only once they agree too.'
+            : 'AI summaries for your athletes come with the premium plan.'}
         </p>
         {account.athletes.length === 0 ? (
           <p>No athletes yet. Invite one above.</p>
@@ -138,15 +172,25 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
           <ul className={styles.list}>
             {account.athletes.map((a) => {
               const on = account.links.some((l) => l.athlete_id === a.id && l.ai_access)
+              const name = a.display_name || 'Athlete'
               return (
                 <li key={a.id} className={styles.listRow}>
+                  <strong>{name}</strong>
                   <label className={styles.check}>
-                    <input type="checkbox" checked={on} onChange={(e) => void setAi(a.id, e.target.checked)} />
-                    <span>{a.display_name || 'Athlete'}</span>
+                    <input
+                      type="checkbox"
+                      checked={on && room.premium}
+                      disabled={!room.premium}
+                      aria-label={`AI for ${name}`}
+                      onChange={(e) => void setAi(a.id, e.target.checked)}
+                    />
+                    <span className={styles.small}>
+                      AI · {settings[a.id]?.aiConsent ? 'they have agreed' : 'they have not agreed yet'}
+                    </span>
                   </label>
-                  <span className={styles.small}>
-                    {settings[a.id]?.aiConsent ? 'They have agreed' : 'They have not agreed yet'}
-                  </span>
+                  <button type="button" className={styles.link} onClick={() => void stop(a.id, name)}>
+                    Stop coaching
+                  </button>
                 </li>
               )
             })}

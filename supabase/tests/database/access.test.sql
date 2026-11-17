@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(78);
+select plan(92);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -27,9 +27,10 @@ insert into coach_athletes (coach_id, athlete_id) values
   ('00000000-0000-4000-a000-00000000000a', '00000000-0000-4000-a000-0000000000a1'),
   ('00000000-0000-4000-a000-00000000000b', '00000000-0000-4000-a000-0000000000b1');
 
-select throws_ok(
+select lives_ok(
   $$update profiles set plan = 'free' where id = '00000000-0000-4000-a000-00000000000a'$$,
-  '23514', null, 'a coach must stay on premium');
+  'a coach may be on the free plan');
+update profiles set plan = 'premium' where id = '00000000-0000-4000-a000-00000000000a';
 select lives_ok(
   $$update coach_athletes set ai_access = false where coach_id = '00000000-0000-4000-a000-00000000000b'$$,
   'the owner (no signed-in user) may change a link');
@@ -213,6 +214,69 @@ set local role anon;
 select throws_ok($$select count(*) from activities$$, '42501', null, 'anon cannot read synced tables');
 reset role;
 
+-- ---- Free coaches: anyone may coach; at most 3 athletes and no AI for them until premium. ----
+insert into auth.users (id, email) values
+  ('00000000-0000-4000-a000-0000000000e1', 'e1@example.test'), ('00000000-0000-4000-a000-0000000000e2', 'e2@example.test'),
+  ('00000000-0000-4000-a000-0000000000e3', 'e3@example.test'), ('00000000-0000-4000-a000-0000000000e4', 'e4@example.test');
+
+select pg_temp.login('00000000-0000-4000-a000-0000000000d1', 'new@example.test');
+set local role authenticated;
+select lives_ok($$select choose_role('coach')$$, 'a new account chooses to coach');
+select is((select role::text || '/' || plan::text from profiles where id = '00000000-0000-4000-a000-0000000000d1'), 'coach/free',
+  'they coach on the free plan');
+select lives_ok($$insert into invitations (coach_id, email) values ('00000000-0000-4000-a000-0000000000d1', 'e4@example.test')$$,
+  'a free coach invites while there is room');
+reset role;
+
+insert into coach_athletes (coach_id, athlete_id) values ('00000000-0000-4000-a000-0000000000d1', '00000000-0000-4000-a000-0000000000e1'), ('00000000-0000-4000-a000-0000000000d1', '00000000-0000-4000-a000-0000000000e2'), ('00000000-0000-4000-a000-0000000000d1', '00000000-0000-4000-a000-0000000000e3');
+
+select pg_temp.login('00000000-0000-4000-a000-0000000000d1', 'new@example.test');
+set local role authenticated;
+select throws_ok($$insert into invitations (coach_id, email) values ('00000000-0000-4000-a000-0000000000d1', 'later@example.test')$$,
+  'LA001', null, 'a free coach with 3 athletes cannot invite a fourth');
+select lives_ok($$update coach_athletes set ai_access = true where athlete_id = '00000000-0000-4000-a000-0000000000e1'$$,
+  'a free coach may switch AI on for an athlete');
+select lives_ok($$update profiles set onboarded_at = now() where id = '00000000-0000-4000-a000-0000000000d1'$$, 'the coach finishes starting');
+select throws_ok($$select choose_role('athlete')$$, '42501', null, 'the role is chosen once');
+reset role;
+
+select pg_temp.login('00000000-0000-4000-a000-0000000000e4', 'e4@example.test');
+set local role authenticated;
+select throws_ok($$select accept_invitation((select id from invitations limit 1))$$,
+  'LA001', null, 'a full free coach cannot take on another athlete');
+reset role;
+
+select pg_temp.login('00000000-0000-4000-a000-0000000000e1', 'e1@example.test');
+set local role authenticated;
+insert into consents (purpose, granted, text_version) values ('ai', true, '2026-11');
+select is(ai_allowed('00000000-0000-4000-a000-0000000000e1'), false, 'a free coach''s athlete gets no AI, even with the grant and consent');
+reset role;
+
+update profiles set plan = 'premium' where id = '00000000-0000-4000-a000-0000000000d1';
+select pg_temp.login('00000000-0000-4000-a000-0000000000e1', 'e1@example.test');
+set local role authenticated;
+select is(ai_allowed('00000000-0000-4000-a000-0000000000e1'), true, 'premium lifts the AI limit');
+reset role;
+
+select pg_temp.login('00000000-0000-4000-a000-0000000000e4', 'e4@example.test');
+set local role authenticated;
+select lives_ok($$select accept_invitation((select id from invitations limit 1))$$,
+  'premium lifts the athlete limit');
+reset role;
+
+insert into invitations (coach_id, email) values ('00000000-0000-4000-a000-00000000000a', 'new@example.test');
+select pg_temp.login('00000000-0000-4000-a000-0000000000d1', 'new@example.test');
+set local role authenticated;
+select throws_ok($$select accept_invitation((select id from invitations where email = 'new@example.test'))$$,
+  '22023', null, 'a coach account cannot train with another coach');
+reset role;
+
+select pg_temp.login('00000000-0000-4000-a000-0000000000a1', 'a1@example.test');
+set local role authenticated;
+select throws_ok($$select choose_role('coach')$$, '42501', null, 'an athlete with a coach keeps their role');
+select lives_ok($$select choose_role('athlete')$$, 'choosing the role one has changes nothing and succeeds');
+reset role;
+
 -- ---- Who may call which function: the privileges as they are, not as the migration means them. ----
 reset role;
 select is(
@@ -222,7 +286,7 @@ select is(
 select is(
   (select coalesce(string_agg(p.oid::regprocedure::text, ', ' order by p.oid::regprocedure::text), '')
    from pg_proc p where p.pronamespace = 'public'::regnamespace and has_function_privilege('authenticated', p.oid, 'execute')),
-  'accept_invitation(uuid), ai_allowed(uuid), can_plan_for(uuid), can_read_athlete(uuid), has_active_coach(uuid), has_consent(uuid,text), is_coach_of(uuid), my_invitations(), ping(), server_now()',
+  'accept_invitation(uuid), ai_allowed(uuid), can_plan_for(uuid), can_read_athlete(uuid), choose_role(user_role), has_active_coach(uuid), has_consent(uuid,text), is_coach_of(uuid), my_invitations(), ping(), server_now()',
   'a signed-in person can call exactly the functions granted to them');
 select ok(has_function_privilege('service_role', 'public.reserve_ai_run(uuid, uuid, text, integer)', 'execute'),
   'the server can take a place in an AI allowance');
