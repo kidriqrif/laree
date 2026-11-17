@@ -19,17 +19,29 @@ jobs:
     env:
       DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       # No default: the URL must name the same project as SUPABASE_DB_URL, or the files come from another bucket.
-      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      # Neither the URL nor the age public key is secret, so each is read from a variable or a secret.
+      SUPABASE_URL: ${{ vars.SUPABASE_URL || secrets.SUPABASE_URL }}
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT || secrets.BACKUP_AGE_RECIPIENT }}
     steps:
+      # Nothing set: backups are not wanted here, so skip. Some set: a backup was wanted and
+      # would be missed without a word, so fail and name what is missing.
       - name: Skip unless configured
         id: ready
         run: |
-          if [ -n "$DB_URL" ] && [ -n "$AGE_RECIPIENT" ] && [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_SECRET_KEY" ]; then
+          missing=()
+          [ -n "$DB_URL" ] || missing+=('SUPABASE_DB_URL (secret)')
+          [ -n "$SUPABASE_URL" ] || missing+=('SUPABASE_URL')
+          [ -n "$SUPABASE_SECRET_KEY" ] || missing+=('SUPABASE_SECRET_KEY (secret)')
+          [ -n "$AGE_RECIPIENT" ] || missing+=('BACKUP_AGE_RECIPIENT')
+          if [ "${#missing[@]}" -eq 0 ]; then
             echo "go=true" >> "$GITHUB_OUTPUT"
-          else
+          elif [ "${#missing[@]}" -eq 4 ]; then
             echo "::warning::Backup skipped: set SUPABASE_DB_URL, SUPABASE_URL, SUPABASE_SECRET_KEY and BACKUP_AGE_RECIPIENT (docs/dev/runbook.md)."
+          else
+            list=$(printf '%s, ' "${missing[@]}")
+            echo "::error::No backup: GitHub has no value for ${list%, } (docs/dev/runbook.md)."
+            exit 1
           fi
       - uses: actions/checkout@v7
         if: steps.ready.outputs.go == 'true'
