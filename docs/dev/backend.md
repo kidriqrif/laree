@@ -9,7 +9,8 @@ The plan behind this page is [docs/roadmap/mvp.md](../roadmap/mvp.md). Where thi
 Every profile has a plan, `free` or `premium`. Users cannot change it; the owner sets it (see the runbook).
 
 - Anyone may choose to coach when they start (onboarding asks "I train" or "I coach"). The role is chosen once, and only while nobody is linked to the account (`public.choose_role`).
-- A coach on the free plan has at most 3 athletes at a time, and their athletes get no AI. The database refuses a fourth link or invitation (error `LA001`). Premium lifts both limits.
+- A coach on the free plan has at most 3 athletes at a time, open invitations included, and their athletes get no AI. The database refuses a fourth link or invitation (error `LA001`). Premium lifts both limits.
+- Any coach may send at most 20 invitations a day (error `LA002`), and may set only whom an invitation is for: its dates and acceptance are the server's. Accepting an invitation from the coach one already has keeps the link as it is.
 - A coached athlete gets AI only when their coach is on premium and turns on "AI access" for them.
 - A self-coached athlete (no active coach) gets AI only on the premium plan.
 - Every athlete must also give their own AI consent. Without it, nothing is sent.

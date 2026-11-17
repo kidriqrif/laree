@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(96);
+select plan(100);
 
 -- People: coach A coaches athlete A1; coach B coaches athlete B1; S1 is self-coached on free;
 -- S2 is self-coached on premium.
@@ -284,6 +284,24 @@ set local role authenticated;
 select throws_ok($$select choose_role('coach')$$, '42501', null, 'an athlete with a coach keeps their role');
 select lives_ok($$select choose_role('athlete')$$, 'choosing the role one has changes nothing and succeeds');
 reset role;
+
+-- ---- Invitations cannot pile up: a daily cap per coach, and no new link for a coach's own athlete. ----
+select pg_temp.login('00000000-0000-4000-a000-00000000000b', 'coach.b@example.test');
+set local role authenticated;
+select lives_ok($$insert into invitations (coach_id, email) select '00000000-0000-4000-a000-00000000000b', 'bulk' || g || '@example.test' from generate_series(1, 20) g$$,
+  'a coach sends 20 invitations in a day');
+select throws_ok($$insert into invitations (coach_id, email) values ('00000000-0000-4000-a000-00000000000b', 'one-more@example.test')$$,
+  'LA002', null, 'the 21st in a day is refused, on any plan');
+reset role;
+
+insert into invitations (coach_id, email) values ('00000000-0000-4000-a000-00000000000a', 'a1@example.test');
+select pg_temp.login('00000000-0000-4000-a000-0000000000a1', 'a1@example.test');
+set local role authenticated;
+select lives_ok($$select accept_invitation((select id from invitations where email = 'a1@example.test' and accepted_at is null))$$,
+  'an athlete accepts an invitation from the coach they already have');
+reset role;
+select is((select count(*)::int from coach_athletes where athlete_id = '00000000-0000-4000-a000-0000000000a1'), 1,
+  'accepting the coach one already has adds no link row');
 
 -- ---- Who may call which function: the privileges as they are, not as the migration means them. ----
 reset role;

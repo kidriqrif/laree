@@ -7,6 +7,7 @@ const fake = vi.hoisted(() => ({
   synced: 0,
   loads: 0,
   invites: [] as { id: string; email: string; expires_at: string }[],
+  insertError: null as { code: string; message: string } | null,
 }))
 
 vi.mock('./session.ts', () => {
@@ -22,6 +23,7 @@ vi.mock('./session.ts', () => {
     supabase: () => ({
       from: () => ({
         ...query,
+        insert: async () => ({ error: fake.insertError }),
         update: (value: unknown) => {
           fake.updates.push(value)
           const result = Promise.resolve({ error: null })
@@ -73,6 +75,7 @@ beforeEach(() => {
   fake.synced = 0
   fake.loads = 0
   fake.invites = []
+  fake.insertError = null
   useSyncStatus.setState({ ready: true })
   vi.stubGlobal('confirm', () => true)
 })
@@ -136,5 +139,13 @@ describe('the coach’s team on the free plan', () => {
     await waitFor(() => expect(fake.loads).toBe(1))
     act(() => useAccount.setState({ account: coachWith(2) }))
     await waitFor(() => expect(fake.loads).toBe(2))
+  })
+  it('says so when the day’s invitations are used up', async () => {
+    fake.insertError = { code: 'LA002', message: 'A coach may send 20 invitations a day' }
+    useAccount.setState({ account: coachWith(0) })
+    render(<CoachTeamPanel />)
+    fireEvent.change(screen.getByLabelText('Invite an athlete by email'), { target: { value: 'ann@example.test' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Invite' }))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/as many invitations as one day allows/))
   })
 })

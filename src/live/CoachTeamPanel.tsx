@@ -83,7 +83,9 @@ export default function CoachTeamPanel({ headingId = 'team-h' }: { headingId?: s
           ? `${address} is already invited. Withdraw that invitation to send a new one.`
           : error.code === 'LA001'
             ? `Your free plan has room for ${room.limit ?? 0} athletes, open invitations included, and it is full.`
-            : `Could not invite: ${error.message}`,
+            : error.code === 'LA002'
+              ? 'You have sent as many invitations as one day allows. Try again tomorrow.'
+              : `Could not invite: ${error.message}`,
       )
     }
     setEmail('')

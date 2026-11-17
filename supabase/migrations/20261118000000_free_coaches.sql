@@ -8,6 +8,11 @@ alter table public.profiles drop constraint coaches_are_premium;
 create function private.free_coach_limit() returns integer
 language sql immutable set search_path = '' as $$ select 3 $$;
 
+-- The invitations any coach may send in a day, so accepted and expired ones cannot pile up without
+-- end. Error code LA002.
+create function private.daily_invitation_limit() returns integer
+language sql immutable set search_path = '' as $$ select 20 $$;
+
 -- A free coach with no room left can neither invite nor take on another athlete. An open invitation
 -- takes a place too, so a free coach cannot hand out invitations without end. Error code LA001, so
 -- the app can say what happened. The owner (no signed-in user) is not limited.
@@ -21,6 +26,13 @@ begin
   end if;
   -- One at a time per coach, so two athletes accepting at once cannot both take the last place.
   perform 1 from public.profiles p where p.id = new.coach_id for update;
+  if tg_table_name = 'invitations' and (
+    select count(*) from public.invitations i
+    where i.coach_id = new.coach_id and i.created_at > now() - interval '1 day'
+  ) >= private.daily_invitation_limit() then
+    raise exception 'A coach may send % invitations a day', private.daily_invitation_limit()
+      using errcode = 'LA002';
+  end if;
   if exists (select 1 from public.profiles p where p.id = new.coach_id and p.plan = 'premium') then
     return new;
   end if;
@@ -87,7 +99,8 @@ begin
   update public.profiles set role = chosen, updated_at = now() where id = me;
 end $$;
 
--- As before, and a coach account cannot join another coach as their athlete.
+-- As before, and a coach account cannot join another coach as their athlete, and an athlete who
+-- already trains with the inviting coach keeps the link they have.
 create or replace function public.accept_invitation(invitation uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -110,9 +123,15 @@ begin
     if exists (select 1 from public.profiles p where p.id = me and p.role = 'coach') then
       raise exception 'A coach account cannot train with another coach' using errcode = '22023';
     end if;
-    update public.coach_athletes set status = 'ended', ended_at = now()
-    where athlete_id = me and status = 'active';
-    insert into public.coach_athletes (coach_id, athlete_id) values (inv.coach_id, me);
+    -- Already this coach's athlete: the link stays as it is, AI access included, and no new row.
+    if not exists (
+      select 1 from public.coach_athletes l
+      where l.athlete_id = me and l.coach_id = inv.coach_id and l.status = 'active'
+    ) then
+      update public.coach_athletes set status = 'ended', ended_at = now()
+      where athlete_id = me and status = 'active';
+      insert into public.coach_athletes (coach_id, athlete_id) values (inv.coach_id, me);
+    end if;
   end if;
   update public.invitations set accepted_at = now() where id = inv.id;
 end $$;
