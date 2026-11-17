@@ -26,7 +26,7 @@ Day-to-day running of the live app. How it works: [backend.md](backend.md).
 | `SUPABASE_DB_URL` | secret, the session pooler connection string | `backup.yml` |
 | `SUPABASE_SECRET_KEY` | secret, the project's secret (service role) key | `backup.yml`, to read the private file bucket |
 | `SUPABASE_PROJECT_REF` | variable, optional: the workflows default to `lqxvjonypveaxsmcgbql` | `supabase-deploy.yml` |
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | variables, optional: the workflows default to this project's public values | `keepalive.yml`; `backup.yml` uses the URL |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | variables. `keepalive.yml` defaults to this project's public values: set both or neither. `backup.yml` has no default and needs `SUPABASE_URL` of the same project as `SUPABASE_DB_URL` | `keepalive.yml`; `backup.yml` uses the URL |
 | `BACKUP_AGE_RECIPIENT` | variable, your age public key (`age1…`) | `backup.yml` |
 
 The deploy and backup jobs use a GitHub environment named `production`. Add the secrets there, or at repository level.
