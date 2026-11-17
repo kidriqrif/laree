@@ -1,0 +1,32 @@
+@layer components {
+  /* Arrows either side of the picker, on one row at any width: the picker takes the room left over. */
+  .switcher {
+    /* A fieldset, for its group role: without its own box. */
+    margin: 0;
+    padding: 0;
+    border: 0;
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: var(--space-1);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+
+  .picker {
+    flex: 1 1 10rem;
+    min-inline-size: 7rem;
+    max-inline-size: 18rem;
+  }
+
+  /* On a phone the switcher has a row to itself, so each part is a large target. */
+  @media (width < 40rem) {
+    .switcher {
+      flex-basis: 100%;
+    }
+
+    .picker {
+      max-inline-size: none;
+    }
+  }
+}

@@ -23,7 +23,7 @@ import type { Activity, AthleteId } from '../../../domain/types.ts'
 import { buttonClass, Card, EmptyState, SPORT_LABEL } from '../../../ui/core/index.ts'
 import { SeverityGlyph } from '../../../ui/core/SeverityGlyph.tsx'
 import { DataTable } from '../../../ui/data/index.ts'
-import { SegmentedControl } from '../../../ui/form/index.ts'
+import { AthleteSwitcher } from '../AthleteSwitcher.tsx'
 import { FlagDrawerSlot } from './FlagDrawerSlot.tsx'
 import { TileBoundary } from './TileBoundary.tsx'
 import { formatThreshold, KIND_LABEL, EDITABLE_KINDS, SOURCE_LABEL, thresholdHistory, thresholdsLine } from './thresholds.ts'
@@ -185,12 +185,7 @@ function AthleteSummary({ athleteId }: { athleteId: AthleteId }) {
           </p>
         </div>
         <div className={styles.toolbar}>
-          <SegmentedControl
-            ariaLabel="Athlete"
-            options={ATHLETES.map((a) => ({ id: a.id, label: a.name }))}
-            value={athleteId}
-            onChange={(id) => navigate(`/coach/athlete/${id}`)}
-          />
+          <AthleteSwitcher value={athleteId} onChange={(id) => void navigate(`/coach/athlete/${id}`)} />
           <Link to={`/coach/calendar/${athleteId}`} className={buttonClass('primary')}>
             Open Calendar
           </Link>

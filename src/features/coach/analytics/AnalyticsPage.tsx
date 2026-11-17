@@ -20,6 +20,7 @@ import { Curve, FORM_BAND_LABEL, Heatmap, PMC, Bars, ZoneBar, fmtDay, fmtNumber,
 import type { BarDatum, HeatCell, HeatLevel, HeatRow } from '../../../charts/index.ts'
 import { Card, Chip, Skeleton } from '../../../ui/core/index.ts'
 import { SegmentedControl } from '../../../ui/form/index.ts'
+import { AthleteSwitcher } from '../AthleteSwitcher.tsx'
 import { RAMP_CAUTION, rampAboveCaution } from '../overview/roster.ts'
 import { digestOf, paceCurves, powerCurves, zoneSummary } from './digest.ts'
 import type { ActivityDigest } from './digest.ts'
@@ -253,12 +254,7 @@ export default function AnalyticsPage() {
       <header className={styles.head}>
         <h1 className={styles.title}>Analytics</h1>
         <div className={styles.controls}>
-          <SegmentedControl
-            ariaLabel="Athlete"
-            options={ATHLETES.map((a) => ({ id: a.id, label: a.name }))}
-            value={athleteId}
-            onChange={(id) => isAthleteId(id) && go(id, range)}
-          />
+          <AthleteSwitcher value={athleteId} onChange={(id) => void go(id, range)} />
           <SegmentedControl
             ariaLabel="Period"
             options={RANGES.map((r) => ({ id: r.id, label: r.label }))}

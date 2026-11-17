@@ -16,7 +16,9 @@ export interface SelectOption {
 
 export interface SelectProps
   extends Omit<AriaSelectProps<SelectOption>, 'className' | 'children' | 'isInvalid' | 'items' | 'value' | 'defaultValue' | 'onChange'>,
-    FieldProps {
+    Omit<FieldProps, 'label'> {
+  /** Visible label. Omit it only with an aria-label. */
+  label?: FieldProps['label']
   options: ReadonlyArray<SelectOption>
   value?: string | null
   defaultValue?: string | null
@@ -42,7 +44,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
       isInvalid={error ? true : undefined}
       className={cx(fieldClass, className)}
     >
-      <FieldLabel>{label}</FieldLabel>
+      {label ? <FieldLabel>{label}</FieldLabel> : null}
       <Button className={cx(controlClass, styles.trigger)}>
         <SelectValue className={styles.value} />
         <svg className={styles.chevron} viewBox="0 0 24 24" aria-hidden="true">

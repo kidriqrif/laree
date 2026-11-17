@@ -14,7 +14,7 @@ import { currentWeek, weekOfDay, weekRange } from '../../../domain/time.ts'
 import type { AthleteId, ComplianceBand, DayOffset } from '../../../domain/types.ts'
 import { Button, EmptyState, IconButton, SportGlyph, StatusGlyph } from '../../../ui/core/index.ts'
 import type { SportKey, StatusKey } from '../../../ui/core/index.ts'
-import { SegmentedControl } from '../../../ui/form/index.ts'
+import { AthleteSwitcher } from '../AthleteSwitcher.tsx'
 import { DragGrid } from '../../../ui/data/index.ts'
 import type { DragGridColumn, DragGridMove } from '../../../ui/data/index.ts'
 import { IconChevronLeft, IconChevronRight } from '../../../ui/icons/index.ts'
@@ -357,14 +357,7 @@ export default function CalendarPage() {
           </p>
         </div>
         <div className={styles.toolbar}>
-          <SegmentedControl
-            ariaLabel="Athlete"
-            options={ATHLETES.map((a) => ({ id: a.id, label: a.name }))}
-            value={athleteId}
-            onChange={(id) => {
-              if (isAthleteId(id)) goAthlete(id)
-            }}
-          />
+          <AthleteSwitcher value={athleteId} onChange={goAthlete} />
           <div className={styles.weekNav}>
             <IconButton aria-label="Previous week" onPress={() => setOffset(offset - 1)}>
               <IconChevronLeft aria-hidden="true" />

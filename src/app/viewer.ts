@@ -25,6 +25,15 @@ function safeStorage(): Storage {
   }
 }
 
+/**
+ * Whether a saved "last athlete viewed" can be kept. The live roster arrives after this store loads,
+ * so live keeps any saved id and the account check drops it if it names no one on the team. Without
+ * that, every reload sent the coach back to their first athlete.
+ */
+function rememberedAthlete(id: unknown): id is AthleteId {
+  return isAthleteId(id) || (__LIVE__ && typeof id === 'string' && id !== '')
+}
+
 export const useViewer = create<ViewerState>()(
   persist(
     (set) => ({
@@ -46,7 +55,7 @@ export const useViewer = create<ViewerState>()(
           ...current,
           role: p.role === 'coach' ? 'coach' : 'athlete',
           athleteId: isAthleteId(p.athleteId) ? p.athleteId : current.athleteId,
-          coachAthleteId: isAthleteId(p.coachAthleteId) ? p.coachAthleteId : current.coachAthleteId,
+          coachAthleteId: rememberedAthlete(p.coachAthleteId) ? p.coachAthleteId : current.coachAthleteId,
           chosen: p.chosen === true,
         }
       },
