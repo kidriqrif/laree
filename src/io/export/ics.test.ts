@@ -189,7 +189,9 @@ describe('sessionIcs', () => {
       expect(lines).not.toContain('BEGIN:VTIMEZONE');
       expect(lines.some((l) => l.includes('TZID'))).toBe(false);
       expect(lines.find((l) => l.startsWith('DTSTART'))).toMatch(/^DTSTART:\d{8}T063000$/);
-      expect(lines.find((l) => l.startsWith('DTEND'))).toMatch(/^DTEND:\d{8}T073900$/);
+      // An elapsed duration, so a clock change on the day cannot stretch or shrink the session.
+      expect(lines).toContain('DURATION:PT1H9M');
+      expect(lines.some((l) => l.startsWith('DTEND'))).toBe(false);
     } finally {
       setTimeZone(null);
     }

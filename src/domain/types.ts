@@ -183,6 +183,11 @@ export interface Activity {
   day: DayOffset;
   /** Minutes after local midnight. */
   startMinute: number;
+  /**
+   * The time zone's offset from UTC, in minutes, when day and startMinute were recorded. Absent
+   * means Kuala Lumpur (+480): the demo, and everything recorded before days followed the device.
+   */
+  utcOffsetMin?: number;
   sport: Sport;
   title: string;
   source: ActivitySource;

@@ -11,6 +11,7 @@ import type { DayOffset } from './types.ts';
 export const HISTORY_WEEKS = 16;
 export const CURRENT_WEEK = HISTORY_WEEKS + 1;
 export const KL_OFFSET_MS = 8 * 3_600_000;
+export const KL_OFFSET_MIN = 480;
 const DAY_MS = 86_400_000;
 export const DEFAULT_TIME_ZONE = 'Asia/Kuala_Lumpur';
 
@@ -120,6 +121,17 @@ export function runtimeStartEpochDay(instant: Date = now()): number {
 export function today(): DayOffset {
   const instant = now();
   return localEpochDay(instant) - runtimeStartEpochDay(instant);
+}
+
+/** The UTC instant, in milliseconds, of a local day and minute recorded at a UTC offset in minutes. */
+export function instantOfLocal(day: DayOffset, minute: number, offsetMin: number): number {
+  return (runtimeStartEpochDay() + day) * DAY_MS + (minute - offsetMin) * 60_000;
+}
+
+/** The zone's UTC offset, in minutes, at a local day and minute. */
+export function offsetMinutesAtLocal(day: DayOffset, minute: number): number {
+  const local = (runtimeStartEpochDay() + day) * DAY_MS + minute * 60_000;
+  return Math.round(offsetAt(local - offsetAt(local)) / 60_000);
 }
 
 /** Minutes after local midnight now. */

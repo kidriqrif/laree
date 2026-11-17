@@ -300,6 +300,13 @@ function isoOf(day: DayOffset, startEpoch: number): string {
 
 const compactOf = (day: DayOffset, startEpoch: number): string => isoOf(day, startEpoch).replace(/-/g, '');
 
+/** An elapsed duration in minutes as RFC 5545 writes it: 69 becomes PT1H9M. */
+function elapsed(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `PT${h > 0 ? `${h}H` : ''}${m > 0 || h === 0 ? `${m}M` : ''}`;
+}
+
 /** 390 becomes 063000. */
 const clockDigits = (minute: number): string => `${pad2(Math.floor(minute / 60))}${pad2(minute % 60)}00`;
 
@@ -324,11 +331,17 @@ function sessionEvent(
   } else {
     const endMinute = session.startMinute + Math.ceil(session.plannedDurationS / 60);
     const endDay = day + Math.floor(endMinute / MINUTES_PER_DAY);
-    const zone = inKualaLumpur() ? `;TZID=${TZID}` : '';
-    dates.push(`DTSTART${zone}:${compactOf(day, stamp.startEpoch)}T${clockDigits(session.startMinute)}`);
-    dates.push(
-      `DTEND${zone}:${compactOf(endDay, stamp.startEpoch)}T${clockDigits(endMinute % MINUTES_PER_DAY)}`,
-    );
+    if (inKualaLumpur()) {
+      dates.push(`DTSTART;TZID=${TZID}:${compactOf(day, stamp.startEpoch)}T${clockDigits(session.startMinute)}`);
+      dates.push(
+        `DTEND;TZID=${TZID}:${compactOf(endDay, stamp.startEpoch)}T${clockDigits(endMinute % MINUTES_PER_DAY)}`,
+      );
+    } else {
+      // A floating end would be read as a wall-clock time and gain or lose an hour across a clock
+      // change; an elapsed DURATION keeps the session as long as it is.
+      dates.push(`DTSTART:${compactOf(day, stamp.startEpoch)}T${clockDigits(session.startMinute)}`);
+      dates.push(`DURATION:${elapsed(endMinute - session.startMinute)}`);
+    }
   }
   const summary = `${SPORT_LABEL[session.sport]} · ${session.title} · ${durationLabel(session.plannedDurationS)}`;
   const description = [...summaryLines(session.steps, thresholds, session.sport === 'bike'), totalsLine(session, thresholds)];
