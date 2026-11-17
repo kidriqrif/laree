@@ -122,7 +122,7 @@ function teardown(): void {
   aiConsentFor = ''
   stopSync()
   // In every tab: an AI answer still on its way belongs to nobody here any more.
-  clearPolishedCache()
+  void clearPolishedCache()
   useLaree.setState({ data: emptyLiveData(), undoStack: [] })
 }
 
@@ -200,15 +200,20 @@ export async function signOut(): Promise<string | null> {
   if (error) return `You are still signed in: ${error.message}`
   teardown()
   cacheAccount(null)
-  clearPolishedCache()
+  const cleared = await clearPolishedCache()
   try {
     localStorage.removeItem(LIVE_STORE_KEY)
     localStorage.removeItem(OWNER_KEY)
   } catch {
     // Nothing kept, nothing to clear.
   }
+  // The sign-in screen that follows says so when AI wording may still be on this device.
+  if (!cleared) useAccount.setState({ notice: AI_LEFT })
   return null
 }
+
+export const AI_LEFT =
+  "You are signed out, but some AI summaries could not be removed from this device: clear this site's data in your browser settings."
 
 /**
  * Stop the sync and remove this account's unsent changes from the device, for good (the account

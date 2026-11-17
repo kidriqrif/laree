@@ -7,6 +7,7 @@ import type { AiRecapOutput } from '../ai/types.ts'
 import { clearPolishedCache, polish } from './aiText.ts'
 
 const CACHE_KEY = 'laree:live:ai'
+const EPOCH_KEY = 'laree:live:ai:epoch'
 const draft = {
   status: 'ok',
   feature: 'recap',
@@ -16,10 +17,10 @@ const draft = {
 } as unknown as Extract<AiRecapOutput, { status: 'ok' }>
 const answer = { data: { ok: true, headline: 'Steady week', lines: ['A 12 km run.'], provider: 'Mock', model: 'mock-1' }, error: null }
 
-beforeEach(() => {
+beforeEach(async () => {
   invoke.mockReset()
   localStorage.clear()
-  clearPolishedCache()
+  await clearPolishedCache()
 })
 
 describe('AI wording on the device', () => {
@@ -36,7 +37,7 @@ describe('AI wording on the device', () => {
     invoke.mockReturnValue(new Promise((resolve) => (finish = resolve)))
     const pending = polish(draft)
     // Sign-out or account deletion lands while the request is on its way.
-    clearPolishedCache()
+    await clearPolishedCache()
     finish(answer)
     expect(await pending).toBeNull()
     expect(localStorage.getItem(CACHE_KEY)).toBeNull()
@@ -50,7 +51,7 @@ describe('AI wording on the device', () => {
     invoke.mockReturnValue(new Promise((resolve) => (finish = resolve)))
     const pending = polish(draft)
     // The person signs out, or deletes the account, in the other tab.
-    otherTab.clearPolishedCache()
+    await otherTab.clearPolishedCache()
     finish(answer)
     expect(await pending).toBeNull()
     expect(localStorage.getItem(CACHE_KEY)).toBeNull()
@@ -71,7 +72,7 @@ describe('AI wording on the device', () => {
     try {
       expect(() => localStorage.setItem('x', 'y')).toThrow('full')
       // Removed here, but other tabs were not told: the clearing is not complete.
-      expect(clearPolishedCache()).toBe(false)
+      expect(await clearPolishedCache()).toBe(false)
     } finally {
       Object.defineProperty(localStorage, 'setItem', { value: real, configurable: true, writable: true })
     }
@@ -79,30 +80,73 @@ describe('AI wording on the device', () => {
   })
 
   it('takes its write back when another tab clears between the check and the write', async () => {
+    // A browser without Web Locks: the clear and the write are not ordered across tabs.
     vi.resetModules()
     const otherTab = await import('./aiText.ts')
     invoke.mockResolvedValue(answer)
     const real = localStorage.setItem.bind(localStorage)
-    let cleared = false
-    // The other tab clears at the worst moment: just before this tab writes the cache.
+    let clearing: Promise<boolean> | null = null
+    // The other tab clears at the worst moment: its mark lands just before this tab writes.
     const racing = (key: string, value: string) => {
-      if (key === CACHE_KEY && !cleared) {
-        cleared = true
-        otherTab.clearPolishedCache()
+      if (key === CACHE_KEY && !clearing) {
+        clearing = otherTab.clearPolishedCache()
+        real(EPOCH_KEY, 'set-by-the-other-tab')
       }
       real(key, value)
     }
     Object.defineProperty(localStorage, 'setItem', { value: racing, configurable: true, writable: true })
     try {
       expect(await polish(draft)).toBeNull()
+      await clearing
     } finally {
       Object.defineProperty(localStorage, 'setItem', { value: real, configurable: true, writable: true })
     }
-    expect(cleared).toBe(true)
+    expect(clearing).not.toBeNull()
     expect(localStorage.getItem(CACHE_KEY)).toBeNull()
   })
 
-  it('says when the wording could not be removed', () => {
+  it('lets a clear from another tab wait for a write under way, then remove it', async () => {
+    // Web Locks shared by two tabs: one turn at a time.
+    let tail: Promise<unknown> = Promise.resolve()
+    const locks = {
+      request: (_name: string, work: () => Promise<unknown>) => {
+        const run = tail.then(work)
+        tail = run.catch(() => undefined)
+        return run
+      },
+    }
+    const nav = globalThis.navigator as Navigator & { locks?: unknown }
+    const before = Object.getOwnPropertyDescriptor(nav, 'locks')
+    Object.defineProperty(nav, 'locks', { value: locks, configurable: true })
+    try {
+      // Each copy of the module is a tab: its own memory, the same storage and locks.
+      vi.resetModules()
+      const thisTab = await import('./aiText.ts')
+      vi.resetModules()
+      const otherTab = await import('./aiText.ts')
+      invoke.mockResolvedValue(answer)
+      const real = localStorage.setItem.bind(localStorage)
+      let clearing: Promise<boolean> | null = null
+      const racing = (key: string, value: string) => {
+        // The other tab asks to clear while this tab is writing: it must wait its turn.
+        if (key === CACHE_KEY && !clearing) clearing = otherTab.clearPolishedCache()
+        real(key, value)
+      }
+      Object.defineProperty(localStorage, 'setItem', { value: racing, configurable: true, writable: true })
+      try {
+        await thisTab.polish(draft)
+        expect(await clearing).toBe(true)
+      } finally {
+        Object.defineProperty(localStorage, 'setItem', { value: real, configurable: true, writable: true })
+      }
+      expect(localStorage.getItem(CACHE_KEY)).toBeNull()
+    } finally {
+      if (before) Object.defineProperty(nav, 'locks', before)
+      else delete (nav as { locks?: unknown }).locks
+    }
+  })
+
+  it('says when the wording could not be removed', async () => {
     const real = localStorage.removeItem.bind(localStorage)
     Object.defineProperty(localStorage, 'removeItem', {
       value: () => {
@@ -112,10 +156,10 @@ describe('AI wording on the device', () => {
       writable: true,
     })
     try {
-      expect(clearPolishedCache()).toBe(false)
+      expect(await clearPolishedCache()).toBe(false)
     } finally {
       Object.defineProperty(localStorage, 'removeItem', { value: real, configurable: true, writable: true })
     }
-    expect(clearPolishedCache()).toBe(true)
+    expect(await clearPolishedCache()).toBe(true)
   })
 })

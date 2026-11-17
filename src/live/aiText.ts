@@ -56,29 +56,41 @@ function epoch(): string | null {
 }
 
 /**
+ * Clearing and writing the wording take turns across the site's tabs (Web Locks), so a clear in
+ * one tab can never land between another tab's check and its write. Without the API (old
+ * browsers) they run at once, and the second check in `polish` takes a late write back.
+ */
+function cacheTurn<T>(work: () => T): Promise<T> {
+  const locks = globalThis.navigator?.locks
+  return locks ? locks.request('laree-ai-cache', async () => work()) : Promise.resolve().then(work)
+}
+
+/**
  * Forget the AI wording kept on this device (on sign-out and account deletion). A request still
  * on its way, in this tab or another, then neither keeps nor shows its answer. False when the
  * wording could not be removed, or other tabs could not be told: an answer on its way there may
  * then still be kept.
  *
- * The mark goes first, then the removal, each tried on its own: a request that writes after the
- * removal sees the new mark when it checks again (`polish`), and removes its write.
+ * The mark goes first, then the removal, each tried on its own.
  */
-export function clearPolishedCache(): boolean {
+export function clearPolishedCache(): Promise<boolean> {
+  // This tab's own requests stop at once, before the turn comes.
   generation++
-  let told = true
-  try {
-    localStorage.setItem(EPOCH_KEY, crypto.randomUUID())
-  } catch {
-    // A full storage: other tabs are not told. The removal below is still tried.
-    told = false
-  }
-  try {
-    localStorage.removeItem(CACHE_KEY)
-    return told
-  } catch {
-    return false
-  }
+  return cacheTurn(() => {
+    let told = true
+    try {
+      localStorage.setItem(EPOCH_KEY, crypto.randomUUID())
+    } catch {
+      // A full storage: other tabs are not told. The removal below is still tried.
+      told = false
+    }
+    try {
+      localStorage.removeItem(CACHE_KEY)
+      return told
+    } catch {
+      return false
+    }
+  })
 }
 
 const apply = <T extends TextOut>(out: T, p: Polished): T => ({
@@ -105,18 +117,21 @@ export async function polish<T extends TextOut>(out: T): Promise<T | null> {
   // Signed out or deleted while the request was on its way: the answer belongs to nobody here.
   // Storage is shared between tabs, so this also sees a sign-out made in another tab.
   const stale = () => asked !== generation || askedEpoch !== epoch()
-  if (stale()) return null
   const p: Polished = { headline: body.headline, lines: body.lines, provider: body.provider, model: body.model }
-  writeCache(key, p)
-  // Another tab can clear between the check above and the write. It sets its mark before it
-  // removes, so the mark has changed by now if it did: take the write back.
-  if (stale()) {
-    try {
-      localStorage.removeItem(CACHE_KEY)
-    } catch {
-      // Nothing more can be done here; the clearing tab removes it too.
+  const kept = await cacheTurn(() => {
+    if (stale()) return false
+    writeCache(key, p)
+    // Without Web Locks another tab can clear between the check above and the write. It sets its
+    // mark before it removes, so the mark has changed by now if it did: take the write back.
+    if (stale()) {
+      try {
+        localStorage.removeItem(CACHE_KEY)
+      } catch {
+        // Nothing more can be done here; the clearing tab removes it too.
+      }
+      return false
     }
-    return null
-  }
-  return apply(out, p)
+    return true
+  })
+  return kept ? apply(out, p) : null
 }

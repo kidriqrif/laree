@@ -88,7 +88,7 @@ export async function deleteMyAccount(): Promise<string | null> {
   const uid = who.session?.user.id
   const { data, error } = await supabase().functions.invoke('delete-account', { body: { confirm: 'DELETE' } })
   if (error || !(data as { ok?: boolean } | null)?.ok) return 'Your account could not be deleted. Try again, or contact the owner.'
-  let left = !clearPolishedCache()
+  let left = !(await clearPolishedCache())
   if (uid) {
     // The sync stops first: a send on its way must not save the queue again after it is removed.
     await discardUnsent(uid).catch(() => {

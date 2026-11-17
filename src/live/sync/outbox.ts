@@ -85,6 +85,8 @@ export class Outbox {
   /** Counts the saves asked for: only the newest one speaks for the whole queue. */
   private revision = 0
   private closed = false
+  /** Did the last save read the device's queue? False after one that failed. */
+  private fresh = false
   private loading: Promise<void> | null = null
   /** The send going on now, if any: the next one waits for it. */
   private sending: Promise<unknown> = Promise.resolve()
@@ -179,6 +181,7 @@ export class Outbox {
         const saved = await this.write((current) => apply(current, [...due]))
         // Changes made while this save ran stay due, on top of what is saved now.
         this.changes = this.changes.filter((c) => !due.has(c))
+        this.fresh = true
         if (!this.closed) this.ops = apply(saved, this.changes)
       })
       .then(
@@ -186,7 +189,10 @@ export class Outbox {
           // An older save that worked says nothing about writes queued after it.
           if (revision === this.revision && this.changes.length === 0) this.onSaveState?.(true)
         },
-        () => this.onSaveState?.(false),
+        () => {
+          this.fresh = false
+          this.onSaveState?.(false)
+        },
       )
     return this.saving
   }
@@ -224,7 +230,10 @@ export class Outbox {
   private async sendAll(send: SendBatch, cancelled: () => boolean): Promise<FlushResult> {
     if (!this.loaded) throw new Error('The saved changes have not been read yet')
     // Read the device's queue first: another tab may have queued writes, or sent some, meanwhile.
+    // If it cannot be read, send nothing: this tab's copy may hold a write another tab has
+    // already replaced on the server with a newer one.
     await this.persist()
+    if (!this.fresh) return { sent: 0, rejected: [], stalled: true, message: 'The changes waiting on this device could not be read' }
     const result: FlushResult = { sent: 0, rejected: [], stalled: false }
     const queue = [...this.ops]
     const done = new Set<Op>()

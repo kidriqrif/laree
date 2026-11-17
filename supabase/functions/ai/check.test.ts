@@ -6,7 +6,7 @@ const answer = (headline: string, ...lines: string[]) => JSON.stringify({ headli
 
 describe('the check on a provider answer', () => {
   it('accepts a rewording that keeps every line\'s numbers with their units', () => {
-    expect(checkOutput(answer('Steady week', 'A 12 km run took you 60 min.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).not.toBeNull()
+    expect(checkOutput(answer('Steady week', 'In 60 min you ran 12 km.', 'Sleep was 7.5 h on 3 of 4 nights.'), draft)).not.toBeNull()
   })
 
   it('wants "3 of 4" back word for word: two plain counts could be swapped unseen', () => {
@@ -41,7 +41,7 @@ describe('the check on a provider answer', () => {
     expect(checkOutput(answer('Heart rate', 'Your resting heart rate was 60 bpm; your maximum was 180 bpm.'), hr)).toBeNull()
     expect(checkOutput(answer('Your heart rate', hr.lines[0] as string), hr)).not.toBeNull()
     // The same value twice is not two values.
-    expect(sameFacts('You ran 5 km on Monday and 5 km on Friday.', 'You ran 5 km on Monday, and 5 km on Friday as well.')).toBe(true)
+    expect(sameFacts('You ran 5 km on Monday and 5 km on Friday.', 'You ran 5 km on Monday and 5 km on Friday too.')).toBe(true)
   })
 
   it('keeps what a number measures', () => {
@@ -61,7 +61,9 @@ describe('the check on a provider answer', () => {
 
   it('keeps which describing word goes with which number when a line has several', () => {
     const line = 'Resting HR 52 bpm and sleep 7 h.'
-    expect(sameFacts(line, 'Your resting HR was 52 bpm and you slept 7 h.')).toBe(true)
+    expect(sameFacts(line, 'Your resting HR was 52 bpm and sleep 7 h.')).toBe(true)
+    // Between two numbers the text stays as written: "sleep" could go with either number.
+    expect(sameFacts(line, 'Your resting HR was 52 bpm and you slept 7 h.')).toBe(false)
     // The same numbers and words, but the words now name the other number.
     expect(sameFacts(line, 'Sleep 52 bpm and resting HR 7 h.')).toBe(false)
     // A single value: the words before it and after it stay where they are.
@@ -79,18 +81,30 @@ describe('the check on a provider answer', () => {
     ).toBe(true)
     // Between two numbers, words keep their order: each could go with either number.
     expect(sameFacts('5 km on Monday; Friday: 30 min.', '5 km on Friday; Monday: 30 min.')).toBe(false)
-    expect(sameFacts('5 km on Monday; Friday: 30 min.', '5 km, Monday. Friday, 30 min.')).toBe(true)
+    expect(sameFacts('5 km on Monday; Friday: 30 min.', '5 km; Monday and Friday: 30 min.')).toBe(false)
+    expect(sameFacts('5 km on Monday; Friday: 30 min.', 'You did 5 km on Monday; Friday: 30 min.')).toBe(true)
     // Two days and one value each side: a day cannot move to the other value.
     expect(sameFacts('5 km on Monday and 8 km on Friday.', '5 km on Friday and 8 km on Monday.')).toBe(false)
     // One describing word cannot be swapped with anything: the order may change.
     expect(sameFacts('You ran 12 km in 60 minutes.', 'In 60 minutes you ran 12 km.')).toBe(true)
   })
 
+  it('refuses a word the draft does not have unless it is neutral', () => {
+    // The relationship changed, though every number and describing word stayed.
+    expect(sameFacts('Resting HR 60 bpm (baseline 50).', 'Resting HR exceeded 60 bpm (baseline 50).')).toBe(false)
+    expect(sameFacts('Resting HR 60 bpm (baseline 50).', 'Your resting HR was 60 bpm (baseline 50).')).toBe(true)
+    // Judgement and hedging are new claims too.
+    expect(sameFacts('You ran 12 km.', 'You ran a great 12 km.')).toBe(false)
+    expect(sameFacts('You ran 12 km.', 'You ran only 12 km.')).toBe(false)
+    // A plural or past form of the draft's own word is the same word.
+    expect(sameFacts('Next week has no key sessions marked.', 'No key session is marked for next week.')).toBe(true)
+  })
+
   it('keeps the sign of a number', () => {
     const load = { headline: 'Load', lines: ['Load changed by -12%.'] }
     expect(checkOutput(answer('Load', 'Your load changed by +12%.'), load)).toBeNull()
     expect(checkOutput(answer('Load', 'Your load changed by 12%.'), load)).toBeNull()
-    expect(checkOutput(answer('Load', 'Your load went to \u221212% this week.'), load)).not.toBeNull()
+    expect(checkOutput(answer('Load', 'Your load changed by \u221212% this week.'), load)).not.toBeNull()
     // A hyphen inside a range is not a sign.
     expect(facts('Zones 10-12 and Z2')).toEqual(['10|', '12|', '2|'])
     expect(facts('-12% and +3 km')).toEqual(['-12|%', '3|km'])

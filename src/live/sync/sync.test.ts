@@ -749,7 +749,7 @@ describe('one send at a time', () => {
     expect(store.saved).toEqual([])
   })
 
-  it('does not replay a sent write over a newer one when the saves before the send failed', async () => {
+  it('keeps a newer write another tab saved while this tab sent the older one, after a failed save', async () => {
     const inner = memoryOutboxStore()
     let failing = 0
     const store = {
@@ -758,8 +758,8 @@ describe('one send at a time', () => {
     }
     const here = new Outbox(store)
     await here.load()
-    // Two saves fail: the write of v1 is still due when its send begins.
-    failing = 2
+    // Saving v1 fails once; the read before the send works, so the send goes ahead.
+    failing = 1
     await here.add([{ ...op, body: { id: 'c-1', v: 1 } }])
     await here.flush(async () => {
       // Another tab saves v2 for the same row while v1 is on its way.
@@ -789,8 +789,8 @@ describe('one send at a time', () => {
     const here = new Outbox(store)
     await here.load()
     const write = (id: string): Op => ({ ...op, id, body: { id } })
-    // Two saves fail: the write of A is still due when its send begins.
-    failing = 2
+    // Saving A fails once; the read before the send works, so A is sent.
+    failing = 1
     await here.add([write('A')])
     let open: () => void = () => undefined
     await here.flush(async () => {
@@ -810,6 +810,30 @@ describe('one send at a time', () => {
     await here.settled()
     expect(inner.saved.map((o) => o.id)).toEqual(['B', 'C'])
     expect(here.pending.map((o) => o.id)).toEqual(['B', 'C'])
+  })
+
+  it('sends nothing when the queue on the device cannot be read first', async () => {
+    const inner = memoryOutboxStore([{ ...op, body: { id: 'c-1', v: 1 } }])
+    let failing = false
+    const here = new Outbox({ ...inner, update: (change) => (failing ? Promise.reject(new Error('blocked')) : inner.update(change)) })
+    const there = new Outbox(inner)
+    await here.load()
+    await there.load()
+    // Another tab sends v1, then v2 of the same row: the server holds v2, and the queue is empty.
+    const server: unknown[] = []
+    const accept = async (_t: string, _s: Op['scope'], ops: readonly Op[]) => {
+      server.push(...ops.map((o) => o.body))
+      return { ok: true as const }
+    }
+    await there.flush(accept)
+    await there.add([{ ...op, body: { id: 'c-1', v: 2 } }])
+    await there.flush(accept)
+    expect(inner.saved).toEqual([])
+    // This tab still holds v1 and cannot read the device's queue: it must not send its old copy.
+    failing = true
+    const result = await here.flush(accept)
+    expect(result.stalled).toBe(true)
+    expect(server.at(-1)).toEqual({ id: 'c-1', v: 2 })
   })
 })
 

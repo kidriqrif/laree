@@ -129,11 +129,41 @@ function ambiguous(lineFacts: readonly string[]): boolean {
 }
 
 /**
+ * Words a rewording may add although the draft does not have them: grammar, and nothing that says
+ * what a number is, how it changed or what it means. Any other new word is refused, so a
+ * relationship the check cannot read ("exceeded", "only", "great") never slips in.
+ */
+const NEUTRAL = new Set(
+  (
+    'a an the this that these those each every both some any ' +
+    'you your yours yourself it its they them their he she his her we our us i my me athlete athletes ' +
+    'is was were are be been being am has have had having do does did will would can could should may might ' +
+    'of in on at by for from to into over under across through during within per with about around after before than ' +
+    'and or but so also too as while when where which who what how then there here ' +
+    'week weeks day days time times rate reading readings level value values number ' +
+    's t d ll re ve m'
+  ).split(' '),
+)
+
+/** A word and its plural or past form count as one: "session", "sessions"; "mark", "marked". */
+const stem = (word: string): string => (word.length > 4 ? word.replace(/(?:ing|ed|es|s)$/, '') : word)
+
+/** The words of a text, lower case. */
+const wordsOf = (text: string): string[] => [...text.toLowerCase().matchAll(/\p{L}+/gu)].map((m) => m[0])
+
+/** Does `to` use only words that `from` has, or neutral ones? */
+function noNewWords(from: string, to: string): boolean {
+  const own = new Set(wordsOf(from).map(stem))
+  const groups = new Set(wordsOf(from).map((w) => DESCRIBES[w]).filter(Boolean))
+  return wordsOf(to).every((w) => {
+    const group = DESCRIBES[w]
+    return own.has(stem(w)) || NEUTRAL.has(w) || UNITS[w] !== undefined || (group !== undefined && groups.has(group))
+  })
+}
+
+/**
  * The describing words between the numbers, stretch by stretch: before the first number, between
- * each pair, after the last. Words may not move to another stretch: which number a word goes with
- * is seen only from where it stands. In the first and the last stretch their order is free ("heart
- * rate at rest" is "resting HR"): those words can only go with the number next to them. In a
- * stretch between two numbers it is not: "Monday" and "Friday" there can each go with either.
+ * each pair, after the last.
  */
 function stretches(marked: readonly string[]): string[][] {
   const out: string[][] = [[]]
@@ -144,17 +174,29 @@ function stretches(marked: readonly string[]): string[][] {
   return out
 }
 
+/** The text between each pair of numbers, as written, in lower case with spaces evened out. */
+function betweenNumbers(text: string): string[] {
+  const out: string[] = []
+  let end = -1
+  for (const m of text.matchAll(TOKEN)) {
+    if (m[4] !== undefined) continue
+    const start = m.index ?? 0
+    if (end >= 0) out.push(text.slice(end, start).toLowerCase().replace(/\s+/g, ' ').trim())
+    end = start + m[0].length
+  }
+  return out
+}
+
 /**
  * May `to` stand in for `from`? It must state exactly the same facts: every number with its sign
- * and unit, none added, none dropped. It must keep the words that say what the numbers measure
- * (`DESCRIBES`), so "resting heart rate 60 bpm" cannot become "maximum heart rate 60 bpm". Where
- * a line holds two different values of the same kind ("resting 60 bpm, maximum 180 bpm"), a
- * rewording could swap them unseen, so that line must come back word for word. Where it holds
- * two or more describing words, which word goes with which number is known only from where they
- * stand, so the numbers keep their order and each word stays in its stretch between them, in
- * order where it stands between two numbers. One
- * describing word cannot go with the wrong number in a way that changes what is said, so it may
- * move. Whatever cannot be verified is refused.
+ * and unit, none added, none dropped. It may use only the draft's own words and neutral ones
+ * (`NEUTRAL`), and must keep the words that say what the numbers measure (`DESCRIBES`), so
+ * "resting heart rate 60 bpm" cannot become "maximum heart rate 60 bpm" nor "resting HR exceeded
+ * 60 bpm". Where a line holds two different values of the same kind ("resting 60 bpm, maximum 180
+ * bpm"), a rewording could swap them unseen, so that line must come back word for word. Which
+ * describing word goes with which number is known only from where it stands, so the numbers keep
+ * their order and each word its stretch. Words between two numbers could go with either, so the
+ * text between them must stay exactly as it is. Whatever cannot be verified is refused.
  */
 export function sameFacts(from: string, to: string): boolean {
   const a = marks(from)
@@ -163,6 +205,7 @@ export function sameFacts(from: string, to: string): boolean {
   const fb = b.filter(isFact)
   if (!sameItems(fa, fb)) return false
   if (ambiguous(fa)) return from.trim() === to.trim()
+  if (!noNewWords(from, to)) return false
   const words = a.filter((m) => !isFact(m))
   if (!sameItems(words, b.filter((m) => !isFact(m)))) return false
   if (words.length < 2 || fa.length === 0) return true
@@ -170,9 +213,11 @@ export function sameFacts(from: string, to: string): boolean {
   const sa = stretches(a)
   const sb = stretches(b)
   const last = sa.length - 1
-  return sa.every((part, i) =>
-    i === 0 || i === last ? sameItems(part, sb[i] ?? []) : part.join(' ') === (sb[i] ?? []).join(' '),
-  )
+  if (!sa.every((part, i) => sameItems(part, sb[i] ?? []))) return false
+  // A stretch between two numbers that holds describing words: its text stays as written.
+  const ra = betweenNumbers(from)
+  const rb = betweenNumbers(to)
+  return sa.every((part, i) => i === 0 || i === last || part.length === 0 || ra[i - 1] === rb[i - 1])
 }
 
 /**
