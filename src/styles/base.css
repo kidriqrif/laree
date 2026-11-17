@@ -130,6 +130,17 @@
     text-decoration-thickness: 0.14em;
   }
 
+  /* A tap on a control acts at once, with no wait to see if it was a double-tap zoom. Components
+     that drag (sliders, sheets) set their own touch-action and win over this layer. */
+  :where(a, button, input, select, textarea, label, summary, [role="button"], [role="tab"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"]) {
+    touch-action: manipulation;
+  }
+
+  /* A faint flash in the focus colour, in place of the browser's grey box. */
+  html {
+    -webkit-tap-highlight-color: color-mix(in oklab, var(--color-focus) 18%, transparent);
+  }
+
   /* Numbers in data are tabular and, in tables, set in mono. */
   table,
   [data-numeric],

@@ -12,8 +12,11 @@
  * - Columns by width: every column at 1440 px. From 1280 px Today drops out (the status line
  *   still counts today's sessions), because twelve columns do not fit beside the rail there.
  *   From 1024 px Phase, Fatigue and the trend also drop out (IA C1); all stay on the athlete
- *   summary. Under 1024 px the roster is a read-only stack. Last activity and recent team
- *   activities are not here: T8.1 does not ask for them and the kudos composer has no slot here.
+ *   summary. Under 1024 px on a touch screen the roster is a read-only stack of compact cards.
+ *   Last activity and recent team activities are not here: T8.1 does not ask for them and the
+ *   kudos composer has no slot here.
+ * - Needs attention comes before the roster: it is the answer to the page's question, and with a
+ *   long roster it would otherwise sit below the fold, out of sight on a phone.
  */
 import { Component, useMemo, useRef, useSyncExternalStore } from 'react'
 import type { FocusEvent, ReactNode } from 'react'
@@ -314,18 +317,26 @@ function columns(width: Width): DataTableColumn<RosterEntry>[] {
 
 // ---------------------------------------------------------------- read-only stack (under 1024 px)
 
+/** What a coach with no athletes can do next. In the demo there is always a team. */
+const NO_ATHLETES = (
+  <>
+    No athletes yet. Invite one from <Link to="/coach/settings">Settings</Link>.
+  </>
+)
+
 function Stack({ entries }: { entries: RosterEntry[] }) {
+  if (entries.length === 0) return <p className={styles.empty}>{NO_ATHLETES}</p>
   return (
     <ol className={styles.stack} aria-label="Team today">
       {entries.map((e) => (
-        <li key={e.id} className={styles.card}>
+        <li key={e.id} className={styles.card} data-severity={e.flags[0]?.severity}>
           <Link to={`/coach/athlete/${e.id}`} className={styles.cardName} data-roster-row={e.id}>
-            {e.name}
-            <IconChevronRight size={14} />
+            <span className={styles.cardNameText}>{e.name}</span>
+            <IconChevronRight size={16} aria-hidden="true" />
           </Link>
           {e.error ? <p className={styles.caution}>Data unreadable</p> : null}
           <dl className={styles.facts}>
-            <div>
+            <div className={styles.factWide}>
               <dt>Next race</dt>
               <dd>
                 <RaceCell e={e} /> <DaysCell e={e} />
@@ -364,7 +375,7 @@ function Stack({ entries }: { entries: RosterEntry[] }) {
             </div>
             <div>
               <dt>Flags</dt>
-              <dd data-numeric>{e.flags.length === 0 ? '0' : <FlagsCell e={e} />}</dd>
+              <dd data-numeric>{e.flags.length === 0 ? <span className={styles.muted}>None</span> : <FlagsCell e={e} />}</dd>
             </div>
           </dl>
         </li>
@@ -385,7 +396,17 @@ function StatusLine({ status }: { status: TeamStatus | null }) {
         {words.flags}.
       </span>{' '}
       <span className={styles.phrase} data-on={status.missingCheckIns > 0 || undefined} data-kind="checkins">
-        {words.checkIns}.
+        {/* One flex item, so the full stop sits against the link. */}
+        <span>
+          {status.missingCheckIns > 0 ? (
+            <Link to="/coach/check-ins" className={styles.phraseLink}>
+              {words.checkIns}
+            </Link>
+          ) : (
+            words.checkIns
+          )}
+          .
+        </span>
       </span>{' '}
       <span className={styles.phrase} data-kind="sessions">
         {words.sessions}.
@@ -396,6 +417,16 @@ function StatusLine({ status }: { status: TeamStatus | null }) {
 
 const SEVERITY_ORDER: Severity[] = ['act', 'watch', 'info']
 
+/** The numbers behind a flag. One line on a wide screen, cut short with the whole line on hover;
+ *  on a narrow one it wraps, so nothing is lost. */
+function FlagValues({ line }: { line: string }) {
+  return (
+    <span className={styles.attnData} title={line} data-mono>
+      {line}
+    </span>
+  )
+}
+
 function Attention({ items }: { items: AttentionItem[] }) {
   const today = currentDay()
   if (items.length === 0) return <p className={styles.empty}>Nothing needs you. No open flags or missed key sessions.</p>
@@ -405,29 +436,27 @@ function Attention({ items }: { items: AttentionItem[] }) {
         item.kind === 'flag' ? (
           <li key={item.flag.id}>
             <Link to={`/coach/athlete/${item.athleteId}?flag=${item.flag.id}`} className={styles.attnRow}>
-              <span className={styles.flags} data-severity={item.flag.severity}>
+              <span className={`${styles.flags} ${styles.attnSev}`} data-severity={item.flag.severity}>
                 <SeverityGlyph severity={item.flag.severity} />
                 {SEVERITY_LABEL[item.flag.severity]}
               </span>
               <span className={styles.attnWho}>{item.name}</span>
               <span className={styles.attnWhat}>{RULES[item.flag.ruleId].title}</span>
-              <span className={styles.attnData} data-mono>
-                {flagValuesLine(item.flag, 'latest', today, fmtDay)}
-              </span>
-              <span className={styles.muted}>Raised {fmtDay(item.flag.openedDay)}</span>
+              <FlagValues line={flagValuesLine(item.flag, 'latest', today, fmtDay)} />
+              <span className={styles.attnWhen}>Raised {fmtDay(item.flag.openedDay)}</span>
             </Link>
           </li>
         ) : (
           <li key={item.workout.id}>
             <Link to={`/coach/calendar/${item.athleteId}`} className={styles.attnRow}>
-              <span className={styles.withGlyph} data-band="missed">
+              <span className={`${styles.withGlyph} ${styles.attnSev}`} data-band="missed">
                 <StatusGlyph status="missed" size={12} />
                 Missed
               </span>
               <span className={styles.attnWho}>{item.name}</span>
               <span className={styles.attnWhat}>Key session: {item.workout.title}</span>
               <span className={styles.attnData} />
-              <span className={styles.muted}>{fmtDay(item.workout.day)}</span>
+              <span className={styles.attnWhen}>{fmtDay(item.workout.day)}</span>
             </Link>
           </li>
         ),
@@ -546,6 +575,20 @@ export default function OverviewPage() {
 
       <StatusLine status={status} />
 
+      <section className={styles.section} aria-labelledby="overview-attention">
+        <h2 id="overview-attention" data-label className={styles.rule}>
+          Needs attention
+          {attention.length > 0 ? (
+            <span className={styles.ruleCount}>
+              {SEVERITY_ORDER.map((s) => (severityCount(s) > 0 ? `${severityCount(s)} ${SEVERITY_LABEL[s]}` : null))
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          ) : null}
+        </h2>
+        <Attention items={attention} />
+      </section>
+
       <section className={styles.section} aria-labelledby="overview-roster">
         <h2 id="overview-roster" data-label className={styles.rule}>
           Team today
@@ -565,7 +608,7 @@ export default function OverviewPage() {
               }
             }}
             onRowAction={(e) => open(e.id)}
-            emptyState="No athletes yet."
+            emptyState={NO_ATHLETES}
             className={styles.table}
           />
         )}
@@ -575,20 +618,6 @@ export default function OverviewPage() {
             <span aria-hidden="true">·</span> <kbd>?</kbd> all keys
           </p>
         ) : null}
-      </section>
-
-      <section className={styles.section} aria-labelledby="overview-attention">
-        <h2 id="overview-attention" data-label className={styles.rule}>
-          Needs attention
-          {attention.length > 0 ? (
-            <span className={styles.ruleCount}>
-              {SEVERITY_ORDER.map((s) => (severityCount(s) > 0 ? `${severityCount(s)} ${SEVERITY_LABEL[s]}` : null))
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
-          ) : null}
-        </h2>
-        <Attention items={attention} />
       </section>
     </div>
   )
