@@ -35,11 +35,11 @@ The deploy and backup jobs use a GitHub environment named `production`. Add the 
 
 | Name | What |
 |---|---|
-| `APP_ORIGIN` | The Vercel URL, so functions answer only the app (CORS) |
+| `APP_ORIGIN` | The production address, `https://laree-pi.vercel.app`, so functions answer only the app (CORS). Preview addresses are refused. |
 | `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY` | AI provider keys. Any subset works. |
 | `AI_PROVIDERS` | Optional: the provider chain as JSON (backend.md, "AI") |
 
-**Supabase, Authentication:** the site URL is `https://laree.vercel.app`; the redirect URLs are that address and the preview addresses (`https://laree-*-kidriqrifs-projects.vercel.app/**`). The email templates "Magic link" and "Confirm signup" carry `{{ .Token }}` (copy `supabase/templates/sign-in.html`, subject "Your Laree sign-in code"). OTP expiry is 600 seconds. On the free plan, Supabase allows custom templates only with custom SMTP: until then the email holds a link, not a code, and the app's code screen cannot be used.
+**Supabase, Authentication:** the site URL is `https://laree-pi.vercel.app`, the project's production domain on Vercel (`laree.vercel.app` belongs to another project); the redirect URLs are that address and the preview addresses (`https://laree-*-kidriqrifs-projects.vercel.app/**`). The email templates "Magic link" and "Confirm signup" carry `{{ .Token }}` (copy `supabase/templates/sign-in.html`, subject "Your Laree sign-in code"). OTP expiry is 600 seconds. On the free plan, Supabase allows custom templates only with custom SMTP: until then the email holds a link, not a code, and the app's code screen cannot be used.
 
 **Email:** Supabase's built-in email sends only to the project's team members, a few per hour. Before inviting anyone else, add custom SMTP under Authentication, SMTP settings. A free tier of an email service is enough for a small team. Brevo, for example, allows 300 emails a day. Use a sender address you own.
 
